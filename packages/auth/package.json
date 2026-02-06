@@ -1,0 +1,24 @@
+{
+  "name": "@arcade-vibe/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@arcade-vibe/db": "workspace:*",
+    "@arcade-vibe/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@arcade-vibe/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

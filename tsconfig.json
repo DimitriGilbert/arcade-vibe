@@ -1,0 +1,3 @@
+{
+  "extends": "@arcade-vibe/config/tsconfig.base.json"
+}

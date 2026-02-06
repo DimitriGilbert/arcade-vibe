@@ -1,0 +1,29 @@
+{
+  "name": "@arcade-vibe/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@arcade-vibe/auth": "workspace:*",
+    "@arcade-vibe/db": "workspace:*",
+    "@arcade-vibe/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "@types/pg": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "next": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@arcade-vibe/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
