@@ -629,12 +629,19 @@ Execute the plan in this chunk following the subagent-orchestration workflow:
 
 ## Execution
 
-Begin by reading the plan file and presenting it for approval. Once approved, execute all phases automatically without further user interaction until completion or failure.
+**THIS IS A NON-INTERACTIVE AUTOMATED RUN. DO NOT ASK FOR APPROVAL.**
+
+The plan is PRE-APPROVED. Execute ALL phases immediately and automatically:
+1. Read the plan file
+2. Execute each phase using implementer → validator → fixer pattern
+3. Continue until ALL phases complete or max retries reached
+4. Report final status
 
 **DO NOT WRITE CODE YOURSELF** - dispatch implementer subagents with complete requirements.
 **VALIDATORS MUST READ CODE** - not just run commands.
+**DO NOT STOP TO ASK QUESTIONS** - execute the entire plan autonomously.
 
-Start now.
+Begin execution NOW.
 EOF
 }
 
