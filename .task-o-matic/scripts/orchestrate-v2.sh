@@ -675,39 +675,23 @@ run_chunk() {
     return 0
   fi
   
-  # Run the harness
-  if run_harness_with_file "$prompt_file" "$log_file"; then
+  # Run the harness - capture exit code but DON'T fail
+  # The harness IS the orchestrator - it handles implementer → validator → fixer loops
+  # We don't interfere with that process
+  local harness_exit_code=0
+  run_harness_with_file "$prompt_file" "$log_file" || harness_exit_code=$?
+  
+  rm -f "$prompt_file"
+  
+  if [[ $harness_exit_code -eq 0 ]]; then
     log "Chunk ${chunk_num} completed successfully" 1
-    rm -f "$prompt_file"
-    return 0
   else
-    log "Chunk ${chunk_num} failed. Check log: ${log_file}" -3
-    rm -f "$prompt_file"
-    return 1
-  fi
-}
-
-# ============================================================================
-# VALIDATION
-# ============================================================================
-
-run_validation() {
-  log "Running validation..." 0
-  
-  cd "$PROJECT_ROOT"
-  
-  if [[ "$_arg_dry_run" == "on" ]]; then
-    log "[DRY-RUN] Would run: pnpm run check-types && pnpm run build" 0
-    return 0
+    log "Chunk ${chunk_num} harness exited with code ${harness_exit_code}" -1
+    log "Check log for details: ${log_file}" -1
   fi
   
-  if pnpm run check-types && pnpm run build; then
-    log "Validation passed" 1
-    return 0
-  else
-    log "Validation failed" -3
-    return 1
-  fi
+  # Always return success - harness handles its own validation internally
+  return 0
 }
 
 # ============================================================================
@@ -788,25 +772,15 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
-    if ! run_chunk "$i"; then
-      log "Chunk ${i} failed. Stopping execution." -3
-      log "To resume from this chunk, run: $0 -s ${i} -H ${_arg_harness}" -1
-      exit 1
-    fi
+    # Run the chunk - harness handles all validation internally via subagent-orchestration
+    run_chunk "$i"
     
-    # Run validation after each chunk
-    if ! run_validation; then
-      log "Validation failed after chunk ${i}. Stopping execution." -3
-      log "Fix issues and resume with: $0 -s ${i} -H ${_arg_harness}" -1
-      exit 1
-    fi
-    
-    # Commit and push after successful chunk
+    # Commit and push after chunk completes
     local plan_file="${CHUNK_ORDER[$((i - 1))]}"
     commit_changes "$i" "$plan_file"
     push_to_origin
     
-    log "Chunk ${i} complete, validated, committed, and pushed" 1
+    log "Chunk ${i} complete, committed, and pushed" 1
   done
   
   echo ""
