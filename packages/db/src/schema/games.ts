@@ -28,6 +28,11 @@ export const games = pgTable(
     gameData: text("game_data"),
     imageUrl: text("image_url"),
     generatedAt: timestamp("generated_at"),
+    isHidden: boolean("is_hidden").default(false).notNull(),
+    hiddenReason: text("hidden_reason"),
+    hiddenAt: timestamp("hidden_at"),
+    isSubmitted: boolean("is_submitted").default(false).notNull(),
+    submittedAt: timestamp("submitted_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

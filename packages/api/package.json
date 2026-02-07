@@ -10,7 +10,8 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "recalculate-scores": "tsx src/jobs/recalculate-scores.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.37",
@@ -30,11 +31,15 @@
     "gpt-tokenizer": "^3.4.0",
     "ioredis": "^5.9.2",
     "js-tiktoken": "^1.0.21",
+    "jsonwebtoken": "^9.0.3",
     "next": "catalog:",
+    "shiki": "^3.22.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@arcade-vibe/config": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.10",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   }
 }

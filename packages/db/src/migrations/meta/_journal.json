@@ -8,6 +8,13 @@
       "when": 1770456496566,
       "tag": "0000_ancient_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770459491283,
+      "tag": "0001_real_sinister_six",
+      "breakpoints": true
     }
   ]
 }
