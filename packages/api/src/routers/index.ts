@@ -12,6 +12,8 @@ import { gameLeaderboardRouter } from "./game-leaderboard";
 import { gameSdkRouter } from "./game-sdk";
 import { moderationRouter } from "./moderation";
 import { adminRouter } from "./admin";
+import { modelsRouter } from "./models";
+import { userRouter } from "./user";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -19,6 +21,7 @@ export const appRouter = router({
   }),
 
   // Auth & User
+  user: userRouter,
   credits: creditsRouter,
   apiKeys: apiKeysRouter,
 
@@ -28,6 +31,9 @@ export const appRouter = router({
   games: gamesRouter,
   ratings: ratingsRouter,
   promptRuns: promptRunsRouter,
+
+  // Models
+  models: modelsRouter,
 
   // Generation
   generate: generateRouter,

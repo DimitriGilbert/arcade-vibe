@@ -8,6 +8,36 @@ import { TRPCError } from "@trpc/server";
 import { addCreditsInternal } from "../lib/credits";
 
 export const creditsRouter = router({
+  // Get user's extended data (including reputation)
+  getUserExtended: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not authenticated",
+      });
+    }
+
+    const user = await db.query.userExtended.findFirst({
+      where: eq(userExtended.id, ctx.user.id),
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return {
+      id: user.id,
+      role: user.role,
+      reputation: parseInt(user.reputation, 10),
+      credits: parseInt(user.credits, 10),
+      isSuspended: user.isSuspended,
+      suspensionReason: user.suspensionReason,
+    };
+  }),
+
   // Get user's current credit balance
   // per PRD lines 2198-2245: Pricing & Credits system
   getBalance: protectedProcedure.query(async ({ ctx }) => {

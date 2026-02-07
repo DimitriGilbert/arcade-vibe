@@ -197,10 +197,33 @@
   - View prompt button (if public)
   - Report button
 
-**Load Skill**: `frontend-design`, `formedible` before implementation
+**Load Skill**: `frontend-design`, `formedible`, `trpc` before implementation
+
+> **CRITICAL WARNING - READ BEFORE IMPLEMENTING:**
+>
+> 1. **Load the `trpc` skill first** - Do NOT guess tRPC patterns from training data
+>
+> 2. **Study existing patterns in the codebase:**
+>    - `apps/web/src/app/ai/page.tsx` - Example of streaming with `useChat`
+>    - `apps/web/src/app/api/generate/route.ts` - SSE streaming pattern
+>    - `apps/web/src/utils/trpc.ts` - Client uses `httpBatchLink` ONLY
+>
+> 3. **DO NOT use tRPC subscriptions** - The client has NO subscription link configured.
+>    The `gameLeaderboard.subscribe` router exists but CANNOT be used from the frontend.
+>    Use **polling with `refetchInterval`** instead for "real-time" updates:
+>    ```typescript
+>    const { data } = trpc.gameLeaderboard.getTop.useQuery(
+>      { gameId },
+>      { refetchInterval: 5000 } // Poll every 5 seconds
+>    );
+>    ```
+>
+> 4. **Run `pnpm run check-types` before marking complete** - Zero errors required
 
 **Inputs**:
 - Read: Components from Phase 25
+- Read: `apps/web/src/utils/trpc.ts` - Understand client configuration
+- Read: `apps/web/src/app/editor/page.tsx` - Follow established patterns
 - Reference: PRD chunk `04-ui-components.md`
 
 **Outputs**:
@@ -210,8 +233,9 @@
 
 **Validation Criteria**:
 - `pnpm run check-types`: Zero errors
+- `pnpm run build`: Success
 - Rating enforces 60s playtime
-- Real-time leaderboard updates
+- Leaderboard updates via polling (NOT subscriptions)
 - NO `any` types
 
 **Dependencies**: Phase 27 must complete

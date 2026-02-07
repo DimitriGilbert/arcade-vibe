@@ -75,6 +75,7 @@ export const themesRouter = router({
         visibility: theme.visibility,
         startDate: theme.startDate,
         endDate: theme.endDate,
+        systemPrompt: theme.systemPrompt,
         createdAt: theme.createdAt,
         updatedAt: theme.updatedAt,
       };

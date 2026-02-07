@@ -1,0 +1,612 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, Save, Play, GitBranch, Copy } from "lucide-react";
+import { trpc, trpcClient } from "@/utils/trpc";
+import { ModelSelector, type ModelConfig, type ModelTier, getCreditCostByTier, toModelConfig } from "./components/model-selector";
+import { VersionHistory, VersionComparison, type PromptVersion } from "./components/version-history";
+import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
+
+interface EditorPageProps {
+  searchParams?: {
+    promptId?: string;
+    forkId?: string;
+  };
+}
+
+// Mock models data for development
+const MOCK_MODELS: ModelConfig[] = [
+  {
+    id: "1",
+    provider: "openai",
+    modelName: "gpt-4o",
+    tier: "cheater",
+    maxTokens: 128000,
+    supportsImages: true,
+  },
+  {
+    id: "2",
+    provider: "openai",
+    modelName: "gpt-4o-mini",
+    tier: "easy",
+    maxTokens: 128000,
+    supportsImages: true,
+  },
+  {
+    id: "3",
+    provider: "anthropic",
+    modelName: "claude-3.5-sonnet",
+    tier: "normal",
+    maxTokens: 200000,
+    supportsImages: false,
+  },
+  {
+    id: "4",
+    provider: "openrouter",
+    modelName: "deepseek-chat",
+    tier: "hard",
+    maxTokens: 128000,
+    supportsImages: false,
+  },
+  {
+    id: "5",
+    provider: "glm",
+    modelName: "glm-4-flash",
+    tier: "impossible",
+    maxTokens: 128000,
+    supportsImages: false,
+  },
+];
+
+export default function EditorPage({ searchParams }: EditorPageProps) {
+  const [promptContent, setPromptContent] = useState("");
+  const [selectedTheme, setSelectedTheme] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [showComparison, setShowComparison] = useState(false);
+  const [compareLeft, setCompareLeft] = useState<PromptVersion | null>(null);
+  const [compareRight, setCompareRight] = useState<PromptVersion | null>(null);
+
+  // Fetch themes using direct tRPC client
+  const { data: themes, isLoading: themesLoading } = useQuery({
+    queryKey: ["themes"],
+    queryFn: () => trpcClient.themes.list.query(),
+  });
+
+  // Fetch models (using mock data for now)
+  const { data: models } = useQuery({
+    queryKey: ["models"],
+    queryFn: async (): Promise<ModelConfig[]> => {
+      try {
+        const result = await trpcClient.models.listActive.query();
+        return result.map(toModelConfig);
+      } catch (error) {
+        console.warn("Models endpoint not available, using mock data");
+        return MOCK_MODELS;
+      }
+    },
+  });
+
+  // Fetch existing prompt if editing or forking
+  const { data: existingPrompt, isLoading: promptLoading } = useQuery({
+    queryKey: ["prompt", searchParams?.promptId || searchParams?.forkId],
+    queryFn: async () => {
+      const id = searchParams?.promptId || searchParams?.forkId;
+      if (!id) return null;
+      return await trpcClient.prompts.getById.query({ id });
+    },
+    enabled: !!(searchParams?.promptId || searchParams?.forkId),
+  });
+
+  // Fetch user credits
+  const { data: credits } = useQuery({
+    queryKey: ["credits"],
+    queryFn: () => trpcClient.credits.getBalance.query(),
+  });
+
+  // Fetch prompt versions for history
+  const { data: versions } = useQuery({
+    queryKey: ["prompt-versions", existingPrompt?.id],
+    queryFn: async () => {
+      if (!existingPrompt?.id) return [];
+      return await trpcClient.prompts.listVersions.query({
+        promptId: existingPrompt.id,
+      });
+    },
+    enabled: !!existingPrompt?.id,
+  });
+
+  // Initialize prompt content when existing prompt loads
+  useEffect(() => {
+    if (existingPrompt && !promptContent) {
+      setPromptContent(existingPrompt.content);
+      setSelectedTheme(existingPrompt.themeId);
+    }
+  }, [existingPrompt, promptContent]);
+
+  // Create prompt mutation
+  const createPromptMutation = useMutation({
+    mutationFn: async (input: { themeId: string; content: string }) => {
+      const result = await trpcClient.prompts.create.mutate({
+        themeId: input.themeId,
+        content: input.content,
+        tokenizer: "gpt-4",
+        visibility: "private",
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt created successfully!");
+      window.location.href = `/prompts/${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create prompt");
+    },
+  });
+
+  // Update prompt mutation
+  const updatePromptMutation = useMutation({
+    mutationFn: async (input: { id: string; content: string }) => {
+      const result = await trpcClient.prompts.update.mutate({
+        id: input.id,
+        content: input.content,
+        tokenizer: "gpt-4",
+      });
+      return result;
+    },
+    onSuccess: () => {
+      toast.success("Prompt updated successfully!");
+      window.location.reload();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update prompt");
+    },
+  });
+
+  // Fork prompt mutation
+  const forkPromptMutation = useMutation({
+    mutationFn: async (input: { forkId: string }) => {
+      const result = await trpcClient.prompts.fork.mutate({
+        promptId: input.forkId,
+        visibility: "private",
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked successfully!");
+      window.location.href = `/editor?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  // Generate content using SSE streaming API
+  const handleGenerate = useCallback(async () => {
+    if (!promptContent.trim()) {
+      toast.error("Please enter prompt content");
+      return;
+    }
+    if (!existingPrompt && !selectedTheme) {
+      toast.error("Please select a theme");
+      return;
+    }
+
+    const modelData = models?.find((m) => m.modelName === selectedModel);
+    if (!modelData) {
+      toast.error("Invalid model selected");
+      return;
+    }
+
+    const creditCost = getCreditCostByTier(modelData.tier);
+    if (credits && credits.balance < creditCost) {
+      toast.error(`Insufficient credits. Need ${creditCost}, have ${credits.balance}`);
+      return;
+    }
+
+    // Get theme ID
+    const currentThemeId = existingPrompt?.themeId || selectedTheme;
+    if (!currentThemeId) {
+      toast.error("Theme not found");
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedCode("");
+
+    try {
+      // Fetch theme with system prompt
+      const themeData = await trpcClient.themes.getById.query({ id: currentThemeId });
+      
+      // Create new prompt first if not exists
+      let promptId = existingPrompt?.id;
+      if (!promptId) {
+        const result = await createPromptMutation.mutateAsync({
+          themeId: selectedTheme,
+          content: promptContent,
+        });
+        promptId = result.promptId;
+      }
+
+      // Use SSE streaming endpoint
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          promptId,
+          modelKey: selectedModel,
+          themeSystemPrompt: themeData.systemPrompt || "You are a helpful game generation assistant.",
+          promptContent,
+          provider: modelData.provider,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json() as { error?: string };
+        throw new Error(error.error || "Generation failed");
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      // Parse SSE stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6)) as {
+                type: string;
+                code?: string;
+                error?: string;
+              };
+
+              if (data.type === "chunk" && data.code) {
+                setGeneratedCode(data.code);
+              } else if (data.type === "complete") {
+                setIsGenerating(false);
+                toast.success("Game generated successfully!");
+              } else if (data.type === "error") {
+                throw new Error(data.error || "Generation failed");
+              }
+            } catch (parseError) {
+              // Skip invalid JSON lines
+              if (parseError instanceof SyntaxError) continue;
+              throw parseError;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Generation error:", error);
+      setIsGenerating(false);
+      toast.error(error instanceof Error ? error.message : "Failed to generate game");
+    }
+  }, [
+    promptContent,
+    existingPrompt,
+    selectedTheme,
+    selectedModel,
+    models,
+    credits,
+    createPromptMutation,
+  ]);
+
+  const handleSave = useCallback(async () => {
+    if (!selectedTheme) {
+      toast.error("Please select a theme");
+      return;
+    }
+    if (!promptContent.trim()) {
+      toast.error("Please enter prompt content");
+      return;
+    }
+    if (existingPrompt) {
+      updatePromptMutation.mutate({
+        id: existingPrompt.id,
+        content: promptContent,
+      });
+    } else {
+      createPromptMutation.mutate({
+        themeId: selectedTheme,
+        content: promptContent,
+      });
+    }
+  }, [
+    selectedTheme,
+    promptContent,
+    existingPrompt,
+    updatePromptMutation,
+    createPromptMutation,
+  ]);
+
+  const handleCompare = (left: PromptVersion, right: PromptVersion) => {
+    setCompareLeft(left);
+    setCompareRight(right);
+    setShowComparison(true);
+  };
+
+  const handleFork = useCallback(() => {
+    if (!searchParams?.forkId) return;
+    forkPromptMutation.mutate({ forkId: searchParams.forkId });
+  }, [searchParams?.forkId, forkPromptMutation]);
+
+  if (promptLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  const isEditing = !!existingPrompt;
+  const isForking = !!searchParams?.forkId;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">
+                {isForking ? "Fork Prompt" : isEditing ? "Edit Prompt" : "Create Prompt"}
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {isForking
+                  ? "Create your own version of this prompt"
+                  : "Write a prompt to generate games"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isForking && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFork}
+                  disabled={forkPromptMutation.isPending}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {forkPromptMutation.isPending ? "Forking..." : "Fork"}
+                </Button>
+              )}
+              {credits && (
+                <Badge variant="secondary" className="text-sm">
+                  {credits.balance} credits
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Editor Panel */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Theme Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="theme">Theme</Label>
+                    {themesLoading ? (
+                      <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                    ) : (
+                      <select
+                        id="theme"
+                        value={selectedTheme}
+                        onChange={(e) => setSelectedTheme(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                      >
+                        <option value="">Select a theme</option>
+                        {themes?.map((theme: { id: string; title: string }) => (
+                          <option key={theme.id} value={theme.id}>
+                            {theme.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Prompt Editor */}
+                  <div className="space-y-2">
+                    <Label htmlFor="prompt">Prompt</Label>
+                    <textarea
+                      id="prompt"
+                      value={promptContent}
+                      onChange={(e) => setPromptContent(e.target.value)}
+                      placeholder="Write your prompt here... Describe the game you want to create."
+                      className="w-full min-h-[400px] px-3 py-2 border rounded-md bg-background font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-4">
+                    <Button
+                      onClick={handleSave}
+                      disabled={
+                        !promptContent.trim() ||
+                        createPromptMutation.isPending ||
+                        updatePromptMutation.isPending
+                      }
+                      className="flex-1"
+                    >
+                      {createPromptMutation.isPending ||
+                      updatePromptMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          {isEditing ? "Update" : "Save"}
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={
+                        isGenerating ||
+                        !promptContent.trim()
+                      }
+                      className="flex-1"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Generate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Generated Output */}
+            {(generatedCode || isGenerating) && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Generated Game</h3>
+                  <StreamingCodeViewer
+                    code={generatedCode}
+                    language="html"
+                    isStreaming={isGenerating}
+                    fileName="game.html"
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Model Selection */}
+            <Card>
+              <CardContent className="p-6">
+                <ModelSelector
+                  models={models || MOCK_MODELS}
+                  selectedModel={selectedModel}
+                  onSelectModel={(modelName) => {
+                    if (modelName) {
+                      setSelectedModel(modelName);
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Version History */}
+            {isEditing && versions && versions.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <VersionHistory
+                    versions={versions.map((v: {
+                      id: string;
+                      version: number;
+                      content: string;
+                      createdAt: string;
+                      authorId: string;
+                    }) => ({
+                      id: v.id,
+                      version: v.version,
+                      content: v.content,
+                      createdAt: new Date(v.createdAt),
+                      author: {
+                        id: v.authorId,
+                        name: null,
+                      },
+                    }))}
+                    currentVersion={existingPrompt.version}
+                    onCompareVersions={handleCompare}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Prompt Info */}
+            {existingPrompt && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-3">Prompt Info</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Version</span>
+                      <Badge variant="secondary">v{existingPrompt.version}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tokens</span>
+                      <span>{existingPrompt.tokenCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Visibility</span>
+                      <Badge variant="outline">{existingPrompt.visibility}</Badge>
+                    </div>
+                    <div className="border-t my-2" />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created</span>
+                      <span className="text-xs">
+                        {new Date(existingPrompt.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Version Comparison Dialog */}
+      {showComparison && compareLeft && compareRight && (
+        <Dialog open={showComparison} onOpenChange={setShowComparison}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Version Comparison</DialogTitle>
+              <DialogDescription>
+                Comparing v{compareLeft.version} with v{compareRight.version}
+              </DialogDescription>
+            </DialogHeader>
+            <VersionComparison
+              leftVersion={compareLeft}
+              rightVersion={compareRight}
+              onClose={() => setShowComparison(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
