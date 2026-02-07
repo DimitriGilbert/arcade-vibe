@@ -23,3 +23,23 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     },
   });
 });
+
+export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (ctx.user?.role !== "admin") {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Admin access required",
+    });
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } });
+});
+
+export const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "moderator")) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Moderator access required",
+    });
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } });
+});

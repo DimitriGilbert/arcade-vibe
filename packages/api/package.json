@@ -21,6 +21,9 @@
     "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
+    "gpt-tokenizer": "^3.4.0",
+    "ioredis": "^5.9.2",
+    "js-tiktoken": "^1.0.21",
     "next": "catalog:",
     "zod": "catalog:"
   },
