@@ -73,4 +73,5 @@ export const moderationTargetTypeEnum = pgEnum("moderation_target_type", [
   "prompt",
   "game",
   "user",
+  "review",
 ]);

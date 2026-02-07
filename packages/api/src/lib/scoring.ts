@@ -55,11 +55,11 @@ const TIER_MULTIPLIERS: Record<ModelTier, number> = {
 
 // Default scoring weights (percentages as decimals)
 const DEFAULT_WEIGHTS = {
-  quality: 0.40,      // 40%
-  difficulty: 0.25,   // 25%
-  efficiency: 0.20,   // 20%
-  engagement: 0.10,   // 10%
-  popularity: 0.05,  // 5%
+  quality: 0.4, // 40%
+  difficulty: 0.25, // 25%
+  efficiency: 0.2, // 20%
+  engagement: 0.1, // 10%
+  popularity: 0.05, // 5%
 };
 
 /**
@@ -88,7 +88,9 @@ async function calculateQualityScore(
   const minRatingCount = 10; // Minimum ratings to consider
 
   // Bayesian average
-  const bayesianAvg = (totalRatingCount * globalAvgRating + sumOfRatings) / (totalRatingCount + minRatingCount);
+  const bayesianAvg =
+    (totalRatingCount * globalAvgRating + sumOfRatings) /
+    (totalRatingCount + minRatingCount);
 
   // Scale to 0-20 range (max rating is 5, so multiply by 4)
   const qualityScore = Math.min(bayesianAvg * 4, 20);
@@ -119,7 +121,8 @@ function calculateEfficiencyScore(tokenCount: number): number {
   }
 
   // Logarithmic formula
-  const efficiencyScore = 20 * Math.log(1000 / (tokenCount + 1)) / Math.log(1000);
+  const efficiencyScore =
+    (20 * Math.log(1000 / (tokenCount + 1))) / Math.log(1000);
   return Math.max(0, Math.min(efficiencyScore, 20));
 }
 
@@ -139,8 +142,11 @@ async function calculateEngagementScore(gameId: string): Promise<number> {
     return 0;
   }
 
-  const validTimes = scores.map((s) => s.completionTime).filter((t) => t !== null && t !== undefined) as number[];
-  const avgPlaytime = validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
+  const validTimes = scores
+    .map((s) => s.completionTime)
+    .filter((t) => t !== null && t !== undefined) as number[];
+  const avgPlaytime =
+    validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
 
   // Cap at 300 seconds (5 minutes)
   const cappedPlaytime = Math.min(avgPlaytime, 300);
@@ -162,18 +168,18 @@ function calculatePopularityScore(ratingCount: number): number {
 
   // Logarithmic formula capped at 99 ratings (for log(100))
   const cappedRatingCount = Math.min(ratingCount, 99);
-  const popularityScore = (20 * Math.log(cappedRatingCount + 1)) / Math.log(100);
+  const popularityScore =
+    (20 * Math.log(cappedRatingCount + 1)) / Math.log(100);
 
   return popularityScore;
 }
 
 /**
  * Fetch scoring weights from database or use defaults
- * Note: The database currently stores rating weights, not scoring weights.
- * For now, we return DEFAULT_WEIGHTS as the scoring weights.
- * A future database migration should add scoring weight fields to the table.
  */
-async function fetchScoringWeights(themeId?: string | null): Promise<ScoringWeights> {
+async function fetchScoringWeights(
+  themeId?: string | null,
+): Promise<ScoringWeights> {
   let weightsRow: typeof scoringWeights.$inferSelect | undefined;
 
   if (themeId) {
@@ -190,11 +196,14 @@ async function fetchScoringWeights(themeId?: string | null): Promise<ScoringWeig
     return DEFAULT_WEIGHTS;
   }
 
-  // Note: The database currently has rating weights, not scoring weights.
-  // A future database migration should add these fields:
-  // quality, difficulty, efficiency, engagement, popularity
-  // For now, we return DEFAULT_WEIGHTS
-  return DEFAULT_WEIGHTS;
+  // Map database decimal fields to numbers for calculation
+  return {
+    quality: parseFloat(weightsRow.qualityWeight ?? "0.40"),
+    difficulty: parseFloat(weightsRow.difficultyWeight ?? "0.25"),
+    efficiency: parseFloat(weightsRow.efficiencyWeight ?? "0.20"),
+    engagement: parseFloat(weightsRow.engagementWeight ?? "0.10"),
+    popularity: parseFloat(weightsRow.popularityWeight ?? "0.05"),
+  };
 }
 
 /**
@@ -224,7 +233,9 @@ async function fetchPlatformStats(): Promise<{
 /**
  * Calculate the final score for a single game
  */
-export async function calculateGameScore(gameId: string): Promise<ScoreResult | null> {
+export async function calculateGameScore(
+  gameId: string,
+): Promise<ScoreResult | null> {
   // Fetch game with prompt and theme information
   const game = await db.query.games.findFirst({
     where: eq(gamesTable.id, gameId),
@@ -304,7 +315,10 @@ export async function calculateGameScore(gameId: string): Promise<ScoreResult | 
  * Update or insert score for a game in the scores table
  * This is called after calculating the game score
  */
-export async function updateGameScore(gameId: string, scoreResult: ScoreResult): Promise<void> {
+export async function updateGameScore(
+  gameId: string,
+  scoreResult: ScoreResult,
+): Promise<void> {
   // Fetch game with prompt information to get promptId and authorId
   const game = await db.query.games.findFirst({
     where: eq(gamesTable.id, gameId),
@@ -348,6 +362,7 @@ export async function updateGameScore(gameId: string, scoreResult: ScoreResult):
       isHighScore: false,
       completionTime: null,
       playedAt: new Date(),
+      finalScore: scoreResult.finalScore.toString(),
     });
   }
 }
@@ -355,7 +370,10 @@ export async function updateGameScore(gameId: string, scoreResult: ScoreResult):
 /**
  * Publish score update to Redis Stream for leaderboard update
  */
-export async function publishScoreUpdate(gameId: string, score: ScoreResult): Promise<void> {
+export async function publishScoreUpdate(
+  gameId: string,
+  score: ScoreResult,
+): Promise<void> {
   // Get the themeId for this game
   const game = await db.query.games.findFirst({
     where: eq(gamesTable.id, gameId),
@@ -392,13 +410,17 @@ export async function publishScoreUpdate(gameId: string, score: ScoreResult): Pr
     Date.now().toString(),
   );
 
-  console.log(`Published score update for game ${gameId} to stream ${streamKey}`);
+  console.log(
+    `Published score update for game ${gameId} to stream ${streamKey}`,
+  );
 }
 
 /**
  * Calculate score for a game and publish to Redis
  */
-export async function calculateAndPublishScore(gameId: string): Promise<ScoreResult | null> {
+export async function calculateAndPublishScore(
+  gameId: string,
+): Promise<ScoreResult | null> {
   const scoreResult = await calculateGameScore(gameId);
 
   if (!scoreResult) {
@@ -440,7 +462,9 @@ export async function recalculateAllScores(): Promise<{
       const scoreResult = await calculateAndPublishScore(game.id);
       if (scoreResult) {
         successful++;
-        console.log(`[${successful}/${totalGames}] Game ${game.id}: ${scoreResult.finalScore}`);
+        console.log(
+          `[${successful}/${totalGames}] Game ${game.id}: ${scoreResult.finalScore}`,
+        );
       } else {
         failed++;
         failedGameIds.push(game.id);

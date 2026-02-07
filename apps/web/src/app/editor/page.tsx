@@ -16,9 +16,20 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Save, Play, GitBranch, Copy } from "lucide-react";
 import { trpc, trpcClient } from "@/utils/trpc";
-import { ModelSelector, type ModelConfig, type ModelTier, getCreditCostByTier, toModelConfig } from "./components/model-selector";
-import { VersionHistory, VersionComparison, type PromptVersion } from "./components/version-history";
+import {
+  ModelSelector,
+  type ModelConfig,
+  type ModelTier,
+  getCreditCostByTier,
+  toModelConfig,
+} from "./components/model-selector";
+import {
+  VersionHistory,
+  VersionComparison,
+  type PromptVersion,
+} from "./components/version-history";
 import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
+import Editor from "@monaco-editor/react";
 
 interface EditorPageProps {
   searchParams?: {
@@ -214,7 +225,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
     const creditCost = getCreditCostByTier(modelData.tier);
     if (credits && credits.balance < creditCost) {
-      toast.error(`Insufficient credits. Need ${creditCost}, have ${credits.balance}`);
+      toast.error(
+        `Insufficient credits. Need ${creditCost}, have ${credits.balance}`,
+      );
       return;
     }
 
@@ -230,8 +243,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
     try {
       // Fetch theme with system prompt
-      const themeData = await trpcClient.themes.getById.query({ id: currentThemeId });
-      
+      const themeData = await trpcClient.themes.getById.query({
+        id: currentThemeId,
+      });
+
       // Create new prompt first if not exists
       let promptId = existingPrompt?.id;
       if (!promptId) {
@@ -251,14 +266,16 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         body: JSON.stringify({
           promptId,
           modelKey: selectedModel,
-          themeSystemPrompt: themeData.systemPrompt || "You are a helpful game generation assistant.",
+          themeSystemPrompt:
+            themeData.systemPrompt ||
+            "You are a helpful game generation assistant.",
           promptContent,
           provider: modelData.provider,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json() as { error?: string };
+        const error = (await response.json()) as { error?: string };
         throw new Error(error.error || "Generation failed");
       }
 
@@ -307,7 +324,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     } catch (error) {
       console.error("Generation error:", error);
       setIsGenerating(false);
-      toast.error(error instanceof Error ? error.message : "Failed to generate game");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to generate game",
+      );
     }
   }, [
     promptContent,
@@ -377,7 +396,11 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">
-                {isForking ? "Fork Prompt" : isEditing ? "Edit Prompt" : "Create Prompt"}
+                {isForking
+                  ? "Fork Prompt"
+                  : isEditing
+                    ? "Edit Prompt"
+                    : "Create Prompt"}
               </h1>
               <p className="text-muted-foreground mt-1">
                 {isForking
@@ -437,13 +460,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                   {/* Prompt Editor */}
                   <div className="space-y-2">
                     <Label htmlFor="prompt">Prompt</Label>
-                    <textarea
-                      id="prompt"
-                      value={promptContent}
-                      onChange={(e) => setPromptContent(e.target.value)}
-                      placeholder="Write your prompt here... Describe the game you want to create."
-                      className="w-full min-h-[400px] px-3 py-2 border rounded-md bg-background font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <div className="w-full h-[400px] border rounded-md overflow-hidden">
+                      <Editor
+                        height="400px"
+                        defaultLanguage="markdown"
+                        value={promptContent}
+                        onChange={(value) => setPromptContent(value || "")}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          lineNumbers: "on",
+                          scrollBeyondLastLine: false,
+                          wordWrap: "on",
+                          automaticLayout: true,
+                          padding: { top: 10, bottom: 10 },
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {/* Action Buttons */}
@@ -472,10 +506,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     </Button>
                     <Button
                       onClick={handleGenerate}
-                      disabled={
-                        isGenerating ||
-                        !promptContent.trim()
-                      }
+                      disabled={isGenerating || !promptContent.trim()}
                       className="flex-1"
                     >
                       {isGenerating ? (
@@ -533,22 +564,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               <Card>
                 <CardContent className="p-6">
                   <VersionHistory
-                    versions={versions.map((v: {
-                      id: string;
-                      version: number;
-                      content: string;
-                      createdAt: string;
-                      authorId: string;
-                    }) => ({
-                      id: v.id,
-                      version: v.version,
-                      content: v.content,
-                      createdAt: new Date(v.createdAt),
-                      author: {
-                        id: v.authorId,
-                        name: null,
-                      },
-                    }))}
+                    versions={versions.map(
+                      (v: {
+                        id: string;
+                        version: number;
+                        content: string;
+                        createdAt: string;
+                        authorId: string;
+                      }) => ({
+                        id: v.id,
+                        version: v.version,
+                        content: v.content,
+                        createdAt: new Date(v.createdAt),
+                        author: {
+                          id: v.authorId,
+                          name: null,
+                        },
+                      }),
+                    )}
                     currentVersion={existingPrompt.version}
                     onCompareVersions={handleCompare}
                   />
@@ -564,7 +597,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Version</span>
-                      <Badge variant="secondary">v{existingPrompt.version}</Badge>
+                      <Badge variant="secondary">
+                        v{existingPrompt.version}
+                      </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tokens</span>
@@ -572,7 +607,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Visibility</span>
-                      <Badge variant="outline">{existingPrompt.visibility}</Badge>
+                      <Badge variant="outline">
+                        {existingPrompt.visibility}
+                      </Badge>
                     </div>
                     <div className="border-t my-2" />
                     <div className="flex justify-between">

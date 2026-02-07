@@ -1,48 +1,56 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+// Create S3 client once for reuse
+const getS3Client = (): S3Client => {
+  const region = process.env.CDN_REGION || "auto";
+  const endpoint = process.env.CDN_URL;
+
+  return new S3Client({
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId: process.env.CDN_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.CDN_SECRET_ACCESS_KEY!,
+    },
+  });
+};
+
 const uploadToCDNInternal = async (
   gameCode: string,
-  gameId: string
+  gameId: string,
 ): Promise<string> => {
   const cdnUrl = process.env.CDN_URL;
   const cdnAccessKeyId = process.env.CDN_ACCESS_KEY_ID;
   const cdnSecretAccessKey = process.env.CDN_SECRET_ACCESS_KEY;
+  const bucket = process.env.CDN_BUCKET || "games";
 
   if (!cdnUrl || !cdnAccessKeyId || !cdnSecretAccessKey) {
     throw new Error("CDN configuration is missing");
   }
 
-  // For now, we'll return a placeholder URL
-  // In production, this would upload to Cloudflare R2 or S3-compatible storage
-  // The gameCode would be uploaded as ${gameId}/index.html
-  console.log(`[CDN] Would upload ${gameCode.length} bytes to ${gameId}/index.html`);
-  const assetUrl = `${cdnUrl}/games/${gameId}/index.html`;
+  const s3Client = getS3Client();
+  const key = `${gameId}/index.html`;
 
-  // TODO: Implement actual upload to CDN
-  // Example using AWS S3 SDK:
-  // const s3 = new S3Client({
-  //   region: 'auto',
-  //   endpoint: cdnUrl,
-  //   credentials: {
-  //     accessKeyId: cdnAccessKeyId,
-  //     secretAccessKey: cdnSecretAccessKey,
-  //   },
-  // });
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: gameCode,
+    ContentType: "text/html",
+    CacheControl: "public, max-age=31536000, immutable",
+  });
 
-  // await s3.send(new PutObjectCommand({
-  //   Bucket: 'games',
-  //   Key: `${gameId}/index.html`,
-  //   Body: gameCode,
-  //   ContentType: 'text/html',
-  // }));
+  await s3Client.send(command);
 
+  const assetUrl = `${cdnUrl}/${key}`;
   return assetUrl;
 };
 
 export const uploadToCDN = async (
   gameCode: string,
-  gameId: string
+  gameId: string,
 ): Promise<string> => {
   const maxAttempts = 3;
   let lastError: Error | null = null;
@@ -62,6 +70,6 @@ export const uploadToCDN = async (
   }
 
   throw new Error(
-    `CDN upload failed after ${maxAttempts} attempts: ${lastError?.message}`
+    `CDN upload failed after ${maxAttempts} attempts: ${lastError?.message}`,
   );
 };

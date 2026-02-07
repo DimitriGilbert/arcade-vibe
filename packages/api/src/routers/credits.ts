@@ -31,8 +31,8 @@ export const creditsRouter = router({
     return {
       id: user.id,
       role: user.role,
-      reputation: parseInt(user.reputation, 10),
-      credits: parseInt(user.credits, 10),
+      reputation: user.reputation,
+      credits: user.credits,
       isSuspended: user.isSuspended,
       suspensionReason: user.suspensionReason,
     };
@@ -62,9 +62,8 @@ export const creditsRouter = router({
       });
     }
 
-    const balance = parseInt(user.credits, 10);
     return {
-      balance: isNaN(balance) ? 0 : balance,
+      balance: user.credits,
     };
   }),
 

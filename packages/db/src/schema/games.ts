@@ -20,7 +20,9 @@ export const games = pgTable(
     promptId: uuid("prompt_id")
       .notNull()
       .references(() => prompts.id, { onDelete: "cascade" }),
-    themeId: uuid("theme_id").references(() => themes.id, { onDelete: "set null" }),
+    themeId: uuid("theme_id").references(() => themes.id, {
+      onDelete: "set null",
+    }),
     status: gameStatusEnum("status").notNull().default("generating"),
     modelProvider: text("model_provider").notNull(),
     modelName: text("model_name").notNull(),
@@ -42,6 +44,12 @@ export const games = pgTable(
   (table) => [
     index("games_promptId_idx").on(table.promptId),
     index("games_themeId_idx").on(table.themeId),
+    index("idx_games_theme_submitted").on(
+      table.promptId,
+      table.isSubmitted,
+      table.status,
+    ),
+    index("idx_games_status_hidden").on(table.status, table.hiddenAt),
   ],
 );
 

@@ -51,6 +51,10 @@ export const modelConfig = pgTable(
       .notNull(),
   },
   (table) => [
-    unique("model_config_provider_modelName_key").on(table.provider, table.modelName),
+    unique("model_config_provider_modelName_key").on(
+      table.provider,
+      table.modelName,
+    ),
+    index("idx_model_config_active").on(table.isActive, table.tier),
   ],
 );

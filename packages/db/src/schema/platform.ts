@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  decimal,
   boolean,
   index,
 } from "drizzle-orm/pg-core";
@@ -23,7 +24,9 @@ export const platformStats = pgTable(
     averageRating: text("average_rating").notNull().default("0"),
     lastCalculatedAt: timestamp("last_calculated_at").defaultNow().notNull(),
   },
-  (table) => [index("platform_stats_lastCalculatedAt_idx").on(table.lastCalculatedAt)],
+  (table) => [
+    index("platform_stats_lastCalculatedAt_idx").on(table.lastCalculatedAt),
+  ],
 );
 
 // per PRD lines 1381-1392 - Admin actions log table
@@ -43,7 +46,10 @@ export const adminActions = pgTable(
   },
   (table) => [
     index("admin_actions_adminId_idx").on(table.adminId),
-    index("admin_actions_targetType_targetId_idx").on(table.targetType, table.targetId),
+    index("admin_actions_targetType_targetId_idx").on(
+      table.targetType,
+      table.targetId,
+    ),
   ],
 );
 
@@ -52,12 +58,36 @@ export const scoringWeights = pgTable(
   "scoring_weights",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    themeId: uuid("theme_id").references(() => themes.id, { onDelete: "cascade" }),
-    promptQualityWeight: integer("prompt_quality_weight").notNull().default(1),
-    gameQualityWeight: integer("game_quality_weight").notNull().default(1),
-    themeRelevanceWeight: integer("theme_relevance_weight").notNull().default(1),
-    overallWeight: integer("overall_weight").notNull().default(1),
+    themeId: uuid("theme_id").references(() => themes.id, {
+      onDelete: "cascade",
+    }),
+    qualityWeight: decimal("quality_weight", {
+      precision: 3,
+      scale: 2,
+    }).default("0.40"),
+    difficultyWeight: decimal("difficulty_weight", {
+      precision: 3,
+      scale: 2,
+    }).default("0.25"),
+    efficiencyWeight: decimal("efficiency_weight", {
+      precision: 3,
+      scale: 2,
+    }).default("0.20"),
+    engagementWeight: decimal("engagement_weight", {
+      precision: 3,
+      scale: 2,
+    }).default("0.10"),
+    popularityWeight: decimal("popularity_weight", {
+      precision: 3,
+      scale: 2,
+    }).default("0.05"),
     isActive: boolean("is_active").notNull().default(true),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedBy: text("updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

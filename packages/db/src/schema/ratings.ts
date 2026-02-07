@@ -45,7 +45,9 @@ export const ratings = pgTable(
     gameId: uuid("game_id")
       .notNull()
       .references(() => gamesImport.id, { onDelete: "cascade" }),
-    themeId: uuid("theme_id").references(() => themes.id, { onDelete: "set null" }),
+    themeId: uuid("theme_id").references(() => themes.id, {
+      onDelete: "set null",
+    }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -61,6 +63,11 @@ export const ratings = pgTable(
     index("ratings_gameId_idx").on(table.gameId),
     index("ratings_themeId_idx").on(table.themeId),
     index("ratings_userId_idx").on(table.userId),
-    unique("ratings_userId_promptId_gameId_key").on(table.userId, table.promptId, table.gameId),
+    index("idx_ratings_game_user").on(table.gameId, table.userId),
+    unique("ratings_userId_promptId_gameId_key").on(
+      table.userId,
+      table.promptId,
+      table.gameId,
+    ),
   ],
 );

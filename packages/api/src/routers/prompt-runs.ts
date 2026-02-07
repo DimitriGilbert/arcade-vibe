@@ -10,7 +10,7 @@ import { highlightCode } from "@arcade-vibe/api/lib/highlighter";
 import { uploadToCDN } from "@arcade-vibe/api/lib/cdn";
 import { streamText } from "ai";
 import { z } from "zod";
-import { eq, desc, and, isNotNull } from "drizzle-orm";
+import { eq, desc, and, isNotNull, notInArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 type ModelTier = "cheater" | "easy" | "normal" | "hard" | "impossible";
@@ -34,7 +34,7 @@ const getCreditCostByTier = (tier: string): number => {
 
 const getDecryptedUserKey = async (
   apiKeyId: string,
-  userId: string
+  userId: string,
 ): Promise<string> => {
   const keyRecord = await db.query.apiKeys.findFirst({
     where: and(eq(apiKeys.id, apiKeyId), eq(apiKeys.userId, userId)),
@@ -102,7 +102,7 @@ export const promptRunsRouter = router({
         promptId: z.string().uuid(),
         modelKey: z.string().min(1),
         apiKeyId: z.string().uuid().optional(),
-      })
+      }),
     )
     .mutation(async function* ({ input, ctx }) {
       if (!ctx.user) {
@@ -171,7 +171,7 @@ export const promptRunsRouter = router({
           ctx.user.id,
           creditCost,
           "Community prompt run",
-          input.modelKey
+          input.modelKey,
         );
       }
 
@@ -294,7 +294,7 @@ export const promptRunsRouter = router({
         promptId: z.string().uuid(),
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const prompt = await db.query.prompts.findFirst({
@@ -327,7 +327,7 @@ export const promptRunsRouter = router({
       const result = await gamesQuery.findMany({
         where: and(
           eq(games.promptId, input.promptId),
-          eq(games.isHidden, false)
+          eq(games.isHidden, false),
         ),
         orderBy: [desc(games.createdAt)],
         limit: input.limit,
@@ -356,13 +356,14 @@ export const promptRunsRouter = router({
    * List current user's runs of other users' prompts
    * Only includes games where promptId is not null
    * Supports pagination
+   * Optimized to filter at database level
    */
   listMine: protectedProcedure
     .input(
       z.object({
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       if (!ctx.user) {
@@ -374,23 +375,27 @@ export const promptRunsRouter = router({
 
       const userId = ctx.user.id;
 
-      const gamesQuery = db.query.games;
-      if (!gamesQuery) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database query not available",
-        });
-      }
+      // Get all prompt IDs by this user
+      const userPrompts = await db.query.prompts.findMany({
+        where: eq(prompts.authorId, userId),
+        columns: { id: true },
+      });
+      const userPromptIds = userPrompts.map((p) => p.id);
 
-      // Fetch all games with prompts, then filter on user side
-      // since games table doesn't have a userId field
-      const allGames = await gamesQuery.findMany({
+      // Query games where promptId is NOT in user's prompts
+      // This filters at the database level for better performance
+      const result = await db.query.games.findMany({
         where: and(
           isNotNull(games.promptId),
-          eq(games.isHidden, false)
+          eq(games.isHidden, false),
+          // If user has prompts, exclude games using those prompts
+          userPromptIds.length > 0
+            ? notInArray(games.promptId, userPromptIds)
+            : undefined,
         ),
         orderBy: [desc(games.createdAt)],
-        limit: input.limit + input.offset + 100, // Fetch extra for filtering
+        limit: input.limit,
+        offset: input.offset,
         with: {
           prompt: {
             with: {
@@ -408,15 +413,6 @@ export const promptRunsRouter = router({
         },
       });
 
-      // Filter to only include games where prompt author is not current user
-      // This represents "running others' prompts"
-      const myRuns = allGames.filter(
-        (game) => game.prompt && game.prompt.user?.id !== userId
-      );
-
-      // Apply pagination
-      const paginatedRuns = myRuns.slice(input.offset, input.offset + input.limit);
-
-      return paginatedRuns;
+      return result;
     }),
 });

@@ -14,6 +14,7 @@ import { moderationRouter } from "./moderation";
 import { adminRouter } from "./admin";
 import { modelsRouter } from "./models";
 import { userRouter } from "./user";
+import { stripeRouter } from "./stripe";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -48,6 +49,9 @@ export const appRouter = router({
 
   // Admin
   admin: adminRouter, // combines models, direct, plans
+
+  // Payments
+  stripe: stripeRouter,
 });
 
 export type AppRouter = typeof appRouter;

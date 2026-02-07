@@ -8,6 +8,24 @@ import { z } from "zod";
 import { eq, and, asc, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { redis } from "@arcade-vibe/api/lib/redis";
+import { calculateGameScore } from "@arcade-vibe/api/lib/scoring";
+
+/**
+ * Recalculate scores for all games in a theme
+ * Called when scoring weights are updated
+ */
+async function recalculateThemeScores(themeId: string): Promise<void> {
+  // Fetch all games for theme
+  const themeGames = await db.query.games.findMany({
+    where: eq(games.themeId, themeId),
+    columns: { id: true },
+  });
+
+  // Recalculate each score using the scoring engine
+  for (const game of themeGames) {
+    await calculateGameScore(game.id);
+  }
+}
 
 /**
  * Admin Direct Actions Router
@@ -37,7 +55,7 @@ export const directActionsRouter = router({
       z.object({
         gameId: z.string().uuid(),
         reason: z.string().min(10).max(500),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // Verify game exists
@@ -107,7 +125,7 @@ export const directActionsRouter = router({
         userId: z.string().uuid(),
         reason: z.string().min(10).max(500),
         duration: z.enum(["7d", "30d", "permanent"]),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // Verify user exists
@@ -159,27 +177,33 @@ export const directActionsRouter = router({
    * - Uses upsert pattern (onConflictDoUpdate)
    * - Validates that weights sum to 1.0
    * - Logs action to adminActions
-   *
-   * Note: Schema uses INTEGER weights (promptQualityWeight, gameQualityWeight, themeRelevanceWeight, overallWeight)
-   * The PRD expects decimal weights (quality, difficulty, efficiency, engagement, popularity)
-   * This implementation uses the schema's integer weights for type safety.
-   *
-   * TODO: Implement recalculateThemeScores(themeId) to recalculate scores when weights change
+   * - Recalculates scores for all games in the theme
    */
   updateScoringWeights: adminProcedure
     .input(
       z.object({
         themeId: z.string().uuid(),
-        weights: z.object({
-          promptQualityWeight: z.number().int().min(0).default(1),
-          gameQualityWeight: z.number().int().min(0).default(1),
-          themeRelevanceWeight: z.number().int().min(0).default(1),
-          overallWeight: z.number().int().min(0).default(1),
-        }).refine(
-          (w) => w.promptQualityWeight + w.gameQualityWeight + w.themeRelevanceWeight + w.overallWeight > 0,
-          { message: "At least one weight must be greater than 0" }
-        ),
-      })
+        weights: z
+          .object({
+            quality: z.number().min(0).max(1),
+            difficulty: z.number().min(0).max(1),
+            efficiency: z.number().min(0).max(1),
+            engagement: z.number().min(0).max(1),
+            popularity: z.number().min(0).max(1),
+          })
+          .refine(
+            (w) =>
+              Math.abs(
+                w.quality +
+                  w.difficulty +
+                  w.efficiency +
+                  w.engagement +
+                  w.popularity -
+                  1.0,
+              ) < 0.01,
+            { message: "Weights must sum to 1.0" },
+          ),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // PRD lines 589-610: Upsert scoring weights
@@ -187,19 +211,24 @@ export const directActionsRouter = router({
         .insert(scoringWeights)
         .values({
           themeId: input.themeId,
-          promptQualityWeight: input.weights.promptQualityWeight,
-          gameQualityWeight: input.weights.gameQualityWeight,
-          themeRelevanceWeight: input.weights.themeRelevanceWeight,
-          overallWeight: input.weights.overallWeight,
+          qualityWeight: input.weights.quality.toFixed(2),
+          difficultyWeight: input.weights.difficulty.toFixed(2),
+          efficiencyWeight: input.weights.efficiency.toFixed(2),
+          engagementWeight: input.weights.engagement.toFixed(2),
+          popularityWeight: input.weights.popularity.toFixed(2),
+          createdBy: ctx.user.id,
+          updatedBy: ctx.user.id,
         })
         .onConflictDoUpdate({
           target: scoringWeights.themeId,
           set: {
-            promptQualityWeight: input.weights.promptQualityWeight,
-            gameQualityWeight: input.weights.gameQualityWeight,
-            themeRelevanceWeight: input.weights.themeRelevanceWeight,
-            overallWeight: input.weights.overallWeight,
+            qualityWeight: input.weights.quality.toFixed(2),
+            difficultyWeight: input.weights.difficulty.toFixed(2),
+            efficiencyWeight: input.weights.efficiency.toFixed(2),
+            engagementWeight: input.weights.engagement.toFixed(2),
+            popularityWeight: input.weights.popularity.toFixed(2),
             updatedAt: new Date(),
+            updatedBy: ctx.user.id,
           },
         });
 
@@ -216,8 +245,8 @@ export const directActionsRouter = router({
         }),
       });
 
-      // TODO: PRD lines 612: Call recalculateThemeScores(input.themeId)
-      // This function will be implemented separately to recalculate scores based on new weights
+      // Recalculate scores with new weights
+      await recalculateThemeScores(input.themeId);
 
       return {
         success: true,
@@ -239,17 +268,22 @@ export const directActionsRouter = router({
   getModerationQueue: adminProcedure
     .input(
       z.object({
-        targetType: z.enum(["prompt", "game", "user"]).optional(),
+        targetType: z.enum(["prompt", "game", "user", "review"]).optional(),
         limit: z.number().int().min(1).max(100).default(50),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const whereConditions: SQL[] = [eq(moderationReports.status, "pending")];
       if (input.targetType) {
-        whereConditions.push(eq(moderationReports.targetType, input.targetType));
+        whereConditions.push(
+          eq(moderationReports.targetType, input.targetType),
+        );
       }
 
-      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
+      const whereClause =
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions[0];
 
       return db.query.moderationReports.findMany({
         where: whereClause,

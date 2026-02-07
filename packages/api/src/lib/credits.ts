@@ -33,15 +33,7 @@ export const deductCredits = async (
     });
   }
 
-  // Parse credits from text to number
-  const currentCredits = parseInt(user.credits, 10);
-
-  if (isNaN(currentCredits)) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Invalid credit balance",
-    });
-  }
+  const currentCredits = user.credits;
 
   if (currentCredits < amount) {
     throw new TRPCError({
@@ -54,7 +46,7 @@ export const deductCredits = async (
   await db
     .update(userExtended)
     .set({
-      credits: (currentCredits - amount).toString(),
+      credits: currentCredits - amount,
     })
     .where(eq(userExtended.id, userId));
 
@@ -80,8 +72,7 @@ export const getUserCredits = async (userId: string): Promise<number> => {
     return 0;
   }
 
-  const credits = parseInt(user.credits, 10);
-  return isNaN(credits) ? 0 : credits;
+  return user.credits;
 };
 
 // Add credits to user's balance (internal helper)
@@ -113,15 +104,7 @@ export const addCreditsInternal = async (
     });
   }
 
-  // Parse credits from text to number
-  const currentCredits = parseInt(user.credits, 10);
-
-  if (isNaN(currentCredits)) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Invalid credit balance",
-    });
-  }
+  const currentCredits = user.credits;
 
   // Update user's credit balance
   const newBalance = currentCredits + amount;
@@ -129,7 +112,7 @@ export const addCreditsInternal = async (
   await db
     .update(userExtended)
     .set({
-      credits: newBalance.toString(),
+      credits: newBalance,
     })
     .where(eq(userExtended.id, userId));
 

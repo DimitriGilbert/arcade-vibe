@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Search, ArrowUpDown, User, Shield, AlertTriangle } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  ArrowUpDown,
+  User,
+  Shield,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,14 +35,19 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [suspendDialog, setSuspendDialog] = useState<{ open: boolean; user: User | null }>({
+  const [suspendDialog, setSuspendDialog] = useState<{
+    open: boolean;
+    user: User | null;
+  }>({
     open: false,
     user: null,
   });
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   // Fetch users (using mock data since user endpoint doesn't exist yet)
   const { data: users, isLoading } = useQuery({
-    queryKey: ["admin-users"],
+    queryKey: ["admin-users", page],
     queryFn: async () => {
       // Mock data for now - in production this would call actual endpoint
       return [
@@ -69,7 +81,11 @@ export default function AdminUsersPage() {
 
   // Suspend user mutation
   const suspendUserMutation = useMutation({
-    mutationFn: async (input: { userId: string; reason: string; duration: string }) => {
+    mutationFn: async (input: {
+      userId: string;
+      reason: string;
+      duration: string;
+    }) => {
       return await trpcClient.admin.direct.suspendUser.mutate({
         userId: input.userId,
         reason: input.reason,
@@ -86,32 +102,34 @@ export default function AdminUsersPage() {
   });
 
   // Filter and sort users
-  const filteredUsers = (users || []).filter((user) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      user.name?.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query)
-    );
-  }).sort((a, b) => {
-    let comparison = 0;
-    switch (sortField) {
-      case "name":
-        comparison = (a.name || "").localeCompare(b.name || "");
-        break;
-      case "email":
-        comparison = a.email.localeCompare(b.email);
-        break;
-      case "role":
-        comparison = a.role.localeCompare(b.role);
-        break;
-      case "credits":
-        comparison = parseInt(a.credits) - parseInt(b.credits);
-        break;
-    }
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+  const filteredUsers = (users || [])
+    .filter((user) => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        user.name?.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.role.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "name":
+          comparison = (a.name || "").localeCompare(b.name || "");
+          break;
+        case "email":
+          comparison = a.email.localeCompare(b.email);
+          break;
+        case "role":
+          comparison = a.role.localeCompare(b.role);
+          break;
+        case "credits":
+          comparison = parseInt(a.credits) - parseInt(b.credits);
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -243,7 +261,10 @@ export default function AdminUsersPage() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-12 text-center text-muted-foreground"
+                    >
                       No users found
                     </td>
                   </tr>
@@ -259,24 +280,34 @@ export default function AdminUsersPage() {
                             {user.name?.[0] || "U"}
                           </div>
                           <div>
-                            <div className="font-medium">{user.name || "Unknown"}</div>
-                            <div className="text-xs text-muted-foreground">{user.email}</div>
+                            <div className="font-medium">
+                              {user.name || "Unknown"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.email}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <Badge
-                          variant={user.role === "admin" ? "default" : "outline"}
+                          variant={
+                            user.role === "admin" ? "default" : "outline"
+                          }
                           className={cn(
                             "capitalize",
-                            user.role === "admin" && "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-                            user.role === "moderator" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            user.role === "admin" &&
+                              "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                            user.role === "moderator" &&
+                              "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
                           )}
                         >
                           {user.role}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">{parseInt(user.credits).toLocaleString()}</td>
+                      <td className="px-4 py-3">
+                        {parseInt(user.credits).toLocaleString()}
+                      </td>
                       <td className="px-4 py-3">
                         {user.isSuspended ? (
                           <Badge variant="destructive" className="gap-1">
@@ -284,7 +315,10 @@ export default function AdminUsersPage() {
                             Suspended
                           </Badge>
                         ) : (
-                          <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <Badge
+                            variant="default"
+                            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          >
                             Active
                           </Badge>
                         )}
@@ -306,24 +340,50 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {page}</span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!users || users.length < pageSize}
+            >
+              Next
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Suspend User Dialog */}
       <Dialog
         open={suspendDialog.open}
-        onOpenChange={(open) => !open && setSuspendDialog({ open: false, user: null })}
+        onOpenChange={(open) =>
+          !open && setSuspendDialog({ open: false, user: null })
+        }
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Suspend User</DialogTitle>
             <DialogDescription>
-              Suspend <span className="font-medium">{suspendDialog.user?.email}</span> from accessing the platform
+              Suspend{" "}
+              <span className="font-medium">{suspendDialog.user?.email}</span>{" "}
+              from accessing the platform
             </DialogDescription>
           </DialogHeader>
           <UserSuspensionForm />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSuspendDialog({ open: false, user: null })}>
+            <Button
+              variant="outline"
+              onClick={() => setSuspendDialog({ open: false, user: null })}
+            >
               Cancel
             </Button>
             <Button

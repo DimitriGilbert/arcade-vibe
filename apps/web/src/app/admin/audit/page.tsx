@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search, ArrowUpDown, History, Filter, Calendar, User } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  ArrowUpDown,
+  History,
+  Filter,
+  Calendar,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,10 +26,12 @@ export default function AdminAuditPage() {
   const [adminFilter, setAdminFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   // Fetch admin actions (using mock data since endpoint doesn't exist yet)
   const { data: actions, isLoading } = useQuery({
-    queryKey: ["admin-audit"],
+    queryKey: ["admin-audit", page],
     queryFn: async () => {
       // Mock data for now - in production this would call actual endpoint
       return [
@@ -85,35 +95,42 @@ export default function AdminAuditPage() {
   });
 
   // Filter and sort actions
-  const filteredActions = (actions || []).filter((action) => {
-    const matchesSearch = !searchQuery.trim() ||
-      action.actionType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      action.targetType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      action.reason?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredActions = (actions || [])
+    .filter((action) => {
+      const matchesSearch =
+        !searchQuery.trim() ||
+        action.actionType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        action.targetType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        action.reason?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesAdmin = adminFilter === "all" || action.adminName === adminFilter;
-    const matchesAction = actionFilter === "all" || action.actionType === actionFilter;
-    const matchesType = typeFilter === "all" || action.targetType === typeFilter;
+      const matchesAdmin =
+        adminFilter === "all" || action.adminName === adminFilter;
+      const matchesAction =
+        actionFilter === "all" || action.actionType === actionFilter;
+      const matchesType =
+        typeFilter === "all" || action.targetType === typeFilter;
 
-    return matchesSearch && matchesAdmin && matchesAction && matchesType;
-  }).sort((a, b) => {
-    let comparison = 0;
-    switch (sortField) {
-      case "createdAt":
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        break;
-      case "actionType":
-        comparison = a.actionType.localeCompare(b.actionType);
-        break;
-      case "targetType":
-        comparison = a.targetType.localeCompare(b.targetType);
-        break;
-      case "adminName":
-        comparison = a.adminName.localeCompare(b.adminName);
-        break;
-    }
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+      return matchesSearch && matchesAdmin && matchesAction && matchesType;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "actionType":
+          comparison = a.actionType.localeCompare(b.actionType);
+          break;
+        case "targetType":
+          comparison = a.targetType.localeCompare(b.targetType);
+          break;
+        case "adminName":
+          comparison = a.adminName.localeCompare(b.adminName);
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -230,7 +247,10 @@ export default function AdminAuditPage() {
               <tbody>
                 {filteredActions.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-12 text-center text-muted-foreground"
+                    >
                       No audit entries found
                     </td>
                   </tr>
@@ -249,7 +269,9 @@ export default function AdminAuditPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-purple-500" />
-                          <span className="font-medium">{action.adminName}</span>
+                          <span className="font-medium">
+                            {action.adminName}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -272,6 +294,25 @@ export default function AdminAuditPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {page}</span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!actions || actions.length < pageSize}
+            >
+              Next
+            </Button>
           </div>
         </CardContent>
       </Card>

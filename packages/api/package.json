@@ -21,6 +21,7 @@
     "@arcade-vibe/auth": "workspace:*",
     "@arcade-vibe/db": "workspace:*",
     "@arcade-vibe/env": "workspace:*",
+    "@aws-sdk/client-s3": "^3.985.0",
     "@openrouter/ai-sdk-provider": "^2.1.1",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
@@ -34,6 +35,7 @@
     "jsonwebtoken": "^9.0.3",
     "next": "catalog:",
     "shiki": "^3.22.0",
+    "stripe": "^20.3.1",
     "zod": "catalog:"
   },
   "devDependencies": {

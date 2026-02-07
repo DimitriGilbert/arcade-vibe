@@ -3,10 +3,14 @@ import { and, eq, ne, asc, desc, isNotNull, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@arcade-vibe/db";
-import { moderationReports, moderationAppeals } from "@arcade-vibe/db/schema/moderation";
+import {
+  moderationReports,
+  moderationAppeals,
+} from "@arcade-vibe/db/schema/moderation";
 import { games } from "@arcade-vibe/db/schema/games";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { userExtended } from "@arcade-vibe/db/schema/users";
+import { ratings } from "@arcade-vibe/db/schema/ratings";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { redis } from "@arcade-vibe/api/lib/redis";
 
@@ -20,9 +24,10 @@ import { router, protectedProcedure, moderatorProcedure } from "../index";
  * Handles user reports, moderator queue, report resolution, and appeals.
  */
 
-// Note: moderationTargetTypeEnum only includes "prompt", "game", "user"
-// The PRD mentions "profile" (→ "user") and "review" (not in schema)
-const targetTypeFilter = z.enum(["prompt", "game", "user"]).optional();
+// Note: moderationTargetTypeEnum includes "prompt", "game", "user", "review"
+const targetTypeFilter = z
+  .enum(["prompt", "game", "user", "review"])
+  .optional();
 
 export const moderationRouter = router({
   /**
@@ -37,11 +42,18 @@ export const moderationRouter = router({
   submitReport: protectedProcedure
     .input(
       z.object({
-        targetType: z.enum(["prompt", "game", "user"]),
+        targetType: z.enum(["prompt", "game", "user", "review"]),
         targetId: z.string().uuid(),
-        reason: z.enum(["inappropriate", "spam", "malicious", "copyright", "harassment", "other"]),
+        reason: z.enum([
+          "inappropriate",
+          "spam",
+          "malicious",
+          "copyright",
+          "harassment",
+          "other",
+        ]),
         description: z.string().min(20).max(1000),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // protectedProcedure guarantees user exists
@@ -54,7 +66,7 @@ export const moderationRouter = router({
           eq(moderationReports.targetType, input.targetType),
           isNotNull(moderationReports.targetId),
           eq(moderationReports.targetId, input.targetId),
-          eq(moderationReports.status, "pending")
+          eq(moderationReports.status, "pending"),
         ),
       });
 
@@ -85,7 +97,7 @@ export const moderationRouter = router({
           "reportId",
           report[0].id,
           "targetType",
-          input.targetType
+          input.targetType,
         );
 
         return report[0];
@@ -109,16 +121,21 @@ export const moderationRouter = router({
       z.object({
         targetType: targetTypeFilter,
         limit: z.number().int().min(1).max(100).default(50),
-      })
+      }),
     )
     .query(async ({ input }) => {
       // PRD lines 225-227: Build where clause
       const whereConditions: SQL[] = [eq(moderationReports.status, "pending")];
       if (input.targetType) {
-        whereConditions.push(eq(moderationReports.targetType, input.targetType));
+        whereConditions.push(
+          eq(moderationReports.targetType, input.targetType),
+        );
       }
 
-      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
+      const whereClause =
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions[0];
 
       // PRD lines 229-237: Query reports with reporter and reviewer
       return db.query.moderationReports.findMany({
@@ -156,7 +173,7 @@ export const moderationRouter = router({
     .input(
       z.object({
         reportId: z.string().uuid(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       // PRD lines 247-253: Get report with reporter and reviewer
@@ -224,7 +241,7 @@ export const moderationRouter = router({
           eq(moderationReports.targetType, report.targetType),
           isNotNull(moderationReports.targetId),
           eq(moderationReports.targetId, report.targetId ?? ""),
-          ne(moderationReports.id, report.id)
+          ne(moderationReports.id, report.id),
         ),
         orderBy: [desc(moderationReports.createdAt)],
         with: {
@@ -255,9 +272,14 @@ export const moderationRouter = router({
     .input(
       z.object({
         reportId: z.string().uuid(),
-        action: z.enum(["approved", "rejected", "requested_changes", "escalated"]),
+        action: z.enum([
+          "approved",
+          "rejected",
+          "requested_changes",
+          "escalated",
+        ]),
         resolutionReason: z.string().min(20).max(500),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // PRD lines 308-314: Get report
@@ -328,8 +350,12 @@ export const moderationRouter = router({
               suspensionReason: input.resolutionReason,
             })
             .where(eq(userExtended.id, report.targetId));
+        } else if (report.targetType === "review" && report.targetId) {
+          // Delete the rating/review
+          await db.delete(ratings).where(eq(ratings.id, report.targetId));
+          // Invalidate cache
+          await redis.del(`lb:*`);
         }
-        // Note: "review" type not in schema, so we don't handle it
       } else if (input.action === "escalated") {
         // PRD lines 358-363: Notify admin via Redis
         await redis.xadd(
@@ -338,7 +364,7 @@ export const moderationRouter = router({
           "reportId",
           input.reportId,
           "escalatedBy",
-          userId
+          userId,
         );
       }
 
@@ -349,7 +375,10 @@ export const moderationRouter = router({
         targetType: report.targetType,
         targetId: report.targetId,
         reason: input.resolutionReason,
-        metadata: JSON.stringify({ resolutionAction: input.action, reportId: input.reportId }),
+        metadata: JSON.stringify({
+          resolutionAction: input.action,
+          reportId: input.reportId,
+        }),
       });
 
       return { success: true };
@@ -370,7 +399,7 @@ export const moderationRouter = router({
       z.object({
         reportId: z.string().uuid(),
         reason: z.string().min(50).max(2000), // Schema uses reason, not message
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // protectedProcedure guarantees user exists
@@ -437,7 +466,7 @@ export const moderationRouter = router({
           "appealId",
           appeal[0].id,
           "reportId",
-          input.reportId
+          input.reportId,
         );
 
         return appeal[0];
@@ -460,7 +489,7 @@ export const moderationRouter = router({
     .input(
       z.object({
         limit: z.number().int().min(1).max(100).default(50),
-      })
+      }),
     )
     .query(async ({ input }) => {
       return db.query.moderationAppeals.findMany({
@@ -502,7 +531,7 @@ export const moderationRouter = router({
         appealId: z.string().uuid(),
         status: z.enum(["approved", "rejected"]),
         response: z.string().min(20).max(1000),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // PRD lines 446-452: Get appeal with report
@@ -559,14 +588,20 @@ export const moderationRouter = router({
           if (game?.themeId) {
             await redis.del(`lb:${game.themeId}`);
           }
-        } else if (appeal.report.targetType === "prompt" && appeal.report.targetId) {
+        } else if (
+          appeal.report.targetType === "prompt" &&
+          appeal.report.targetId
+        ) {
           await db
             .update(prompts)
             .set({
               status: "draft",
             })
             .where(eq(prompts.id, appeal.report.targetId));
-        } else if (appeal.report.targetType === "user" && appeal.report.targetId) {
+        } else if (
+          appeal.report.targetType === "user" &&
+          appeal.report.targetId
+        ) {
           await db
             .update(userExtended)
             .set({
@@ -584,7 +619,10 @@ export const moderationRouter = router({
         targetType: "appeal",
         targetId: input.appealId,
         reason: input.response,
-        metadata: JSON.stringify({ appealStatus: input.status, originalReportId: appeal.reportId }),
+        metadata: JSON.stringify({
+          appealStatus: input.status,
+          originalReportId: appeal.reportId,
+        }),
       });
 
       return { success: true };

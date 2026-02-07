@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, Crown, Sparkles, Zap, Check } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 interface SubscriptionPlan {
   id: string;
@@ -84,7 +86,9 @@ function PlanCard({
   return (
     <Card
       className={`relative bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-all ${
-        isPopular ? "border-2 border-purple-300 dark:border-purple-600 scale-105" : ""
+        isPopular
+          ? "border-2 border-purple-300 dark:border-purple-600 scale-105"
+          : ""
       } ${isCurrent ? "ring-2 ring-purple-500" : ""}`}
     >
       {isPopular && (
@@ -96,8 +100,12 @@ function PlanCard({
       )}
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {plan.name === "Free" && <Sparkles className="h-5 w-5 text-gray-500" />}
-          {plan.name === "Starter" && <Zap className="h-5 w-5 text-purple-500" />}
+          {plan.name === "Free" && (
+            <Sparkles className="h-5 w-5 text-gray-500" />
+          )}
+          {plan.name === "Starter" && (
+            <Zap className="h-5 w-5 text-purple-500" />
+          )}
           {plan.name === "Pro" && <Crown className="h-5 w-5 text-yellow-500" />}
           {plan.name}
         </CardTitle>
@@ -106,7 +114,9 @@ function PlanCard({
         <div className="mb-4">
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-bold">${plan.price}</span>
-            {plan.price > 0 && <span className="text-muted-foreground">/month</span>}
+            {plan.price > 0 && (
+              <span className="text-muted-foreground">/month</span>
+            )}
           </div>
           <p className="text-lg text-purple-600 dark:text-purple-400">
             {plan.credits.toLocaleString()} credits
@@ -162,7 +172,9 @@ function CreditPackage({
       <CardContent className="p-6">
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-1">
-            <span className="text-3xl font-bold">{pkg.credits.toLocaleString()}</span>
+            <span className="text-3xl font-bold">
+              {pkg.credits.toLocaleString()}
+            </span>
             <span className="text-muted-foreground">credits</span>
           </div>
           {hasBonus && (
@@ -173,9 +185,7 @@ function CreditPackage({
           <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
             ${pkg.price}
           </div>
-          <Button className="w-full">
-            Purchase
-          </Button>
+          <Button className="w-full">Purchase</Button>
         </div>
       </CardContent>
     </Card>
@@ -209,21 +219,36 @@ export default function SubscriptionSettingsPage() {
   const credits = creditsData?.balance ?? 0;
   const transactions = transactionsData?.transactions ?? [];
 
+  // Stripe checkout mutation
+  const checkoutMutation = useMutation({
+    mutationFn: async (input: { planId?: string; creditAmount?: number }) => {
+      return await trpcClient.stripe.createCheckoutSession.mutate(input);
+    },
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create checkout session");
+    },
+  });
+
   const handleSelectPlan = (plan: SubscriptionPlan) => {
-    // TODO: Implement Stripe checkout integration
     if (plan.price === 0) return;
 
-    alert(
-      `Subscription checkout will be implemented with Stripe.\n\nPlan: ${plan.name}\nPrice: $${plan.price}/month\nCredits: ${plan.credits}`
-    );
+    // For now, use creditAmount-based checkout since plans are mock data
+    // In production, this would use plan.id with actual database plan IDs
+    checkoutMutation.mutate({ creditAmount: plan.credits });
   };
 
-  const handlePurchaseCredits = (pkg: { credits: number; price: number; bonus: number }) => {
-    // TODO: Implement Stripe checkout integration
+  const handlePurchaseCredits = (pkg: {
+    credits: number;
+    price: number;
+    bonus: number;
+  }) => {
     const totalCredits = pkg.credits + pkg.bonus;
-    alert(
-      `Credit purchase checkout will be implemented with Stripe.\n\nCredits: ${totalCredits.toLocaleString()}\nPrice: $${pkg.price}`
-    );
+    checkoutMutation.mutate({ creditAmount: totalCredits });
   };
 
   if (sessionPending || creditsLoading || userLoading) {
@@ -260,9 +285,7 @@ export default function SubscriptionSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold mb-1">Current Plan: Free</h2>
-              <p className="text-muted-foreground">
-                Your credits never expire
-              </p>
+              <p className="text-muted-foreground">Your credits never expire</p>
             </div>
             <div className="text-right">
               <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">

@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Search, CheckCircle, XCircle, Eye, Check, X, AlertTriangle } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Check,
+  X,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +35,9 @@ type ReportAction = "approved" | "rejected" | "requested_changes" | "escalated";
 export default function AdminModerationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "prompt" | "game" | "user">("all");
+  const [typeFilter, setTypeFilter] = useState<
+    "all" | "prompt" | "game" | "user" | "review"
+  >("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [resolutionDialog, setResolutionDialog] = useState<{
     open: boolean;
@@ -37,21 +48,29 @@ export default function AdminModerationPage() {
     report: null,
     action: null,
   });
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   // Fetch moderation queue
-  const { data: reports, isLoading, refetch } = useQuery({
-    queryKey: ["admin-moderation-queue", typeFilter, statusFilter],
+  const {
+    data: reports,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin-moderation-queue", typeFilter, statusFilter, page],
     queryFn: async () => {
       const params: {
-        targetType?: "user" | "prompt" | "game";
+        targetType?: "user" | "prompt" | "game" | "review";
         limit: number;
-      } = { limit: 100 };
-      
+        offset: number;
+      } = { limit: pageSize, offset: (page - 1) * pageSize };
+
       if (typeFilter !== "all") {
         params.targetType = typeFilter;
       }
-      
-      const allReports = await trpcClient.admin.direct.getModerationQueue.query(params);
+
+      const allReports =
+        await trpcClient.admin.direct.getModerationQueue.query(params);
 
       // Filter by status if needed (since endpoint only returns pending reports)
       if (statusFilter === "resolved") {
@@ -89,17 +108,26 @@ export default function AdminModerationPage() {
 
   // Filter reports
   const filteredReports = (reports || []).filter((report) => {
-    const matchesSearch = !searchQuery.trim() ||
-      (report.description ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      !searchQuery.trim() ||
+      (report.description ?? "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       report.targetType.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || report.status === statusFilter;
-    const matchesType = typeFilter === "all" || report.targetType === typeFilter;
+    const matchesStatus =
+      statusFilter === "all" || report.status === statusFilter;
+    const matchesType =
+      typeFilter === "all" || report.targetType === typeFilter;
 
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const handleResolve = (report: Report, action: ReportAction, resolutionReason: string) => {
+  const handleResolve = (
+    report: Report,
+    action: ReportAction,
+    resolutionReason: string,
+  ) => {
     resolveReportMutation.mutate({
       reportId: report.id,
       action,
@@ -145,7 +173,9 @@ export default function AdminModerationPage() {
             </div>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as ReportStatus | "all")}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as ReportStatus | "all")
+              }
               className="px-3 py-2 border rounded-md bg-background"
             >
               <option value="all">All Status</option>
@@ -154,13 +184,23 @@ export default function AdminModerationPage() {
             </select>
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as "all" | "prompt" | "game" | "user")}
+              onChange={(e) =>
+                setTypeFilter(
+                  e.target.value as
+                    | "all"
+                    | "prompt"
+                    | "game"
+                    | "user"
+                    | "review",
+                )
+              }
               className="px-3 py-2 border rounded-md bg-background"
             >
               <option value="all">All Types</option>
               <option value="prompt">Prompts</option>
               <option value="game">Games</option>
               <option value="user">Users</option>
+              <option value="review">Reviews</option>
             </select>
           </div>
         </CardContent>
@@ -187,14 +227,15 @@ export default function AdminModerationPage() {
                     {/* Report Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          variant="outline"
-                          className="capitalize"
-                        >
+                        <Badge variant="outline" className="capitalize">
                           {report.targetType}
                         </Badge>
                         <Badge
-                          variant={report.status === "pending" ? "default" : "secondary"}
+                          variant={
+                            report.status === "pending"
+                              ? "default"
+                              : "secondary"
+                          }
                           className="capitalize"
                         >
                           {report.status}
@@ -207,9 +248,16 @@ export default function AdminModerationPage() {
                         {report.description ?? ""}
                       </p>
                       <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>By {report.reporter?.name || report.reporter?.email || "Anonymous"}</span>
+                        <span>
+                          By{" "}
+                          {report.reporter?.name ||
+                            report.reporter?.email ||
+                            "Anonymous"}
+                        </span>
                         <span>•</span>
-                        <span>{new Date(report.createdAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(report.createdAt).toLocaleString()}
+                        </span>
                       </div>
                     </div>
 
@@ -228,7 +276,13 @@ export default function AdminModerationPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setResolutionDialog({ open: true, report, action: null })}
+                            onClick={() =>
+                              setResolutionDialog({
+                                open: true,
+                                report,
+                                action: null,
+                              })
+                            }
                             className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
@@ -242,11 +296,33 @@ export default function AdminModerationPage() {
               ))}
             </div>
           )}
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {page}</span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!reports || reports.length < pageSize}
+            >
+              Next
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Report Details Dialog */}
-      <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
+      <Dialog
+        open={!!selectedReport}
+        onOpenChange={(open) => !open && setSelectedReport(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report Details</DialogTitle>
@@ -259,12 +335,18 @@ export default function AdminModerationPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Reporter</Label>
-                  <p className="text-sm">{selectedReport.reporter?.name || "Anonymous"}</p>
-                  <p className="text-xs text-muted-foreground">{selectedReport.reporter?.email || ""}</p>
+                  <p className="text-sm">
+                    {selectedReport.reporter?.name || "Anonymous"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedReport.reporter?.email || ""}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Target Type</Label>
-                  <p className="text-sm capitalize">{selectedReport.targetType}</p>
+                  <p className="text-sm capitalize">
+                    {selectedReport.targetType}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Reason</Label>
@@ -272,7 +354,13 @@ export default function AdminModerationPage() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
-                  <Badge variant={selectedReport.status === "pending" ? "default" : "secondary"}>
+                  <Badge
+                    variant={
+                      selectedReport.status === "pending"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
                     {selectedReport.status}
                   </Badge>
                 </div>
@@ -294,7 +382,10 @@ export default function AdminModerationPage() {
       {/* Resolution Dialog */}
       <Dialog
         open={resolutionDialog.open}
-        onOpenChange={(open) => !open && setResolutionDialog({ open: false, report: null, action: null })}
+        onOpenChange={(open) =>
+          !open &&
+          setResolutionDialog({ open: false, report: null, action: null })
+        }
       >
         <DialogContent>
           <DialogHeader>
@@ -310,7 +401,12 @@ export default function AdminModerationPage() {
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button
                     type="button"
-                    onClick={() => setResolutionDialog({ ...resolutionDialog, action: "approved" as ReportAction })}
+                    onClick={() =>
+                      setResolutionDialog({
+                        ...resolutionDialog,
+                        action: "approved" as ReportAction,
+                      })
+                    }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "approved"
                         ? "bg-green-100 border-green-500 text-green-800 dark:bg-green-900 dark:text-green-200"
@@ -325,7 +421,12 @@ export default function AdminModerationPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setResolutionDialog({ ...resolutionDialog, action: "rejected" as ReportAction })}
+                    onClick={() =>
+                      setResolutionDialog({
+                        ...resolutionDialog,
+                        action: "rejected" as ReportAction,
+                      })
+                    }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "rejected"
                         ? "bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
@@ -340,7 +441,12 @@ export default function AdminModerationPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setResolutionDialog({ ...resolutionDialog, action: "requested_changes" as ReportAction })}
+                    onClick={() =>
+                      setResolutionDialog({
+                        ...resolutionDialog,
+                        action: "requested_changes" as ReportAction,
+                      })
+                    }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "requested_changes"
                         ? "bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
@@ -355,7 +461,12 @@ export default function AdminModerationPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setResolutionDialog({ ...resolutionDialog, action: "escalated" as ReportAction })}
+                    onClick={() =>
+                      setResolutionDialog({
+                        ...resolutionDialog,
+                        action: "escalated" as ReportAction,
+                      })
+                    }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "escalated"
                         ? "bg-red-100 border-red-500 text-red-800 dark:bg-red-900 dark:text-red-200"
@@ -382,22 +493,28 @@ export default function AdminModerationPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setResolutionDialog({ open: false, report: null, action: null })}
+              onClick={() =>
+                setResolutionDialog({ open: false, report: null, action: null })
+              }
             >
               Cancel
             </Button>
             <Button
               onClick={() => {
                 if (resolutionDialog.report && resolutionDialog.action) {
-                  const textarea = document.querySelector("textarea") as HTMLTextAreaElement;
+                  const textarea = document.querySelector(
+                    "textarea",
+                  ) as HTMLTextAreaElement;
                   handleResolve(
                     resolutionDialog.report,
                     resolutionDialog.action,
-                    textarea?.value || "No reason provided"
+                    textarea?.value || "No reason provided",
                   );
                 }
               }}
-              disabled={!resolutionDialog.action || resolveReportMutation.isPending}
+              disabled={
+                !resolutionDialog.action || resolveReportMutation.isPending
+              }
             >
               {resolveReportMutation.isPending ? (
                 <>
@@ -420,7 +537,7 @@ export default function AdminModerationPage() {
 
 type Report = {
   id: string;
-  targetType: "user" | "prompt" | "game";
+  targetType: "user" | "prompt" | "game" | "review";
   targetId: string | null;
   reason: string;
   description: string | null;

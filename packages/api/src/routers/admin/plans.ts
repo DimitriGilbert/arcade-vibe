@@ -14,7 +14,7 @@ import { TRPCError } from "@trpc/server";
  * Admin procedures for managing subscription plans:
  * - getPlans: List all plans ordered by price
  * - updatePlan: Update plan pricing and configuration
- * - togglePlanActive: Activate/deactivate plan (PARTIALLY IMPLEMENTED - see note)
+ * - togglePlanActive: Activate/deactivate plan
  *
  * SCHEMA DISCREPANCIES:
  * The subscriptionPlans schema does not include all fields expected by the PRD:
@@ -25,13 +25,9 @@ import { TRPCError } from "@trpc/server";
  * - displayName → name (text)
  * - features → features (text array) ✓
  * - description → NOT IN SCHEMA
- * - isActive → NOT IN SCHEMA
+ * - isActive → isActive (boolean) ✓
  * - extraCreditMarkupPercent → NOT IN SCHEMA
  * - minExtraCreditsPurchase → NOT IN SCHEMA
- *
- * CRITICAL: The isActive field is missing from the schema, so togglePlanActive
- * cannot be fully implemented. This procedure is included but with a clear TODO
- * comment documenting the schema limitation.
  */
 
 export const plansRouter = router({
@@ -140,22 +136,8 @@ export const plansRouter = router({
    * PRD Lines: 1544-1564
    *
    * Activate or deactivate a subscription plan.
-   *
-   * CRITICAL SCHEMA LIMITATION:
-   * The subscriptionPlans schema does NOT include an `isActive` field.
-   * This procedure cannot be fully implemented as designed in the PRD.
-   *
-   * POSSIBLE WORKAROUNDS (not implemented here):
-   * 1. Add an `isActive` boolean field to the schema (recommended)
-   * 2. Use a price of 0 or null to indicate inactive (not recommended)
-   * 3. Maintain a separate plan status mapping elsewhere (not recommended)
-   *
-   * This procedure throws an error with a clear message explaining the limitation.
-   * Once the schema is updated to include an `isActive` field, this procedure
-   * should be updated to:
-   * 1. Accept a plan ID and isActive boolean
-   * 2. Update the plan's isActive field
-   * 3. Log the action to adminActions with before/after metadata
+   * - Updates the plan's isActive field
+   * - Logs the action to adminActions with before/after metadata
    */
   togglePlanActive: adminProcedure
     .input(
@@ -164,8 +146,7 @@ export const plansRouter = router({
         isActive: z.boolean(),
       }),
     )
-    .mutation(async ({ ctx: _ctx, input }) => {
-      // ctx.user.id will be used when isActive field is added to schema
+    .mutation(async ({ ctx, input }) => {
       // Verify plan exists
       const plan = await db.query.subscriptionPlans.findFirst({
         where: eq(subscriptionPlans.id, input.id),
@@ -178,17 +159,13 @@ export const plansRouter = router({
         });
       }
 
-      // SCHEMA LIMITATION: The isActive field does not exist in the schema
-      // TODO: Add isActive boolean field to subscriptionPlans schema
-      // Schema location: packages/db/src/schema/credits.ts
-      // Once added, uncomment and use the following code:
-
-      /*
+      // Update the plan's isActive status
       await db
         .update(subscriptionPlans)
         .set({ isActive: input.isActive })
         .where(eq(subscriptionPlans.id, input.id));
 
+      // Log the action to adminActions
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
         actionType: input.isActive ? "activate_plan" : "deactivate_plan",
@@ -206,15 +183,5 @@ export const plansRouter = router({
         planId: input.id,
         isActive: input.isActive,
       };
-      */
-
-      // For now, throw an error explaining the limitation
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message:
-          "togglePlanActive cannot be implemented: The subscriptionPlans schema is missing an `isActive` field. " +
-          "Please add `isActive: boolean('is_active').notNull().default(true)` to the schema in packages/db/src/schema/credits.ts, " +
-          "run `pnpm run db:generate` and `pnpm run db:push`, then update this procedure.",
-      });
     }),
 });
