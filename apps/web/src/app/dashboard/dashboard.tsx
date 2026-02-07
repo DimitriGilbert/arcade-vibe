@@ -5,11 +5,14 @@ import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/utils/trpc";
 
 export default function Dashboard({ session }: { session: typeof authClient.$Infer.Session }) {
-  const privateData = useQuery(trpc.privateData.queryOptions());
+  // TODO: privateData procedure was removed in Phase 22 (router integration)
+  // This was a development-only test procedure that is no longer needed
+  // const privateData = useQuery(trpc.privateData.queryOptions());
 
   return (
     <>
-      <p>API: {privateData.data?.message}</p>
-    </>
+        {/* <p>API: {privateData.data?.message}</p> */}
+        <p>Dashboard: User {session.user?.name}</p>
+      </>
   );
 }
