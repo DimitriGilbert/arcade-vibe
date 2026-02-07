@@ -1,0 +1,152 @@
+/* 
+  ARCADE VIBE DESIGN SYSTEM (Scoped)
+  Based on @design-guidelines.md
+*/
+
+.theme-arcade {
+  /* --- PALETTE DEFINITION --- */
+  --bg-arcade-deep: 0.12 0.01 270;
+  --bg-arcade-mid: 0.18 0.02 280;
+  --bg-cabinet: 0.15 0.03 285;
+  --bg-crt: 0.08 0.01 260;
+
+  --bg-arcade-light-deep: 0.90 0.008 280;
+  --bg-arcade-light-mid: 0.95 0.005 285;
+  --bg-cabinet-light: 0.93 0.01 282;
+  --bg-crt-light: 0.88 0.012 275;
+
+  --neon-pink: 0.65 0.25 340;
+  --neon-blue: 0.70 0.22 250;
+  --neon-cyan: 0.75 0.18 190;
+  --neon-purple: 0.68 0.20 300;
+  --neon-yellow: 0.85 0.22 85;
+  --neon-orange: 0.72 0.24 45;
+  --neon-green: 0.78 0.20 145;
+
+  --text-primary: 0.98 0.005 280;
+  --text-secondary: 0.75 0.01 280;
+  --text-muted: 0.55 0.015 280;
+  --text-neon: 0.85 0.20 180;
+
+  --text-primary-light: 0.15 0.02 280;
+  --text-secondary-light: 0.35 0.015 280;
+  --text-muted-light: 0.50 0.01 280;
+  --text-neon-light: 0.55 0.20 180;
+
+  --border-neon: 0.75 0.18 250;
+  --card-arcade: 0.15 0.03 285;
+  --input-arcade: 0.10 0.02 270;
+
+  /* --- SHADCN MAPPING --- */
+  --background: oklch(var(--bg-arcade-deep));
+  --foreground: oklch(var(--text-primary));
+  --card: oklch(var(--card-arcade));
+  --card-foreground: oklch(var(--text-primary));
+  --popover: oklch(var(--bg-arcade-mid));
+  --popover-foreground: oklch(var(--text-primary));
+  --primary: oklch(var(--neon-blue));
+  --primary-foreground: oklch(var(--text-primary));
+  --secondary: oklch(var(--bg-cabinet));
+  --secondary-foreground: oklch(var(--text-primary));
+  --muted: oklch(var(--bg-arcade-mid));
+  --muted-foreground: oklch(var(--text-muted));
+  --accent: oklch(var(--neon-purple) / 0.3);
+  --accent-foreground: oklch(var(--text-neon));
+  --destructive: oklch(var(--neon-orange));
+  --destructive-foreground: oklch(var(--text-primary));
+  --border: oklch(var(--border-neon) / 0.4);
+  --input: oklch(var(--input-arcade));
+  --ring: oklch(var(--neon-cyan));
+  
+  --font-display: var(--font-orbitron);
+  --font-body: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-sans: var(--font-space-grotesk); 
+}
+
+.theme-arcade.light, .theme-arcade .light {
+  --background: oklch(var(--bg-arcade-light-deep));
+  --foreground: oklch(var(--text-primary-light));
+  --card: oklch(var(--bg-cabinet-light));
+  --card-foreground: oklch(var(--text-primary-light));
+  --popover: oklch(var(--bg-arcade-light-mid));
+  --popover-foreground: oklch(var(--text-primary-light));
+  --primary: oklch(var(--neon-blue)); 
+  --primary-foreground: oklch(var(--bg-arcade-deep));
+  --secondary: oklch(var(--neon-purple) / 0.2);
+  --secondary-foreground: oklch(var(--text-primary-light));
+  --muted: oklch(var(--bg-arcade-light-mid));
+  --muted-foreground: oklch(var(--text-muted-light));
+  --accent: oklch(var(--neon-cyan) / 0.2);
+  --accent-foreground: oklch(var(--text-primary-light));
+  --destructive: oklch(var(--neon-orange));
+  --destructive-foreground: oklch(var(--bg-arcade-deep));
+  --border: oklch(var(--neon-purple) / 0.2);
+  --input: oklch(var(--bg-arcade-light-mid));
+  --ring: oklch(var(--neon-blue));
+}
+
+/* Utilities */
+.theme-arcade .neon-text-pink { text-shadow: 0 0 10px oklch(var(--neon-pink)), 0 0 20px oklch(var(--neon-pink)); }
+.theme-arcade .neon-text-blue { text-shadow: 0 0 10px oklch(var(--neon-blue)), 0 0 20px oklch(var(--neon-blue)); }
+.theme-arcade .neon-text-cyan { text-shadow: 0 0 10px oklch(var(--neon-cyan)), 0 0 20px oklch(var(--neon-cyan)); }
+
+.theme-arcade .neon-glow-pink { box-shadow: 0 0 10px oklch(var(--neon-pink) / 0.5), 0 0 20px oklch(var(--neon-pink) / 0.3); }
+.theme-arcade .neon-glow-blue { box-shadow: 0 0 10px oklch(var(--neon-blue) / 0.5), 0 0 20px oklch(var(--neon-blue) / 0.3); }
+
+.theme-arcade .card-cabinet {
+  position: relative; overflow: hidden; border-radius: 0.75rem; border-width: 2px;
+  background-color: oklch(var(--card)); border-color: oklch(var(--border-neon) / 0.5);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px oklch(var(--neon-purple) / 0.2);
+}
+.theme-arcade .card-cabinet::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, oklch(var(--neon-pink)), oklch(var(--neon-blue)), oklch(var(--neon-purple)));
+}
+
+.theme-arcade .crt-overlay {
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0px, rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px);
+  pointer-events: none; position: fixed; inset: 0; z-index: 9999; opacity: 0.3;
+}
+
+/* Page Specific Animations */
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.theme-arcade .animate-shimmer { animation: shimmer 2s infinite; }
+
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.theme-arcade .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+@keyframes grid-move { 0% { transform: translateY(0); } 100% { transform: translateY(50px); } }
+.theme-arcade .animate-grid-move { animation: grid-move 20s linear infinite; }
+
+@keyframes scanline { 0% { transform: translateY(-100vh); } 100% { transform: translateY(100vh); } }
+.theme-arcade .animate-scanline { animation: scanline 8s linear infinite; }
+
+@keyframes flash { 0%, 90%, 100% { opacity: 0; } 92%, 96% { opacity: 1; transform: scaleY(1.2); } }
+.theme-arcade .animate-flash { animation: flash 4s infinite linear; }
+
+/* Retro Grid Specials */
+.theme-arcade .sun-mask {
+  mask-image: repeating-linear-gradient(black, black 5%, transparent 5%, transparent 7%);
+  -webkit-mask-image: repeating-linear-gradient(black, black 5%, transparent 5%, transparent 7%);
+}
+.theme-arcade .perspective-1000 { perspective: 1000px; }
+.theme-arcade .rotate-x-60 { transform: rotateX(60deg); }
+
+/* Glitch Animation */
+.theme-arcade .glitch-text { position: relative; display: inline-block; }
+.theme-arcade .glitch-text::before, .theme-arcade .glitch-text::after {
+  content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: inherit;
+}
+.theme-arcade .glitch-text::before { left: 2px; text-shadow: -1px 0 oklch(var(--neon-pink)); clip-path: inset(44% 0 61% 0); animation: glitch-anim-1 2s infinite linear alternate-reverse; }
+.theme-arcade .glitch-text::after { left: -2px; text-shadow: -1px 0 oklch(var(--neon-cyan)); clip-path: inset(50% 0 30% 0); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+
+@keyframes glitch-anim-1 {
+  0% { clip-path: inset(20% 0 80% 0); } 20% { clip-path: inset(60% 0 10% 0); } 40% { clip-path: inset(40% 0 50% 0); }
+  60% { clip-path: inset(80% 0 5% 0); } 80% { clip-path: inset(10% 0 70% 0); } 100% { clip-path: inset(30% 0 20% 0); }
+}
+@keyframes glitch-anim-2 {
+  0% { clip-path: inset(10% 0 60% 0); } 20% { clip-path: inset(30% 0 20% 0); } 40% { clip-path: inset(70% 0 10% 0); }
+  60% { clip-path: inset(20% 0 50% 0); } 80% { clip-path: inset(50% 0 30% 0); } 100% { clip-path: inset(5% 0 80% 0); }
+}

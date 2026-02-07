@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* 
+  ARCADE VIBE THEME 
+  Based on Design Guidelines 
+*/
+
+/* 1. Define the dynamic variables */
+:root {
+  /* Dark Theme (Default) */
+  --bg-arcade-deep: oklch(0.12 0.01 270);
+  --bg-arcade-mid: oklch(0.18 0.02 280);
+  --bg-cabinet: oklch(0.15 0.03 285);
+  --bg-crt: oklch(0.08 0.01 260);
+  
+  --val-neon-pink: oklch(0.65 0.25 340);
+  --val-neon-blue: oklch(0.70 0.22 250);
+  --val-neon-cyan: oklch(0.75 0.18 190);
+  --val-neon-purple: oklch(0.68 0.20 300);
+  --val-neon-yellow: oklch(0.85 0.22 85);
+  --val-neon-orange: oklch(0.72 0.24 45);
+  --val-neon-green: oklch(0.78 0.20 145);
+}
+
+.light {
+  /* Light Theme Overrides */
+  --bg-arcade-deep: oklch(0.90 0.008 280);
+  --bg-arcade-mid: oklch(0.95 0.005 285);
+  --bg-cabinet: oklch(0.93 0.01 282);
+  --bg-crt: oklch(0.88 0.012 275);
+  
+  /* Optional: Adjust neons for light mode if needed (guidelines said saturated but balanced) */
+  /* For now keeping neons same or slightly darker for contrast if text */
+}
+
+@theme {
+  /* 2. Map Tailwind colors to variables */
+  --color-arcade-deep: var(--bg-arcade-deep);
+  --color-arcade-mid: var(--bg-arcade-mid);
+  --color-cabinet: var(--bg-cabinet);
+  --color-crt: var(--bg-crt);
+
+  --color-neon-pink: var(--val-neon-pink);
+  --color-neon-blue: var(--val-neon-blue);
+  --color-neon-cyan: var(--val-neon-cyan);
+  --color-neon-purple: var(--val-neon-purple);
+  --color-neon-yellow: var(--val-neon-yellow);
+  --color-neon-orange: var(--val-neon-orange);
+  --color-neon-green: var(--val-neon-green);
+
+  /* Fonts */
+  --font-display: "Orbitron", "Roboto Mono", monospace;
+  --font-body: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* Spacing */
+  --spacing-arcade-xs: 0.25rem;
+  --spacing-arcade-sm: 0.5rem;
+  --spacing-arcade-md: 1rem;
+  --spacing-arcade-lg: 1.5rem;
+  --spacing-arcade-xl: 2rem;
+  --spacing-arcade-2xl: 3rem;
+  --spacing-arcade-3xl: 4rem;
+  
+  /* Animations */
+  --animate-neon-pulse: neon-pulse 2s ease-in-out infinite;
+  --animate-glitch-1: glitch-1 0.3s infinite;
+  --animate-glitch-2: glitch-2 0.3s infinite;
+  --animate-scan-line: scan-line 8s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-scroll: scroll 10s linear infinite;
+  
+  @keyframes neon-pulse {
+    0%, 100% { box-shadow: 0 0 20px oklch(0.70 0.22 250 / 0.4); }
+    50% { box-shadow: 0 0 40px oklch(0.70 0.22 250 / 0.8); }
+  }
+  
+  @keyframes glitch-1 {
+    0%, 100% { transform: translate(-2px, 0); }
+    50% { transform: translate(2px, -1px); }
+  }
+
+  @keyframes glitch-2 {
+    0%, 100% { transform: translate(2px, 0); }
+    50% { transform: translate(-2px, 1px); }
+  }
+
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes scroll {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+}
+
+/* Custom Utility Classes */
+
+.text-glow {
+  text-shadow: 0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink);
+}
+
+.box-glow-blue {
+  box-shadow: 0 0 20px var(--color-neon-blue), inset 0 0 20px var(--color-neon-blue);
+}
+
+.box-glow-pink {
+  box-shadow: 0 0 20px var(--color-neon-pink), inset 0 0 20px var(--color-neon-pink);
+}
+
+.crt-overlay {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  mix-blend-mode: overlay;
+}
+
+.scanline {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.5;
+  animation: scan-line 8s linear infinite;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 51;
+}
+
+.arcade-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}

@@ -6,8 +6,32 @@ catalog:
   zod: ^4.1.13
   typescript: ^5
   next: ^16.1.1
-  "@trpc/server": ^11.7.2
-  "@trpc/client": ^11.7.2
+  '@trpc/server': ^11.7.2
+  '@trpc/client': ^11.7.2
   better-auth: ^1.4.18
   drizzle-orm: ^0.45.1
-  "@types/pg": ^8.16.0
+  '@types/pg': ^8.16.0
+onlyBuiltDependencies:
+  - ' '
+  - ''''
+  - ','
+  - '-'
+  - '2'
+  - '['
+  - ']'
+  - a
+  - b
+  - c
+  - e
+  - esbuild
+  - f
+  - h
+  - j
+  - msw
+  - o
+  - p
+  - r
+  - s
+  - sharp
+  - t
+  - u
