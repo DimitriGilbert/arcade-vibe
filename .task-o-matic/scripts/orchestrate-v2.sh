@@ -627,21 +627,37 @@ Execute the plan in this chunk following the subagent-orchestration workflow:
 - PRD: \`${PRD_DIR}/${prd_file}\`
 - Vision (for context): \`${VISION_DOC}\` (lines 1-60 for mission/philosophy)
 
-## Execution
+## Execution - FOLLOW THE SUBAGENT-ORCHESTRATION WORKFLOW EXACTLY
 
-**THIS IS A NON-INTERACTIVE AUTOMATED RUN. DO NOT ASK FOR APPROVAL.**
+**THIS IS A NON-INTERACTIVE AUTOMATED RUN. THE PLAN IS PRE-APPROVED.**
 
-The plan is PRE-APPROVED. Execute ALL phases immediately and automatically:
-1. Read the plan file
-2. Execute each phase using implementer → validator → fixer pattern
-3. Continue until ALL phases complete or max retries reached
-4. Report final status
+You are the ORCHESTRATOR. Execute the subagent-orchestration workflow:
 
-**DO NOT WRITE CODE YOURSELF** - dispatch implementer subagents with complete requirements.
-**VALIDATORS MUST READ CODE** - not just run commands.
-**DO NOT STOP TO ASK QUESTIONS** - execute the entire plan autonomously.
+### For EACH phase in the plan:
 
-Begin execution NOW.
+1. **DISPATCH IMPLEMENTER** subagent with COMPLETE requirements from the plan
+   - Give them the full phase requirements, files to read, files to create
+   - They write code, you DO NOT
+
+2. **DISPATCH VALIDATOR** subagent (DIFFERENT from implementer)
+   - They ACTUALLY READ the code line by line
+   - They verify requirements are met
+   - They run \`pnpm run check-types\` and \`pnpm run build\`
+
+3. **IF VALIDATION FAILS**:
+   - DISPATCH FIXER subagent with the validator's error report
+   - DISPATCH VALIDATOR again
+   - REPEAT until pass (up to 3 attempts)
+
+4. **IF VALIDATION PASSES**: Move to next phase
+
+### CRITICAL RULES:
+- **YOU NEVER WRITE CODE** - only dispatch subagents
+- **Implementer ≠ Validator ≠ Fixer** - strict role separation
+- **DO NOT ASK FOR APPROVAL** - execute ALL phases autonomously
+- **DO NOT STOP** - continue until all phases complete or max retries
+
+Begin execution NOW. Dispatch your first implementer for Phase 1.
 EOF
 }
 
