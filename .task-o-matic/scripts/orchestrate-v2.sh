@@ -142,7 +142,7 @@ parse_commandline()
 			-s*)
 				_arg_start_chunk="${_key##-s}"
 				;;
-			
+
 			-e|--end-chunk)
 				test $# -lt 2 && die "Missing value for the option: '$_key'" 1
 				_arg_end_chunk="$2"
@@ -154,7 +154,7 @@ parse_commandline()
 			-e*)
 				_arg_end_chunk="${_key##-e}"
 				;;
-			
+
 			-H|--harness)
 				test $# -lt 2 && die "Missing value for the option: '$_key'" 1
 				_arg_harness="$2"
@@ -169,7 +169,7 @@ parse_commandline()
 				_arg_harness="${_key##-H}"
 				if [[ "${#_one_of_arg_harness[@]}" -gt 0 ]];then [[ "${_one_of_arg_harness[*]}" =~ (^|[[:space:]])"$_arg_harness"($|[[:space:]]) ]] || die "harness must be one of: opencode claude gemini codex kilo";fi
 				;;
-			
+
 			-m|--model)
 				test $# -lt 2 && die "Missing value for the option: '$_key'" 1
 				_arg_model="$2"
@@ -181,7 +181,7 @@ parse_commandline()
 			-m*)
 				_arg_model="${_key##-m}"
 				;;
-			
+
 			--project-root)
 				test $# -lt 2 && die "Missing value for the option: '$_key'" 1
 				_arg_project_root="$2"
@@ -190,7 +190,7 @@ parse_commandline()
 			--project-root=*)
 				_arg_project_root="${_key##--project-root=}"
 				;;
-			
+
 			-n|--dry-run)
 				_arg_dry_run="on"
 				;;
@@ -241,7 +241,7 @@ parse_commandline()
 					shift;
 				fi
 				;;
-			
+
 				*)
 				_last_positional="$1"
 				_positionals+=("$_last_positional")
@@ -290,7 +290,7 @@ print_debug()
 	print_help
 	# shellcheck disable=SC2145
 	echo "DEBUG: $0 $@";
-	
+
 	echo -e "	start-chunk: ${_arg_start_chunk}";
 	echo -e "	end-chunk: ${_arg_end_chunk}";
 	echo -e "	harness: ${_arg_harness}";
@@ -380,9 +380,9 @@ declare -A DEFAULT_MODELS=(
 build_harness_cmd() {
   local prompt_file="$1"
   local model="${_arg_model:-${DEFAULT_MODELS[$_arg_harness]}}"
-  
+
   HARNESS_CMD=()
-  
+
   case "$_arg_harness" in
     opencode)
       # opencode run [message..] - message as positional args
@@ -429,9 +429,9 @@ build_harness_cmd() {
 build_harness_msg_cmd() {
   local message="$1"
   local model="${_arg_model:-${DEFAULT_MODELS[$_arg_harness]}}"
-  
+
   HARNESS_MSG_CMD=()
-  
+
   case "$_arg_harness" in
     opencode)
       HARNESS_MSG_CMD=(opencode run)
@@ -469,11 +469,11 @@ build_harness_msg_cmd() {
 run_harness_with_file() {
   local prompt_file="$1"
   local log_file="$2"
-  
+
   build_harness_cmd "$prompt_file"
-  
+
   log "Command: ${HARNESS_CMD[*]}" 2
-  
+
   "${HARNESS_CMD[@]}" 2>&1 | tee "$log_file"
 }
 
@@ -481,11 +481,11 @@ run_harness_with_file() {
 # Usage: run_harness_with_message <message>
 run_harness_with_message() {
   local message="$1"
-  
+
   build_harness_msg_cmd "$message"
-  
+
   log "Command: ${HARNESS_MSG_CMD[*]}" 2
-  
+
   "${HARNESS_MSG_CMD[@]}"
 }
 
@@ -497,32 +497,32 @@ run_harness_with_message() {
 commit_changes() {
   local chunk_num="$1"
   local plan_file="$2"
-  
+
   if [[ "$_arg_skip_commit" == "on" ]]; then
     log "Skipping commit (--skip-commit)" 1
     return 0
   fi
-  
+
   local commit_msg="feat(orchestrate): complete chunk ${chunk_num} - ${plan_file%.md}"
-  
+
   log "Committing changes: $commit_msg" 0
-  
+
   cd "$PROJECT_ROOT"
-  
+
   # Check if there are changes to commit
   if git diff --quiet && git diff --staged --quiet; then
     log "No changes to commit" 1
     return 0
   fi
-  
+
   local commit_prompt="Please commit all current changes with this exact message: '${commit_msg}'. Run: git add -A && git commit -m '${commit_msg}'"
-  
+
   if [[ "$_arg_dry_run" == "on" ]]; then
     build_harness_msg_cmd "$commit_prompt"
     log "[DRY-RUN] Would execute: ${HARNESS_MSG_CMD[*]}" 0
     return 0
   fi
-  
+
   log "Executing commit via ${_arg_harness}..." 1
   if run_harness_with_message "$commit_prompt"; then
     log "Commit successful" 1
@@ -540,19 +540,19 @@ push_to_origin() {
     log "Skipping push (--skip-push)" 1
     return 0
   fi
-  
+
   cd "$PROJECT_ROOT"
-  
+
   local current_branch
   current_branch=$(git branch --show-current)
-  
+
   log "Pushing branch '$current_branch' to origin..." 0
-  
+
   if [[ "$_arg_dry_run" == "on" ]]; then
     log "[DRY-RUN] Would execute: git push origin $current_branch" 0
     return 0
   fi
-  
+
   if git push origin "$current_branch"; then
     log "Push successful" 1
     return 0
@@ -571,7 +571,7 @@ generate_prompt() {
   local prd_file="$2"
   local chunk_num="$3"
   local total_chunks="$4"
-  
+
   cat <<EOF
 # Arcade Vibe Implementation - Chunk ${chunk_num} of ${total_chunks}
 
@@ -657,7 +657,7 @@ You are the ORCHESTRATOR. Execute the subagent-orchestration workflow:
 - **DO NOT ASK FOR APPROVAL** - execute ALL phases autonomously
 - **DO NOT STOP** - continue until all phases complete or max retries
 
-Begin execution NOW. Dispatch your first implementer for Phase 1.
+Begin execution NOW. Being in an automated loop, some of the work might have been done and must not be repeated.
 EOF
 }
 
@@ -673,23 +673,23 @@ run_chunk() {
   local timestamp
   timestamp=$(date +"%Y%m%d_%H%M%S")
   local log_file="$LOG_DIR/chunk_${chunk_num}_${_arg_harness}_${timestamp}.log"
-  
+
   log "Starting Chunk ${chunk_num}/${total_chunks}: ${plan_file}" 0
   log "PRD Reference: ${prd_file}" 1
   log "Harness: ${_arg_harness}${_arg_model:+ (model: $_arg_model)}" 1
   log "Log file: ${log_file}" 1
-  
+
   # Generate prompt
   local prompt
   prompt=$(generate_prompt "$plan_file" "$prd_file" "$chunk_num" "$total_chunks")
-  
+
   # Save prompt to temp file
   local prompt_file
   prompt_file=$(mktemp)
   echo "$prompt" > "$prompt_file"
-  
+
   log "Launching ${_arg_harness}..." 0
-  
+
   if [[ "$_arg_dry_run" == "on" ]]; then
     build_harness_cmd "$prompt_file"
     log "[DRY-RUN] Would execute: ${HARNESS_CMD[*]}" 0
@@ -697,22 +697,22 @@ run_chunk() {
     # Don't remove prompt file in dry run for inspection
     return 0
   fi
-  
+
   # Run the harness - capture exit code but DON'T fail
   # The harness IS the orchestrator - it handles implementer → validator → fixer loops
   # We don't interfere with that process
   local harness_exit_code=0
   run_harness_with_file "$prompt_file" "$log_file" || harness_exit_code=$?
-  
+
   rm -f "$prompt_file"
-  
+
   if [[ $harness_exit_code -eq 0 ]]; then
     log "Chunk ${chunk_num} completed successfully" 1
   else
     log "Chunk ${chunk_num} harness exited with code ${harness_exit_code}" -1
     log "Check log for details: ${log_file}" -1
   fi
-  
+
   # Always return success - harness handles its own validation internally
   return 0
 }
@@ -734,34 +734,34 @@ get_harness_bin() {
 
 verify_prerequisites() {
   log "Verifying prerequisites..." 0
-  
+
   # Check harness is available
   local harness_bin
   harness_bin=$(get_harness_bin)
-  
+
   if ! command -v "$harness_bin" &> /dev/null; then
     die "${_arg_harness} harness not found: $harness_bin not in PATH" 1
   fi
-  
+
   # Check plan files exist
   for plan_file in "${CHUNK_ORDER[@]}"; do
     if [[ ! -f "$PLANS_DIR/$plan_file" ]]; then
       die "Plan file not found: $PLANS_DIR/$plan_file" 1
     fi
   done
-  
+
   # Check PRD files exist
   for prd_file in "${CHUNKS[@]}"; do
     if [[ ! -f "$PRD_DIR/$prd_file" ]]; then
       die "PRD file not found: $PRD_DIR/$prd_file" 1
     fi
   done
-  
+
   # Check vision document exists
   if [[ ! -f "$VISION_DOC" ]]; then
     die "Vision document not found: $VISION_DOC" 1
   fi
-  
+
   log "All prerequisites verified" 1
 }
 
@@ -772,7 +772,7 @@ verify_prerequisites() {
 main() {
   local start_chunk="${_arg_start_chunk}"
   local end_chunk="${_arg_end_chunk}"
-  
+
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║       Arcade Vibe - Multi-Harness Orchestration v2.0        ║"
@@ -785,33 +785,33 @@ main() {
   fi
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   verify_prerequisites
-  
+
   for ((i = start_chunk; i <= end_chunk; i++)); do
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "                      CHUNK ${i} OF ${#CHUNK_ORDER[@]}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    
+
     # Run the chunk - harness handles all validation internally via subagent-orchestration
     run_chunk "$i"
-    
+
     # Commit and push after chunk completes
     local plan_file="${CHUNK_ORDER[$((i - 1))]}"
     commit_changes "$i" "$plan_file"
     push_to_origin
-    
+
     log "Chunk ${i} complete, committed, and pushed" 1
   done
-  
+
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║                    ALL CHUNKS COMPLETE                       ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   log "Arcade Vibe implementation complete!" 1
 }
 
