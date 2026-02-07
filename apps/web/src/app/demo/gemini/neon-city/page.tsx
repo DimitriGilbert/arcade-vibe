@@ -12,7 +12,7 @@ export default function NeonCityPage() {
       {/* Dynamic Background */}
       <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-pink-600/10 rounded-full blur-[100px] pointer-events-none" />
-      
+
       {/* Grid Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
 
@@ -46,7 +46,7 @@ export default function NeonCityPage() {
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          
+
           {/* Left Column - Stats */}
           <div className="md:col-span-4 space-y-6">
             <Card className="bg-white/5 border-white/10 backdrop-blur-xl shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] transition-all duration-500 group">
@@ -62,7 +62,7 @@ export default function NeonCityPage() {
                     <span className="text-4xl font-display font-bold text-white group-hover:text-pink-200 transition-colors">84%</span>
                     <span className="text-xs font-mono text-pink-400 animate-pulse">CRITICAL</span>
                   </div>
-                  <Progress value={84} className="h-1 bg-white/10" indicatorClassName="bg-gradient-to-r from-purple-500 to-pink-500" />
+                  <Progress value={84} className="h-1 bg-white/10" />
                 </div>
               </CardContent>
             </Card>
@@ -122,7 +122,7 @@ export default function NeonCityPage() {
                       <TabsTrigger value="map" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-300 font-mono text-xs">MAP</TabsTrigger>
                     </TabsList>
                   </div>
-                  
+
                   <TabsContent value="missions" className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="group flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-pink-500/30 transition-all duration-300 cursor-pointer">
