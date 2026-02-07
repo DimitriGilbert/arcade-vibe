@@ -373,6 +373,7 @@ DO NOT implement your own score tracking via postMessage. The SDK handles all co
 ````
 
 **Server-side Validation:**
+
 ```typescript
 // tRPC router for game SDK endpoints
 export const gameSdkRouter = router({
@@ -1116,9 +1117,11 @@ export const providerEnum = pgEnum("provider", [
   "openrouter",
   "deepseek",
   "glm",
+  "glm-coding-plan",
   "moonshot",
   "custom",
   // Note: deepseek, glm, moonshot, and custom use OpenAI-compatible API with custom baseURL
+  // Note: glm-coding-plan uses Anthropic-compatible API with custom baseURL https://api.z.ai/api/anthropic
   // custom provider can also use Anthropic-compatible API with custom baseURL
 ]);
 
