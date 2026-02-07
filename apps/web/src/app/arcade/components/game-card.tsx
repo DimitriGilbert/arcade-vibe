@@ -2,39 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, User, Clock, Star } from "lucide-react";
+import type { AppRouter } from "@arcade-vibe/api/routers/index";
+import type { inferRouterOutputs } from "@trpc/server";
 
-interface Game {
-  id: string;
-  promptId: string;
-  themeId: string | null;
-  status: "generating" | "completed" | "failed" | "hidden";
-  modelProvider: string;
-  modelName: string;
-  modelTier: "cheater" | "easy" | "normal" | "hard" | "impossible";
-  imageUrl: string | null;
-  generatedAt: string | null;
-  isHidden: boolean;
-  isSubmitted: boolean;
-  createdAt: string;
-  updatedAt: string;
-  prompt: {
-    id: string;
-    content: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string;
-      image: string | null;
-    };
-  };
-  theme: {
-    id: string;
-    title: string;
-  } | null;
-}
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type GameFromApi = RouterOutput["games"]["listByTheme"][number];
 
 interface GameCardProps {
-  game: Game;
+  game: GameFromApi;
   onClick: () => void;
 }
 
@@ -48,7 +23,8 @@ const TIER_CONFIG = {
 
 export function GameCard({ game, onClick }: GameCardProps) {
   const tierInfo = TIER_CONFIG[game.modelTier];
-  const creatorName = game.prompt.user.name || game.prompt.user.email.split("@")[0];
+  const prompt = game.prompt as { id: string; content: string; user: { id: string; name: string | null; email: string; image: string | null } };
+  const creatorName = prompt.user?.name || prompt.user?.email?.split("@")[0] || "Unknown";
   const createdAt = new Date(game.createdAt).toLocaleDateString();
 
   return (
@@ -93,8 +69,8 @@ export function GameCard({ game, onClick }: GameCardProps) {
             {game.theme?.title || "Untitled Game"}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {game.prompt.content.slice(0, 100)}
-            {game.prompt.content.length > 100 && "..."}
+            {prompt.content?.slice(0, 100)}
+            {prompt.content && prompt.content.length > 100 && "..."}
           </p>
         </div>
 

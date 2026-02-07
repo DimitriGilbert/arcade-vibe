@@ -104,7 +104,7 @@ export const creditsRouter = router({
         userId: z.string(),
         amount: z.number().int().positive(),
         reason: z.string().min(1).max(100),
-        metadata: z.record(z.any(), z.any()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(async ({ input }) => {

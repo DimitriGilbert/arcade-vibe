@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   integer,
+  boolean,
   timestamp,
   index,
   unique,
@@ -35,6 +36,7 @@ export const subscriptionPlans = pgTable(
     credits: integer("credits").notNull(),
     features: text("features").array(),
     stripePriceId: text("stripe_price_id").unique(),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

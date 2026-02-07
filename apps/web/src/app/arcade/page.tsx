@@ -6,55 +6,12 @@ import { trpcClient } from "@/utils/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Gamepad2, Clock, TrendingUp, Star } from "lucide-react";
 import { ThemeHeader } from "./components/theme-header";
 import { GameCard } from "./components/game-card";
 
 type SortOption = "recent" | "popular" | "score";
 type ThemeStatus = "current" | "archived";
-
-interface Theme {
-  id: string;
-  title: string;
-  description: string;
-  status: "upcoming" | "active" | "frozen" | "archived";
-  visibility: "private" | "public_on_freeze" | "public";
-  startDate: string | null;
-  endDate: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Game {
-  id: string;
-  promptId: string;
-  themeId: string | null;
-  status: "generating" | "completed" | "failed" | "hidden";
-  modelProvider: string;
-  modelName: string;
-  modelTier: "cheater" | "easy" | "normal" | "hard" | "impossible";
-  imageUrl: string | null;
-  generatedAt: string | null;
-  isHidden: boolean;
-  isSubmitted: boolean;
-  createdAt: string;
-  updatedAt: string;
-  prompt: {
-    id: string;
-    content: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string;
-      image: string | null;
-    };
-  };
-  theme: {
-    id: string;
-    title: string;
-  } | null;
-}
 
 export default function ArcadePage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>("current");
@@ -65,7 +22,7 @@ export default function ArcadePage() {
   // Fetch all themes
   const { data: themes, isLoading: themesLoading } = useQuery({
     queryKey: ["themes"],
-    queryFn: async (): Promise<Theme[]> => {
+    queryFn: async () => {
       return await trpcClient.themes.list.query();
     },
   });
@@ -73,7 +30,7 @@ export default function ArcadePage() {
   // Fetch games for the selected theme
   const { data: games, isLoading: gamesLoading } = useQuery({
     queryKey: ["games", selectedThemeId, themeStatus],
-    queryFn: async (): Promise<Game[]> => {
+    queryFn: async () => {
       if (!selectedThemeId || selectedThemeId === "current") {
         // Try to get current theme's games
         try {
@@ -205,7 +162,7 @@ export default function ArcadePage() {
 
         {/* Theme Selector */}
         <ThemeHeader
-          currentTheme={currentTheme || null} //you stupid mother fucker !
+          currentTheme={currentTheme || null}
           archivedThemes={archivedThemes}
           selectedThemeId={selectedThemeId}
           themeStatus={themeStatus}
@@ -290,7 +247,7 @@ export default function ArcadePage() {
                 key={game.id}
                 game={game}
                 onClick={() => {
-                  window.location.href = `/play?gameId=${game.id}`;
+                  window.location.href = `/game/${game.id}`;
                 }}
               />
             ))}
