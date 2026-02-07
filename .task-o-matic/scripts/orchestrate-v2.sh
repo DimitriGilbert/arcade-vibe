@@ -385,40 +385,37 @@ build_harness_cmd() {
   
   case "$_arg_harness" in
     opencode)
-      # opencode run [message..] - non-interactive mode
-      # -m for model, message as positional args
+      # opencode run [message..] - message as positional args
       HARNESS_CMD=(opencode run)
       [[ -n "$model" ]] && HARNESS_CMD+=(-m "$model")
-      HARNESS_CMD+=(--file "$prompt_file")
+      HARNESS_CMD+=("$(<"$prompt_file")")
       ;;
     claude)
       # claude -p "prompt" - print mode (non-interactive)
-      # --model for model, -p for non-interactive
       HARNESS_CMD=(claude -p)
       [[ -n "$model" ]] && HARNESS_CMD+=(--model "$model")
-      # Claude reads prompt from file via stdin or we pass as arg
+      HARNESS_CMD+=("$(<"$prompt_file")")
       ;;
     gemini)
-      # gemini -p "prompt" - non-interactive headless mode
-      # -m for model
+      # gemini [query..] - non-interactive headless mode
       HARNESS_CMD=(gemini)
       [[ -n "$model" ]] && HARNESS_CMD+=(-m "$model")
       HARNESS_CMD+=(-y)  # yolo mode for auto-approve
+      HARNESS_CMD+=("$(<"$prompt_file")")
       ;;
     codex)
       # codex exec [PROMPT] - non-interactive mode
-      # -m for model, --dangerously-bypass-approvals-and-sandbox for full auto
       HARNESS_CMD=(codex exec)
       [[ -n "$model" ]] && HARNESS_CMD+=(-m "$model")
       HARNESS_CMD+=(--full-auto)
+      HARNESS_CMD+=("$(<"$prompt_file")")
       ;;
     kilo)
-      # kilo run [message..] - non-interactive mode (like opencode)
-      # -m for model, --auto for auto-approve
+      # kilo run [message..] - message as positional args
       HARNESS_CMD=(kilo run)
       [[ -n "$model" ]] && HARNESS_CMD+=(-m "$model")
       HARNESS_CMD+=(--auto)
-      HARNESS_CMD+=(--file "$prompt_file")
+      HARNESS_CMD+=("$(<"$prompt_file")")
       ;;
     *)
       die "Unknown harness: $_arg_harness" 1
@@ -467,37 +464,17 @@ build_harness_msg_cmd() {
   esac
 }
 
-# Run harness with prompt file, piping content appropriately
+# Run harness with prompt file
 # Usage: run_harness_with_file <prompt_file> <log_file>
 run_harness_with_file() {
   local prompt_file="$1"
   local log_file="$2"
-  local prompt_content
   
-  prompt_content=$(<"$prompt_file")
   build_harness_cmd "$prompt_file"
   
   log "Command: ${HARNESS_CMD[*]}" 2
   
-  case "$_arg_harness" in
-    opencode|kilo)
-      # These use --file flag, no stdin needed
-      "${HARNESS_CMD[@]}" 2>&1 | tee "$log_file"
-      ;;
-    claude)
-      # Claude: pass prompt as final argument
-      "${HARNESS_CMD[@]}" "$prompt_content" 2>&1 | tee "$log_file"
-      ;;
-    gemini)
-      # Gemini: pass prompt via -p flag, but we already have -y
-      # Use positional query argument
-      "${HARNESS_CMD[@]}" "$prompt_content" 2>&1 | tee "$log_file"
-      ;;
-    codex)
-      # Codex: prompt as positional argument
-      "${HARNESS_CMD[@]}" "$prompt_content" 2>&1 | tee "$log_file"
-      ;;
-  esac
+  "${HARNESS_CMD[@]}" 2>&1 | tee "$log_file"
 }
 
 # Run harness with simple message
