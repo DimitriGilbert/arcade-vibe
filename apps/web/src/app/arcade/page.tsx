@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2,
   Search,
   Gamepad2,
   Clock,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { ThemeHeader } from "./components/theme-header";
 import { GameCard } from "./components/game-card";
+import { LoadingState, EmptyState } from "@/components/reusable";
 
 type SortOption = "recent" | "popular" | "score";
 type ThemeStatus = "current" | "archived";
@@ -225,23 +225,21 @@ export default function ArcadePage() {
         {/* Game Grid */}
         {gamesLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-              <p className="text-muted-foreground">Loading games...</p>
-            </div>
+            <LoadingState size="lg" centered message="Loading games..." />
           </div>
         ) : sortedGames.length === 0 ? (
           <Card className="bg-card border-border">
-            <CardContent className="p-20 text-center">
-              <Gamepad2 className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2 text-foreground">
-                No Games Found
-              </h3>
-              <p className="text-muted-foreground">
-                {selectedTheme
-                  ? `No games available for ${selectedTheme.title}`
-                  : "Select a theme to view available games"}
-              </p>
+            <CardContent className="p-20">
+              <EmptyState
+                variant="card"
+                icon={<Gamepad2 className="h-16 w-16 opacity-50" />}
+                title="No Games Found"
+                message={
+                  selectedTheme
+                    ? `No games available for ${selectedTheme.title}`
+                    : "Select a theme to view available games"
+                }
+              />
             </CardContent>
           </Card>
         ) : (

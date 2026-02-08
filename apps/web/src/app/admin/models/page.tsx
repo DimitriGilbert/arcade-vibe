@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Edit2, Power, Search, ArrowUpDown, Zap, Settings } from "lucide-react";
+import { Plus, Power, Search, ArrowUpDown, Zap, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { LoadingState, EmptyState } from "@/components/reusable";
 import {
   Dialog,
   DialogContent,
@@ -239,10 +240,7 @@ export default function AdminModelsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading models...</p>
-        </div>
+        <LoadingState size="lg" variant="purple" message="Loading models..." centered />
       </div>
     );
   }
@@ -323,9 +321,7 @@ export default function AdminModelsPage() {
               <tbody>
                 {filteredModels.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                      No models found
-                    </td>
+                    <EmptyState variant="table" colSpan={8} message="No models found" />
                   </tr>
                 ) : (
                   filteredModels.map((model) => (

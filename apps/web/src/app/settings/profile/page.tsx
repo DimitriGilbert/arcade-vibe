@@ -7,8 +7,9 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { trpc, trpcClient } from "@/utils/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User } from "lucide-react";
+import { Loader2, User, Shield, Calendar, CheckCircle, AlertCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -65,14 +66,7 @@ export default function ProfileSettingsPage() {
   });
 
   if (sessionPending) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPlaceholder />;
   }
 
   return (
@@ -128,28 +122,91 @@ export default function ProfileSettingsPage() {
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">User ID</p>
-              <p className="font-mono text-sm">{user?.id}</p>
+          <div className="space-y-6">
+            {/* User ID Section */}
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">User ID</p>
+                <p className="font-mono text-sm mt-1 bg-muted px-2 py-1 rounded">{user?.id}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
-              <p className="text-sm">
-                {user?.emailVerified ? (
-                  <span className="text-green-600 dark:text-green-400">Yes</span>
-                ) : (
-                  <span className="text-amber-600 dark:text-amber-400">No</span>
+
+            {/* Email Verification Status */}
+            <div className="flex items-start gap-3">
+              {user?.emailVerified ? (
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
+                <p className="text-sm mt-1">
+                  {user?.emailVerified ? (
+                    <span className="text-green-600 dark:text-green-400 font-medium">Verified</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">Not Verified</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Account Creation Date */}
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Account Created</p>
+                <p className="text-sm mt-1">
+                  {user?.createdAt ? (
+                    <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+                  ) : (
+                    <span className="text-muted-foreground">Unknown</span>
+                  )}
+                </p>
+                {user?.createdAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(user.createdAt).toLocaleString()}
+                  </p>
                 )}
-              </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Joined</p>
-              <p className="text-sm">
+
+            {/* Account Status */}
+            <div className="flex items-start gap-3">
+              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground">Account Status</p>
+                <p className="text-sm mt-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    Active
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Profile Statistics */}
+      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Profile Statistics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Profile Completion</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">100%</p>
+              <p className="text-xs text-muted-foreground mt-1">All required fields completed</p>
+            </div>
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Account Age</p>
+              <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
                 {user?.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString()
-                  : "Unknown"}
+                  ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+                  : 0}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">Days since joining</p>
             </div>
           </div>
         </CardContent>

@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
+import { LoadingState, EmptyState } from "@/components/reusable";
 
 type ReportStatus = "pending" | "resolved" | "reviewing" | "dismissed";
 type ReportAction = "approved" | "rejected" | "requested_changes" | "escalated";
@@ -136,14 +137,7 @@ export default function AdminModerationPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading moderation queue...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState size="lg" message="Loading moderation queue..." variant="purple" centered />;
   }
 
   return (
@@ -210,12 +204,11 @@ export default function AdminModerationPage() {
       <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
         <CardContent className="p-6">
           {filteredReports.length === 0 ? (
-            <div className="text-center py-12">
-              <AlertTriangle className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                No reports found matching your filters
-              </p>
-            </div>
+            <EmptyState
+              icon={<AlertTriangle className="h-12 w-12" />}
+              message="No reports found matching your filters"
+              variant="card"
+            />
           ) : (
             <div className="space-y-4">
               {filteredReports.map((report) => (

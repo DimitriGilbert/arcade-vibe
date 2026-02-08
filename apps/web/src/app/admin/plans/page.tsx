@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
+import { LoadingState, EmptyState } from "@/components/reusable";
 import { z } from "zod";
 
 type SortField = "name" | "price" | "credits";
@@ -173,10 +174,7 @@ export default function AdminPlansPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading plans...</p>
-        </div>
+        <LoadingState size="lg" variant="purple" message="Loading plans..." centered />
       </div>
     );
   }
@@ -253,9 +251,7 @@ export default function AdminPlansPage() {
               <tbody>
                 {filteredPlans.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                      No plans found
-                    </td>
+                    <EmptyState variant="table" message="No plans found" colSpan={6} />
                   </tr>
                 ) : (
                   filteredPlans.map((plan) => (

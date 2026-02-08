@@ -20,22 +20,33 @@ import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
+import type { Theme, ThemeList } from "@/types/entities";
+import LoadingState from "@/components/reusable/loading-state";
+import { EmptyState } from "@/components/reusable/empty-state";
 
 type SortField = "title" | "status" | "startDate";
 type SortOrder = "asc" | "desc";
+
+function themeListToTheme(theme: ThemeList): Theme {
+  return {
+    ...theme,
+    systemPrompt: theme.systemPrompt || "",
+    requirements: theme.requirements || null,
+  };
+}
 
 export default function AdminThemesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("startDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; theme: Theme | null }>({
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; theme: ThemeList | null }>({
     open: false,
     theme: null,
   });
 
   // Fetch all themes
-  const { data: themes, isLoading, refetch } = useQuery({
+  const { data: themes, isLoading, refetch } = useQuery<ThemeList[]>({
     queryKey: ["admin-themes"],
     queryFn: async () => {
       return await trpcClient.themes.list.query();
@@ -222,10 +233,7 @@ export default function AdminThemesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading themes...</p>
-        </div>
+        <LoadingState size="lg" message="Loading themes..." variant="purple" centered />
       </div>
     );
   }
@@ -311,9 +319,7 @@ export default function AdminThemesPage() {
               <tbody>
                 {filteredThemes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                      No themes found
-                    </td>
+                    <EmptyState variant="table" colSpan={5} message="No themes found" />
                   </tr>
                 ) : (
                   filteredThemes.map((theme) => (
@@ -357,7 +363,7 @@ export default function AdminThemesPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setEditingTheme(theme)}
+                            onClick={() => setEditingTheme(themeListToTheme(theme))}
                           >
                             <Edit2 className="h-4 w-4 mr-1" />
                             Edit
@@ -427,17 +433,3 @@ export default function AdminThemesPage() {
     </div>
   );
 }
-
-type Theme = {
-  id: string;
-  title: string;
-  description: string;
-  status: "upcoming" | "active" | "frozen" | "archived";
-  visibility: "private" | "public_on_freeze" | "public";
-  startDate: string | null;
-  endDate: string | null;
-  requirements?: Record<string, unknown> | null;
-  systemPrompt?: string;
-  createdAt: string;
-  updatedAt: string;
-};

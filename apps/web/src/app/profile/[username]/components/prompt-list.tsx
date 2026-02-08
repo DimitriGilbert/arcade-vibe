@@ -1,25 +1,7 @@
 import { GitBranch, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
-
-interface Prompt {
-  id: string;
-  authorId: string;
-  themeId: string;
-  parentId: string | null;
-  content: string;
-  contentHash: string;
-  tokenCount: number;
-  tokenizer: string;
-  version: number;
-  visibility: "private" | "public_on_freeze" | "public";
-  status: "draft" | "submitted" | "disqualified";
-  hiddenAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  hiddenReason: string | null;
-  hiddenBy: string | null;
-}
+import { LoadingState, EmptyState } from "@/components/reusable";
+import type { Prompt } from "@/types/entities";
 
 interface PromptListProps {
   prompts: Prompt[];
@@ -29,16 +11,16 @@ interface PromptListProps {
 export function PromptList({ prompts, isLoading }: PromptListProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      <div className="py-8">
+        <LoadingState centered />
       </div>
     );
   }
 
   if (!prompts || prompts.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No prompts found
+      <div className="text-center py-8">
+        <EmptyState message="No data available" />
       </div>
     );
   }

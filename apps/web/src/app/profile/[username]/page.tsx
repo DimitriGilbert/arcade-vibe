@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import {
-  Loader2,
-  User as UserIcon,
-  Gamepad2,
-  Star,
-  GitBranch,
-} from "lucide-react";
-import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import React, { useEffect, useMemo, useState } from "react";
+import { User as UserIcon, AlertCircle, Trophy, Zap } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "./components/stats-card";
 import { PromptList } from "./components/prompt-list";
+import { ProfileHeader } from "./components/profile-header";
+import { GamesListCard } from "./components/games-list-card";
+import { RatingsHistoryCard } from "./components/ratings-history-card";
+import { PromptRunsCard } from "./components/prompt-runs-card";
+import { useProfileData } from "@/hooks/use-profile-data";
+import { type User } from "@/types/entities";
+import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
+import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 
 interface ProfilePageProps {
   params: Promise<{
@@ -21,124 +21,9 @@ interface ProfilePageProps {
   }>;
 }
 
-interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface UserExtended {
-  id: string;
-  role: string;
-  reputation: string;
-  credits: string;
-  isSuspended: boolean;
-  suspensionReason: string | null;
-}
-
-interface Game {
-  id: string;
-  promptId: string;
-  themeId: string | null;
-  status: string;
-  modelProvider: string;
-  modelName: string;
-  modelTier: string;
-  imageUrl: string | null;
-  generatedAt: string | null;
-  isHidden: boolean;
-  isSubmitted: boolean;
-  createdAt: string;
-  prompt: {
-    id: string;
-    content: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string;
-      image: string | null;
-    };
-  };
-  theme: {
-    id: string;
-    title: string;
-  } | null;
-}
-
-interface Rating {
-  id: string;
-  promptId: string;
-  gameId: string;
-  themeId: string | null;
-  userId: string;
-  promptQuality: number | null;
-  gameQuality: number | null;
-  themeRelevance: number | null;
-  overall: number;
-  feedback: string | null;
-  createdAt: string;
-}
-
-interface GameWithRanking extends Game {
-  ranking: number | null;
-}
-
-interface LeaderboardEntry {
-  id: string;
-  userId: string;
-  promptId: string;
-  gameId: string;
-  themeId: string | null;
-  score: number;
-  isHighScore: boolean;
-  completionTime: number | null;
-  playedAt: string;
-  game: {
-    id: string;
-    promptId: string;
-    themeId: string | null;
-    status: string;
-    modelProvider: string;
-    modelName: string;
-    modelTier: string;
-    imageUrl: string | null;
-    generatedAt: string | null;
-    isHidden: boolean;
-    isSubmitted: boolean;
-    createdAt: string;
-    updatedAt: string;
-    prompt: {
-      id: string;
-      content: string;
-      authorId: string;
-      themeId: string | null;
-      createdAt: string;
-      updatedAt: string;
-      visibility: string;
-      user: {
-        id: string;
-        name: string | null;
-        email: string;
-        image: string | null;
-      };
-    };
-    theme: {
-      id: string;
-      title: string;
-      description: string | null;
-      systemPrompt: string;
-      createdAt: string;
-      updatedAt: string;
-    } | null;
-  } | null;
-}
-
 export default function ProfilePage({ params }: ProfilePageProps) {
-  const [username, setUsername] = React.useState<string>("");
-  const [isOwnProfile, setIsOwnProfile] = React.useState<boolean>(false);
+  const [username, setUsername] = useState<string>("");
+  const [isOwnProfile, setIsOwnProfile] = useState<boolean>(false);
 
   useEffect(() => {
     params.then((resolvedParams) => {
@@ -146,51 +31,23 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     });
   }, [params]);
 
-  // Decode username (it might be URL-encoded email)
-  const userEmail = useMemo(() => {
-    try {
-      return decodeURIComponent(username);
-    } catch {
-      return username;
-    }
-  }, [username]);
+  const {
+    user,
+    userExtended,
+    prompts,
+    userGamesWithRankings,
+    ratings,
+    promptRunsHistory,
+    stats,
+    isOwnProfile: computedIsOwnProfile,
+    userEmail,
+    userLoading,
+    promptsLoading,
+    gamesLoading,
+    ratingsLoading,
+    promptRunsLoading,
+  } = useProfileData(username, isOwnProfile);
 
-  // Fetch user by email
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ["user", userEmail],
-    queryFn: async (): Promise<User | null> => {
-      if (!userEmail) return null;
-
-      // Try to fetch via auth API
-      try {
-        const response = await fetch(
-          "/api/auth/user?email=" + encodeURIComponent(userEmail),
-          {
-            credentials: "include",
-          },
-        );
-
-        if (!response.ok) {
-          return null;
-        }
-
-        const data = (await response.json()) as User | null;
-        return data;
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        return null;
-      }
-    },
-    enabled: !!userEmail,
-  });
-
-  // Fetch user's credits and reputation
-  const { data: credits, isLoading: creditsLoading } = useQuery({
-    queryKey: ["credits"],
-    queryFn: () => trpcClient.credits.getBalance.query(),
-  });
-
-  // Check if viewing own profile
   useEffect(() => {
     const checkOwnProfile = async () => {
       if (!user?.id) return;
@@ -201,9 +58,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         });
 
         if (sessionResponse.ok) {
-          const session = (await sessionResponse.json()) as {
-            user?: { id: string };
-          } | null;
+          const session = await sessionResponse.json();
           const currentUserId = session?.user?.id;
           setIsOwnProfile(currentUserId === user.id);
         }
@@ -215,155 +70,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     checkOwnProfile();
   }, [user?.id]);
 
-  // Fetch user's prompts
-  const { data: prompts, isLoading: promptsLoading } = useQuery({
-    queryKey: ["prompts", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      const allPrompts = await trpcClient.prompts.listPublic.query();
-      const userPrompts = allPrompts.filter(
-        (prompt) => prompt.authorId === user.id,
-      );
-      return userPrompts;
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch user extended data (for reputation) - only for own profile
-  const { data: userExtended } = useQuery({
-    queryKey: ["user-extended", user?.id],
-    queryFn: async () => {
-      if (!isOwnProfile) return null;
-
-      try {
-        const result = await trpcClient.credits.getUserExtended.query();
-        return result;
-      } catch {
-        return null;
-      }
-    },
-    enabled: !!user?.id && isOwnProfile,
-  });
-
-  // Fetch all games and filter to user's games
-  const { data: allGames, isLoading: gamesLoading } = useQuery({
-    queryKey: ["games-all"],
-    queryFn: async (): Promise<Game[]> => {
-      try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
-        return await trpcClient.games.listByTheme.query({
-          themeId: currentTheme.id,
-          includeSubmitted: true,
-          limit: 200,
-        });
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!user?.id,
-  });
-
-  // Filter games to user's games (where they are the prompt author)
-  const userGames = useMemo(() => {
-    if (!allGames || !user?.id) return [];
-    return allGames.filter((game) => game.prompt.user?.id === user.id);
-  }, [allGames, user?.id]);
-
-  // Fetch leaderboard to compute game rankings
-  const { data: leaderboard } = useQuery({
-    queryKey: ["leaderboard"],
-    queryFn: async (): Promise<LeaderboardEntry[]> => {
-      try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
-        const result = await trpcClient.leaderboard.getTop.query({
-          themeId: currentTheme.id,
-          limit: 200,
-        });
-        return result as LeaderboardEntry[];
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!user?.id,
-  });
-
-  // Compute rankings for user's games
-  const userGamesWithRankings = useMemo((): GameWithRanking[] => {
-    if (!userGames || !leaderboard)
-      return userGames.map((game) => ({ ...game, ranking: null }));
-
-    const rankingMap = new Map<string, number>();
-    leaderboard.forEach((entry: LeaderboardEntry, index: number) => {
-      if (entry.game) {
-        rankingMap.set(entry.game.id, index + 1);
-      }
-    });
-
-    return userGames.map((game) => ({
-      ...game,
-      ranking: rankingMap.get(game.id) ?? null,
-    }));
-  }, [userGames, leaderboard]);
-
-  // Fetch user's ratings
-  const { data: ratings, isLoading: ratingsLoading } = useQuery({
-    queryKey: ["ratings", user?.id],
-    queryFn: async (): Promise<Rating[]> => {
-      if (!user?.id) return [];
-      return await trpcClient.ratings.getByUser.query({ userId: user.id });
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch prompt runs history (games generated using user's prompts)
-  const { data: promptRunsHistory, isLoading: promptRunsLoading } = useQuery({
-    queryKey: ["prompt-runs-history", user?.id],
-    queryFn: async (): Promise<Game[]> => {
-      if (!user?.id) return [];
-      if (!prompts || prompts.length === 0) return [];
-
-      try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
-        const allGames = await trpcClient.games.listByTheme.query({
-          themeId: currentTheme.id,
-          includeSubmitted: true,
-          limit: 200,
-        });
-
-        return allGames.filter((game) => {
-          return game.prompt.user?.id === user.id;
-        });
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!user?.id && !!prompts && prompts.length > 0,
-  });
-
-  // Calculate stats
-  const stats = useMemo(() => {
-    if (!user) return null;
-
-    return {
-      gamesCreated: userGames.length,
-      totalRatings: ratings?.length || 0,
-      reputation: userExtended?.reputation ?? 0,
-      credits: credits?.balance || 0,
-      promptsCount: prompts?.length || 0,
-    };
-  }, [user, userGames, ratings, credits, prompts, userExtended]);
-
   if (userLoading || (!user && !userLoading)) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-              <p className="text-muted-foreground">Loading profile...</p>
-            </div>
-          </div>
+          <LoadingPlaceholder />
         </div>
       </div>
     );
@@ -375,12 +86,15 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         <div className="container mx-auto py-8 px-4">
           <Card className="bg-card border-border">
             <CardContent className="p-20 text-center">
-              <UserIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+              <AlertCircle className="h-16 w-16 mx-auto text-destructive mb-4 opacity-70" />
               <h3 className="text-xl font-semibold mb-2 text-foreground">
                 User Not Found
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 The profile {userEmail} could not be found.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Please check the username and try again, or contact support if the problem persists.
               </p>
             </CardContent>
           </Card>
@@ -392,284 +106,61 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
-            {user.image ? (
-              <img
-                src={user.image}
-                alt={user.name || user.email}
-                className="w-20 h-20 rounded-full border-4 border-border shadow-lg"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-lg">
-                {(user.name || user.email).charAt(0).toUpperCase()}
-              </div>
-            )}
+        <ProfileHeader
+          user={user}
+          userEmail={userEmail}
+          credits={stats ? { balance: stats.credits } : null}
+          isOwnProfile={computedIsOwnProfile}
+        />
 
-            {/* User Info */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-foreground mb-2">
-                {user.name || user.email}
-              </h1>
-              <p className="text-muted-foreground mb-3">{user.email}</p>
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">
-                  Member since {new Date(user.createdAt).getFullYear()}
-                </Badge>
-                {isOwnProfile && credits && (
-                  <Badge variant="default" className="bg-primary">
-                    {credits.balance} credits
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Card */}
         {stats && (
-          <StatsCard
-            gamesCreated={stats.gamesCreated}
-            totalRatings={stats.totalRatings}
-            reputation={stats.reputation}
-            isLoading={gamesLoading || ratingsLoading}
-          />
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="h-5 w-5 text-primary" />
+              <h2 className="text-2xl font-bold">Statistics Overview</h2>
+            </div>
+            <StatsCard
+              gamesCreated={stats.gamesCreated}
+              totalRatings={stats.totalRatings}
+              reputation={stats.reputation}
+              isLoading={gamesLoading || ratingsLoading}
+            />
+          </div>
         )}
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          {/* User's Prompts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5 text-primary" />
-                  Prompts
-                </CardTitle>
-                <Badge variant="outline">{prompts?.length || 0}</Badge>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                Prompts Created
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {promptsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : !prompts || prompts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No prompts created yet
-                </div>
-              ) : (
-                <PromptList prompts={prompts} />
-              )}
+              <PromptList prompts={prompts || []} isLoading={promptsLoading} />
             </CardContent>
           </Card>
 
-          {/* User's Games */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5 text-primary" />
-                  Games
-                </CardTitle>
-                <Badge variant="outline">{userGames.length}</Badge>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Games & Rankings
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {gamesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : userGames.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No games created yet
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {userGamesWithRankings.slice(0, 5).map((game) => {
-                    const ranking = userGamesWithRankings.find(
-                      (g) => g.id === game.id,
-                    )?.ranking;
-                    return (
-                      <button
-                        key={game.id}
-                        type="button"
-                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer text-left"
-                        onClick={() => {
-                          const target = `/play?gameId=${game.id}`;
-                          window.location.href = target;
-                        }}
-                      >
-                        {game.imageUrl ? (
-                          <img
-                            src={game.imageUrl}
-                            alt={game.prompt.content.slice(0, 30)}
-                            className="w-16 h-12 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-16 h-12 bg-primary rounded flex items-center justify-center">
-                            <Gamepad2 className="h-6 w-6 text-primary-foreground" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate text-foreground">
-                            {game.prompt.content.slice(0, 50)}...
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {game.theme?.title || "No theme"} •{" "}
-                            {new Date(game.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {ranking && (
-                            <Badge variant="outline" className="text-xs">
-                              Rank #{ranking}
-                            </Badge>
-                          )}
-                          <Badge
-                            variant={
-                              game.status === "completed"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {game.status}
-                          </Badge>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <GamesListCard
+                games={userGamesWithRankings}
+                isLoading={gamesLoading}
+              />
             </CardContent>
           </Card>
         </div>
 
-        {/* Ratings History */}
-        <Card className="bg-card border-border mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary" />
-                Ratings History
-              </CardTitle>
-              <Badge variant="outline">{ratings?.length || 0}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {ratingsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : !ratings || ratings.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No ratings yet
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {ratings.slice(0, 10).map((rating) => (
-                  <div
-                    key={rating.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= rating.overall
-                                ? "fill-accent text-accent"
-                                : "text-muted-foreground/30"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-foreground">
-                        Game ID: {rating.gameId}
-                      </p>
-                      {rating.feedback && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {rating.feedback}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(rating.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Prompt Runs History */}
-        <Card className="bg-card border-border mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Gamepad2 className="h-5 w-5 text-primary" />
-                Prompt Runs History
-              </CardTitle>
-              <Badge variant="outline">{promptRunsHistory?.length || 0}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {promptRunsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : !promptRunsHistory || promptRunsHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No prompt runs yet
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {promptRunsHistory.slice(0, 10).map((game) => (
-                  <div
-                    key={game.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                  >
-                    {game.imageUrl ? (
-                      <img
-                        src={game.imageUrl}
-                        alt={game.prompt.content.slice(0, 30)}
-                        className="w-16 h-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-16 h-12 bg-primary rounded flex items-center justify-center">
-                        <Gamepad2 className="h-6 w-6 text-primary-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-foreground">
-                        {game.prompt.content.slice(0, 60)}...
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {game.theme?.title || "No theme"} •{" "}
-                        {new Date(game.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        game.status === "completed" ? "default" : "secondary"
-                      }
-                    >
-                      {game.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="mt-8 space-y-6">
+          <RatingsHistoryCard ratings={ratings || []} isLoading={ratingsLoading} />
+          <PromptRunsCard promptRuns={promptRunsHistory || []} isLoading={promptRunsLoading} />
+        </div>
       </div>
     </div>
   );

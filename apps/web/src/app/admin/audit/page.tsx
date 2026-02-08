@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Loader2,
   Search,
   ArrowUpDown,
   History,
@@ -15,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LoadingState } from "@/components/reusable";
+import { EmptyState } from "@/components/reusable";
 
 type SortField = "createdAt" | "actionType" | "targetType" | "adminName";
 type SortOrder = "asc" | "desc";
@@ -144,10 +145,7 @@ export default function AdminAuditPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading audit log...</p>
-        </div>
+        <LoadingState size="lg" message="Loading audit log..." variant="purple" centered />
       </div>
     );
   }
@@ -247,12 +245,11 @@ export default function AdminAuditPage() {
               <tbody>
                 {filteredActions.length === 0 ? (
                   <tr>
-                    <td
+                    <EmptyState
+                      message="No audit entries found"
+                      variant="table"
                       colSpan={5}
-                      className="px-4 py-12 text-center text-muted-foreground"
-                    >
-                      No audit entries found
-                    </td>
+                    />
                   </tr>
                 ) : (
                   filteredActions.map((action) => (

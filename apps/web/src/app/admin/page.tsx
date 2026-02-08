@@ -2,9 +2,10 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Users, FileText, Shield, Activity, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, FileText, Shield, Activity, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/reusable";
 import { trpcClient } from "@/utils/trpc";
 
 export default function AdminDashboardPage() {
@@ -167,10 +168,10 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             {!pendingReports || pendingReports.length === 0 ? (
-              <div className="text-center py-8">
-                <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />
-                <p className="text-sm text-muted-foreground">No pending reports</p>
-              </div>
+              <EmptyState
+                icon={<CheckCircle className="h-12 w-12" />}
+                message="No pending reports"
+              />
             ) : (
               <div className="space-y-3">
                 {pendingReports.slice(0, 5).map((report) => (
@@ -219,10 +220,10 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             {!adminActions || adminActions.length === 0 ? (
-              <div className="text-center py-8">
-                <Activity className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                <p className="text-sm text-muted-foreground">No recent activity</p>
-              </div>
+              <EmptyState
+                icon={<Activity className="h-12 w-12" />}
+                message="No recent activity"
+              />
             ) : (
               <div className="space-y-3">
                 {adminActions.slice(0, 5).map((action) => (

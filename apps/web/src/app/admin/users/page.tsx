@@ -6,7 +6,7 @@ import {
   Loader2,
   Search,
   ArrowUpDown,
-  User,
+  User as UserIcon,
   Shield,
   AlertTriangle,
 } from "lucide-react";
@@ -24,9 +24,13 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { LoadingState } from "@/components/reusable";
+import { EmptyState } from "@/components/reusable";
+import UserAvatar from "@/components/reusable/user-avatar";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
+import type { UserAdminView as User } from "@/types/entities";
 
 type SortField = "name" | "email" | "role" | "credits";
 type SortOrder = "asc" | "desc";
@@ -55,25 +59,31 @@ export default function AdminUsersPage() {
           id: "1",
           name: "Alice Johnson",
           email: "alice@example.com",
-          role: "participant" as const,
-          credits: "500",
+          role: "participant",
+          credits: 500,
           isSuspended: false,
+          reputation: 0,
+          suspensionReason: null,
         },
         {
           id: "2",
           name: "Bob Smith",
           email: "bob@example.com",
-          role: "participant" as const,
-          credits: "1250",
+          role: "participant",
+          credits: 1250,
           isSuspended: false,
+          reputation: 0,
+          suspensionReason: null,
         },
         {
           id: "3",
           name: "Charlie Brown",
           email: "charlie@example.com",
-          role: "admin" as const,
-          credits: "10000",
+          role: "admin",
+          credits: 10000,
           isSuspended: false,
+          reputation: 0,
+          suspensionReason: null,
         },
       ] as User[];
     },
@@ -125,7 +135,7 @@ export default function AdminUsersPage() {
           comparison = a.role.localeCompare(b.role);
           break;
         case "credits":
-          comparison = parseInt(a.credits) - parseInt(b.credits);
+          comparison = a.credits - b.credits;
           break;
       }
       return sortOrder === "asc" ? comparison : -comparison;
@@ -189,10 +199,7 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
-          <p className="text-muted-foreground">Loading users...</p>
-        </div>
+        <LoadingState size="lg" message="Loading users..." variant="purple" centered />
       </div>
     );
   }
@@ -261,12 +268,7 @@ export default function AdminUsersPage() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-12 text-center text-muted-foreground"
-                    >
-                      No users found
-                    </td>
+                    <EmptyState variant="table" colSpan={6} message="No users found" />
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
@@ -276,9 +278,7 @@ export default function AdminUsersPage() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
-                            {user.name?.[0] || "U"}
-                          </div>
+                          <UserAvatar user={user} size="xs" />
                           <div>
                             <div className="font-medium">
                               {user.name || "Unknown"}
@@ -306,7 +306,7 @@ export default function AdminUsersPage() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        {parseInt(user.credits).toLocaleString()}
+                        {user.credits.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
                         {user.isSuspended ? (
@@ -411,12 +411,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-type User = {
-  id: string;
-  name: string | null;
-  email: string;
-  role: "admin" | "moderator" | "participant";
-  credits: string;
-  isSuspended: boolean;
-};

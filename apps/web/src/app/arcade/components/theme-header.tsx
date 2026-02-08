@@ -2,22 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Archive, Sparkles } from "lucide-react";
-
-interface Theme {
-  id: string;
-  title: string;
-  description: string;
-  status: "upcoming" | "active" | "frozen" | "archived";
-  visibility: "private" | "public_on_freeze" | "public";
-  startDate: string | null;
-  endDate: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { ThemeList } from "@/types/entities";
 
 interface ThemeHeaderProps {
-  currentTheme: Theme | null;
-  archivedThemes: Theme[];
+  currentTheme: ThemeList | null;
+  archivedThemes: ThemeList[];
   selectedThemeId: string;
   themeStatus: "current" | "archived";
   onThemeSelect: (themeId: string) => void;

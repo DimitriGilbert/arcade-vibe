@@ -1,7 +1,7 @@
 import { Gamepad2, Star, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
 interface StatsCardProps {
   gamesCreated: number;
@@ -41,9 +41,7 @@ export function StatsCard({
     return (
       <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
         <CardContent className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-          </div>
+          <LoadingPlaceholder />
         </CardContent>
       </Card>
     );
