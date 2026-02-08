@@ -12,10 +12,12 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArcadeCard,
+  ArcadeButton,
+  ArcadeInput,
+  ArcadeBadge,
+} from "@/components/arcade";
 import {
   Dialog,
   DialogContent,
@@ -137,7 +139,14 @@ export default function AdminModerationPage() {
   };
 
   if (isLoading) {
-    return <LoadingState size="lg" message="Loading moderation queue..." variant="accent" centered />;
+    return (
+      <LoadingState
+        size="lg"
+        message="Loading moderation queue..."
+        variant="accent"
+        centered
+      />
+    );
   }
 
   return (
@@ -147,18 +156,18 @@ export default function AdminModerationPage() {
         <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Moderation Queue
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-[var(--muted-foreground)] mt-2">
           Review and resolve user reports
         </p>
       </div>
 
       {/* Search and Filters */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+              <ArcadeInput
                 placeholder="Search reports..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -170,7 +179,7 @@ export default function AdminModerationPage() {
               onChange={(e) =>
                 setStatusFilter(e.target.value as ReportStatus | "all")
               }
-              className="px-3 py-2 border rounded-md bg-background"
+              className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -188,7 +197,7 @@ export default function AdminModerationPage() {
                     | "review",
                 )
               }
-              className="px-3 py-2 border rounded-md bg-background"
+              className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Types</option>
               <option value="prompt">Prompts</option>
@@ -197,12 +206,12 @@ export default function AdminModerationPage() {
               <option value="review">Reviews</option>
             </select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Reports List */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           {filteredReports.length === 0 ? (
             <EmptyState
               icon={<AlertTriangle className="h-12 w-12" />}
@@ -220,27 +229,28 @@ export default function AdminModerationPage() {
                     {/* Report Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="capitalize">
-                          {report.targetType}
-                        </Badge>
-                        <Badge
+                        <ArcadeBadge
+                          text={report.targetType}
+                          variant="default"
+                          className="capitalize"
+                        />
+                        <ArcadeBadge
+                          text={report.status}
                           variant={
-                            report.status === "pending"
-                              ? "default"
-                              : "secondary"
+                            report.status === "pending" ? "neon" : "default"
                           }
                           className="capitalize"
-                        >
-                          {report.status}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {report.reason}
-                        </Badge>
+                        />
+                        <ArcadeBadge
+                          text={report.reason}
+                          variant="pixel"
+                          className="text-xs"
+                        />
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-sm text-[var(--muted-foreground)] line-clamp-2">
                         {report.description ?? ""}
                       </p>
-                      <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="mt-2 flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
                         <span>
                           By{" "}
                           {report.reporter?.name ||
@@ -256,17 +266,17 @@ export default function AdminModerationPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      <Button
+                      <ArcadeButton
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedReport(report)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-4 w-4" />
                         Details
-                      </Button>
+                      </ArcadeButton>
                       {report.status === "pending" && (
                         <>
-                          <Button
+                          <ArcadeButton
                             variant="secondary"
                             size="sm"
                             onClick={() =>
@@ -277,9 +287,9 @@ export default function AdminModerationPage() {
                               })
                             }
                           >
-                            <CheckCircle className="h-4 w-4 mr-1" />
+                            <CheckCircle className="h-4 w-4" />
                             Resolve
-                          </Button>
+                          </ArcadeButton>
                         </>
                       )}
                     </div>
@@ -291,24 +301,26 @@ export default function AdminModerationPage() {
 
           {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
-            <Button
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {page}</span>
-            <Button
+            </ArcadeButton>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              Page {page}
+            </span>
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
               disabled={!reports || reports.length < pageSize}
             >
               Next
-            </Button>
+            </ArcadeButton>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Report Details Dialog */}
       <Dialog
@@ -330,7 +342,7 @@ export default function AdminModerationPage() {
                   <p className="text-sm">
                     {selectedReport.reporter?.name || "Anonymous"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[var(--muted-foreground)]">
                     {selectedReport.reporter?.email || ""}
                   </p>
                 </div>
@@ -346,15 +358,12 @@ export default function AdminModerationPage() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
-                  <Badge
+                  <ArcadeBadge
+                    text={selectedReport.status}
                     variant={
-                      selectedReport.status === "pending"
-                        ? "default"
-                        : "secondary"
+                      selectedReport.status === "pending" ? "neon" : "default"
                     }
-                  >
-                    {selectedReport.status}
-                  </Badge>
+                  />
                 </div>
               </div>
               <div>
@@ -363,7 +372,7 @@ export default function AdminModerationPage() {
                   {selectedReport.description ?? ""}
                 </p>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-[var(--muted-foreground)]">
                 Created: {new Date(selectedReport.createdAt).toLocaleString()}
               </div>
             </div>
@@ -407,7 +416,7 @@ export default function AdminModerationPage() {
                   >
                     <XCircle className="h-4 w-4 mx-auto mb-1" />
                     <span className="block">Approve</span>
-                    <span className="block text-xs text-muted-foreground mt-1">
+                    <span className="block text-xs text-[var(--muted-foreground)] mt-1">
                       Take action (hide game, suspend user, etc.)
                     </span>
                   </button>
@@ -427,7 +436,7 @@ export default function AdminModerationPage() {
                   >
                     <CheckCircle className="h-4 w-4 mx-auto mb-1" />
                     <span className="block">Reject</span>
-                    <span className="block text-xs text-muted-foreground mt-1">
+                    <span className="block text-xs text-[var(--muted-foreground)] mt-1">
                       No action needed
                     </span>
                   </button>
@@ -447,7 +456,7 @@ export default function AdminModerationPage() {
                   >
                     <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
                     <span className="block">Request Changes</span>
-                    <span className="block text-xs text-muted-foreground mt-1">
+                    <span className="block text-xs text-[var(--muted-foreground)] mt-1">
                       Ask for content modification
                     </span>
                   </button>
@@ -467,7 +476,7 @@ export default function AdminModerationPage() {
                   >
                     <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
                     <span className="block">Escalate</span>
-                    <span className="block text-xs text-muted-foreground mt-1">
+                    <span className="block text-xs text-[var(--muted-foreground)] mt-1">
                       Send to admin review
                     </span>
                   </button>
@@ -483,15 +492,16 @@ export default function AdminModerationPage() {
             </div>
           )}
           <DialogFooter>
-            <Button
+            <ArcadeButton
               variant="outline"
               onClick={() =>
                 setResolutionDialog({ open: false, report: null, action: null })
               }
             >
               Cancel
-            </Button>
-            <Button
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
               onClick={() => {
                 if (resolutionDialog.report && resolutionDialog.action) {
                   const textarea = document.querySelector(
@@ -510,16 +520,16 @@ export default function AdminModerationPage() {
             >
               {resolveReportMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Resolving...
                 </>
               ) : (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="h-4 w-4" />
                   Submit Resolution
                 </>
               )}
-            </Button>
+            </ArcadeButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

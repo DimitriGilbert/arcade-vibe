@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { Clock, Eye, Share2, Flag, Trophy } from "lucide-react";
 
 interface GameHeaderProps {
@@ -28,47 +27,43 @@ export function GameHeader({
   return (
     <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold truncate max-w-md text-foreground">
+        <h1 className="text-2xl font-bold truncate max-w-md text-[var(--foreground)]">
           {promptContent.slice(0, 50)}...
         </h1>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
           <span className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
             {playtimeDisplay}
           </span>
-          {themeTitle && <Badge variant="secondary">{themeTitle}</Badge>}
+          {themeTitle && <ArcadeBadge text={themeTitle} variant="default" />}
         </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={onViewPrompt}
-          className="inline-flex items-center gap-2 px-3 py-2 border border-border bg-background hover:bg-muted rounded-none text-xs font-medium transition-colors"
-        >
+        <ArcadeButton variant="outline" onClick={onViewPrompt}>
           <Eye className="h-4 w-4" />
           View Prompt
-        </button>
+        </ArcadeButton>
 
-        <Button variant="outline" size="sm" onClick={onShare} className="gap-2">
+        <ArcadeButton variant="outline" onClick={onShare}>
           <Share2 className="h-4 w-4" />
           Share
-        </Button>
+        </ArcadeButton>
 
-        <button
-          type="button"
+        <ArcadeButton
+          variant="outline"
           onClick={onReport}
-          className="inline-flex items-center gap-2 px-3 py-2 border border-destructive/50 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-none text-xs font-medium transition-colors"
+          className="border-[var(--destructive)]/50 bg-[var(--destructive)]/10 hover:bg-[var(--destructive)]/20 text-[var(--destructive)]"
         >
           <Flag className="h-4 w-4" />
           Report
-        </button>
+        </ArcadeButton>
 
         {canRate && (
-          <Button size="sm" onClick={onRate} className="gap-2">
+          <ArcadeButton variant="primary" onClick={onRate}>
             <Trophy className="h-4 w-4" />
             Rate Game
-          </Button>
+          </ArcadeButton>
         )}
       </div>
     </div>

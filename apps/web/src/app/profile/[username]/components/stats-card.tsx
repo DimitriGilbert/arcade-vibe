@@ -1,5 +1,5 @@
 import { Gamepad2, Star, TrendingUp } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArcadeCard } from "@/components/arcade";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
 interface StatsCardProps {
@@ -44,17 +44,17 @@ export function StatsCard({
 
   if (isLoading) {
     return (
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard className="bg-[var(--card)]/60 backdrop-blur-sm">
+        <div className="p-6">
           <LoadingPlaceholder />
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     );
   }
 
   return (
-    <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-      <CardContent className="p-6">
+    <ArcadeCard className="bg-[var(--card)]/60 backdrop-blur-sm">
+      <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {stats.map((stat) => (
             <div
@@ -65,13 +65,15 @@ export function StatsCard({
                 <stat.icon className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  {stat.label}
+                </p>
                 <p className="text-2xl font-bold">{stat.value}</p>
               </div>
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </ArcadeCard>
   );
 }

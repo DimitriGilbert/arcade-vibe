@@ -2,9 +2,16 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, FileText, Shield, Activity, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  FileText,
+  Shield,
+  Activity,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+} from "lucide-react";
+import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
 import { trpcClient } from "@/utils/trpc";
 
@@ -14,7 +21,9 @@ export default function AdminDashboardPage() {
     queryKey: ["admin-pending-reports"],
     queryFn: async () => {
       try {
-        const reports = await trpcClient.moderation.getQueue.query({ limit: 5 });
+        const reports = await trpcClient.moderation.getQueue.query({
+          limit: 5,
+        });
         return reports;
       } catch {
         return [];
@@ -23,13 +32,16 @@ export default function AdminDashboardPage() {
   });
 
   // Use memoized stats (mock data for now)
-  const stats = useMemo(() => ({
-    totalUsers: 1250,
-    activeUsers: 342,
-    totalPrompts: 856,
-    totalGames: 1243,
-    pendingReports: pendingReports?.length || 12,
-  }), [pendingReports]);
+  const stats = useMemo(
+    () => ({
+      totalUsers: 1250,
+      activeUsers: 342,
+      totalPrompts: 856,
+      totalGames: 1243,
+      pendingReports: pendingReports?.length || 12,
+    }),
+    [pendingReports],
+  );
 
   // Recent admin actions - using mock data for now
   const adminActions: Array<{
@@ -90,12 +102,36 @@ export default function AdminDashboardPage() {
   } as const;
 
   const quickActions = [
-    { name: "Manage Plans", href: "/admin/plans", description: "Configure subscription plans and pricing" },
-    { name: "Manage Models", href: "/admin/models", description: "Add, edit, and configure AI models" },
-    { name: "Moderation Queue", href: "/admin/moderation", description: "Review and resolve user reports" },
-    { name: "Manage Themes", href: "/admin/themes", description: "Create and manage competition themes" },
-    { name: "User Management", href: "/admin/users", description: "View and manage user accounts" },
-    { name: "Audit Log", href: "/admin/audit", description: "View admin activity history" },
+    {
+      name: "Manage Plans",
+      href: "/admin/plans",
+      description: "Configure subscription plans and pricing",
+    },
+    {
+      name: "Manage Models",
+      href: "/admin/models",
+      description: "Add, edit, and configure AI models",
+    },
+    {
+      name: "Moderation Queue",
+      href: "/admin/moderation",
+      description: "Review and resolve user reports",
+    },
+    {
+      name: "Manage Themes",
+      href: "/admin/themes",
+      description: "Create and manage competition themes",
+    },
+    {
+      name: "User Management",
+      href: "/admin/users",
+      description: "View and manage user accounts",
+    },
+    {
+      name: "Audit Log",
+      href: "/admin/audit",
+      description: "View admin activity history",
+    },
   ];
 
   return (
@@ -105,7 +141,7 @@ export default function AdminDashboardPage() {
         <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Dashboard Overview
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-[var(--muted-foreground)] mt-2">
           Welcome back! Here's what's happening on the platform.
         </p>
       </div>
@@ -115,12 +151,16 @@ export default function AdminDashboardPage() {
         {statistics.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title} className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-              <CardContent className="p-6">
+            <ArcadeCard key={stat.title}>
+              <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-3xl font-bold">{stat.value.toLocaleString()}</p>
+                    <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                      {stat.title}
+                    </p>
+                    <p className="text-3xl font-bold">
+                      {stat.value.toLocaleString()}
+                    </p>
                   </div>
                   <div className={`p-3 rounded-xl ${toneClasses[stat.tone]}`}>
                     <Icon className="h-6 w-6" />
@@ -128,28 +168,30 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   {stat.change && (
-                    <Badge
-                      variant={stat.positive ? "secondary" : "destructive"}
-                      className="text-xs"
-                    >
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                      {stat.change}
-                    </Badge>
+                    <ArcadeBadge
+                      text={stat.change}
+                      variant={stat.positive ? "default" : "pixel"}
+                      icon={<TrendingUp className="h-3 w-3" />}
+                    />
                   )}
-                  <span className="text-xs text-muted-foreground">vs last month</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    vs last month
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </ArcadeCard>
           );
         })}
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardHeader>
-          <CardTitle className="text-xl">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ArcadeCard>
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)] text-xl">
+            Quick Actions
+          </h3>
+        </div>
+        <div className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {quickActions.map((action) => (
               <a
@@ -160,24 +202,26 @@ export default function AdminDashboardPage() {
                 <h3 className="font-semibold text-sm group-hover:text-[var(--primary)] transition-colors">
                   {action.name}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                  {action.description}
+                </p>
               </a>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Two Column Layout for Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Moderation */}
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+        <ArcadeCard>
+          <div className="p-4 border-b border-[var(--border)]">
+            <h3 className="font-semibold text-[var(--foreground)] text-xl flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-[var(--accent)]" />
               Pending Moderation
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h3>
+          </div>
+          <div className="p-4">
             {!pendingReports || pendingReports.length === 0 ? (
               <EmptyState
                 icon={<CheckCircle className="h-12 w-12" />}
@@ -195,15 +239,13 @@ export default function AdminDashboardPage() {
                         <p className="text-sm font-medium truncate">
                           {report.targetType} Report
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-1">
+                        <p className="text-xs text-[var(--muted-foreground)] truncate mt-1">
                           {report.reason}
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {report.status}
-                      </Badge>
+                      <ArcadeBadge text={report.status} variant="default" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-[var(--muted-foreground)] mt-2">
                       {new Date(report.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -218,18 +260,18 @@ export default function AdminDashboardPage() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
 
         {/* Recent Admin Activity */}
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+        <ArcadeCard>
+          <div className="p-4 border-b border-[var(--border)]">
+            <h3 className="font-semibold text-[var(--foreground)] text-xl flex items-center gap-2">
               <Shield className="h-5 w-5 text-[var(--primary)]" />
               Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h3>
+          </div>
+          <div className="p-4">
             {!adminActions || adminActions.length === 0 ? (
               <EmptyState
                 icon={<Activity className="h-12 w-12" />}
@@ -247,20 +289,21 @@ export default function AdminDashboardPage() {
                         <p className="text-sm font-medium truncate">
                           {action.actionType.replace(/_/g, " ")}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-1">
-                          {action.targetType}: {action.reason || "No reason provided"}
+                        <p className="text-xs text-[var(--muted-foreground)] truncate mt-1">
+                          {action.targetType}:{" "}
+                          {action.reason || "No reason provided"}
                         </p>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-[var(--muted-foreground)] mt-2">
                       {new Date(action.createdAt).toLocaleString()}
                     </p>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
       </div>
     </div>
   );

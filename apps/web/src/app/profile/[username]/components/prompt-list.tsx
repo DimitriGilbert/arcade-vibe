@@ -1,5 +1,5 @@
 import { GitBranch, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArcadeBadge } from "@/components/arcade";
 import { LoadingState, EmptyState } from "@/components/reusable";
 import type { Prompt } from "@/types/entities";
 
@@ -43,22 +43,15 @@ export function PromptList({ prompts, isLoading }: PromptListProps) {
                 {prompt.content.slice(0, 60)}
                 {prompt.content.length > 60 && "..."}
               </p>
-              <Badge
-                variant="outline"
-                className="text-xs whitespace-nowrap"
-              >
-                v{prompt.version}
-              </Badge>
+              <ArcadeBadge text={`v${prompt.version}`} variant="default" />
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {new Date(prompt.createdAt).toLocaleDateString()}
               </div>
               <div className="flex items-center gap-1">
-                <Badge variant="secondary" className="text-xs">
-                  {prompt.visibility}
-                </Badge>
+                <ArcadeBadge text={prompt.visibility} variant="default" />
               </div>
             </div>
           </div>

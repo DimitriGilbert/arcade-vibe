@@ -3,12 +3,6 @@
 import React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Star, Loader2 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
@@ -29,7 +23,12 @@ const ratingSchema = z.object({
   feedback: z.string().optional(),
 });
 
-export function RatingForm({ gameId, promptId, playtime, onSuccess }: RatingFormProps) {
+export function RatingForm({
+  gameId,
+  promptId,
+  playtime,
+  onSuccess,
+}: RatingFormProps) {
   const { Form } = useFormedible({
     schema: ratingSchema,
     fields: [
@@ -124,7 +123,8 @@ export function RatingForm({ gameId, promptId, playtime, onSuccess }: RatingForm
           toast.success("Rating submitted successfully!");
           onSuccess();
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Failed to submit rating";
+          const message =
+            error instanceof Error ? error.message : "Failed to submit rating";
           toast.error(message);
           throw error;
         }

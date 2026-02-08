@@ -2,8 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
 import { Trophy, Medal, Clock } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
@@ -13,7 +12,11 @@ interface LeaderboardSidebarProps {
 
 export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
   // Fetch leaderboard data with polling (NOT subscriptions!)
-  const { data: leaderboard, isLoading, error } = useQuery({
+  const {
+    data: leaderboard,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["game-leaderboard", gameId],
     queryFn: async () => {
       return await trpcClient.gameLeaderboard.getLeaderboard.query({
@@ -28,51 +31,51 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
+      <ArcadeCard>
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
             <Trophy className="h-4 w-4" />
             Leaderboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div className="p-4">
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--muted-foreground)]" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
+      <ArcadeCard>
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
             <Trophy className="h-4 w-4" />
             Leaderboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
+          </h3>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
             Failed to load leaderboard
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
+    <ArcadeCard>
+      <div className="p-4 border-b border-[var(--border)]">
+        <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
           <Trophy className="h-4 w-4 text-[var(--accent)]" />
           Leaderboard
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </h3>
+      </div>
+      <div className="p-4">
         {!leaderboard || leaderboard.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
             No scores yet. Be the first!
           </p>
         ) : (
@@ -85,9 +88,7 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                 <div
                   key={entry.id}
                   className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                    isTop3
-                      ? "bg-[var(--accent)]/10"
-                      : "bg-[var(--muted)]/20"
+                    isTop3 ? "bg-[var(--accent)]/10" : "bg-[var(--muted)]/20"
                   }`}
                 >
                   {/* Rank */}
@@ -98,12 +99,12 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                           rank === 1
                             ? "text-[var(--accent)]"
                             : rank === 2
-                            ? "text-[var(--primary)]"
-                            : "text-[var(--secondary)]"
+                              ? "text-[var(--primary)]"
+                              : "text-[var(--secondary)]"
                         }`}
                       />
                     ) : (
-                      <span className="text-sm font-medium text-muted-foreground">
+                      <span className="text-sm font-medium text-[var(--muted-foreground)]">
                         {rank}
                       </span>
                     )}
@@ -116,9 +117,11 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                         {entry.user?.name || "Anonymous"}
                       </p>
                       {isTop3 && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                          {rank === 1 ? "1st" : rank === 2 ? "2nd" : "3rd"}
-                        </Badge>
+                        <ArcadeBadge
+                          text={rank === 1 ? "1st" : rank === 2 ? "2nd" : "3rd"}
+                          variant="default"
+                          className="text-xs px-1.5 py-0.5"
+                        />
                       )}
                     </div>
                   </div>
@@ -129,11 +132,13 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                       <p className="text-sm font-semibold">{entry.score}</p>
                     </div>
                     {entry.completionTime && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
                         <Clock className="h-3 w-3" />
                         <span>
                           {Math.floor(entry.completionTime / 60)}:
-                          {(entry.completionTime % 60).toString().padStart(2, "0")}
+                          {(entry.completionTime % 60)
+                            .toString()
+                            .padStart(2, "0")}
                         </span>
                       </div>
                     )}
@@ -143,7 +148,7 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ArcadeCard>
   );
 }

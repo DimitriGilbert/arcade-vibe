@@ -4,8 +4,15 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { GamePlayer } from "@/components/game-player";
-import { Card, CardContent } from "@/components/ui/card";
-import { DialogPrimitive } from "@/components/ui/dialog";
+import {
+  ArcadeCard,
+  ArcadeDialog,
+  ArcadeDialogContent,
+  ArcadeDialogHeader,
+  ArcadeDialogTitle,
+  ArcadeDialogDescription,
+  ArcadeDialogClose,
+} from "@/components/arcade";
 import { X } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { RatingForm } from "./components/rating-form";
@@ -127,7 +134,7 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   if (gameLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
         <LoadingState size="lg" message="Loading game..." centered />
       </div>
     );
@@ -135,8 +142,11 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   if (!game) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <EmptyState title="Game not found" message="The game you're looking for doesn't exist." />
+      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+        <EmptyState
+          title="Game not found"
+          message="The game you're looking for doesn't exist."
+        />
       </div>
     );
   }
@@ -144,7 +154,7 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
   const canRate = playtime >= 60 && !myRating && isGameLoaded;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--background)]">
       <div className="container mx-auto py-6 px-4">
         <GameHeader
           promptContent={game.prompt?.content || ""}
@@ -159,8 +169,8 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <Card className="h-[calc(100vh-200px)]">
-              <CardContent className="p-0 h-full">
+            <ArcadeCard className="h-[calc(100vh-200px)]">
+              <div className="h-full">
                 <GamePlayer
                   gameUrl={`/api/games/${gameId}/play`}
                   gameId={gameId}
@@ -169,8 +179,8 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
                   onLoad={handleGameLoad}
                   onError={handleGameError}
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </ArcadeCard>
           </div>
 
           <div className="space-y-4">
@@ -199,37 +209,25 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
         isSubmitting={reportMutation.isPending}
       />
 
-      {showRatingDialog && (
-        <DialogPrimitive.Root
-          open={showRatingDialog}
-          onOpenChange={setShowRatingDialog}
-        >
-        <DialogPrimitive.Portal>
-            <DialogPrimitive.Backdrop className="fixed inset-0 bg-[var(--foreground)]/40" />
-            <DialogPrimitive.Popup className="bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-none p-4 text-xs/relaxed ring-1 duration-100 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none">
-              <button
-                type="button"
-                onClick={() => setShowRatingDialog(false)}
-                className="absolute top-2 right-2 p-1 hover:bg-muted rounded-none"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="space-y-2">
-                <h2 className="text-lg font-semibold">Rate This Game</h2>
-                <p className="text-muted-foreground text-xs">
-                  Your feedback helps improve future games
-                </p>
-              </div>
-              <RatingForm
-                gameId={gameId}
-                promptId={game.promptId}
-                playtime={playtime}
-                onSuccess={() => setShowRatingDialog(false)}
-              />
-            </DialogPrimitive.Popup>
-          </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
-      )}
+      <ArcadeDialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <ArcadeDialogContent>
+          <ArcadeDialogHeader>
+            <ArcadeDialogTitle>Rate This Game</ArcadeDialogTitle>
+            <ArcadeDialogDescription>
+              Your feedback helps improve future games
+            </ArcadeDialogDescription>
+          </ArcadeDialogHeader>
+          <ArcadeDialogClose>
+            <X className="h-4 w-4" />
+          </ArcadeDialogClose>
+          <RatingForm
+            gameId={gameId}
+            promptId={game.promptId}
+            playtime={playtime}
+            onSuccess={() => setShowRatingDialog(false)}
+          />
+        </ArcadeDialogContent>
+      </ArcadeDialog>
     </div>
   );
 }

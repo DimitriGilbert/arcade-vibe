@@ -2,11 +2,21 @@
 
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Edit2, Trash2, Search, ArrowUpDown, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Loader2,
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  ArrowUpDown,
+  CheckCircle,
+} from "lucide-react";
+import {
+  ArcadeCard,
+  ArcadeButton,
+  ArcadeInput,
+  ArcadeBadge,
+} from "@/components/arcade";
 import {
   Dialog,
   DialogContent,
@@ -29,13 +39,20 @@ export default function AdminPlansPage() {
   const [sortField, setSortField] = useState<SortField>("price");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; plan: Plan | null }>({
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    plan: Plan | null;
+  }>({
     open: false,
     plan: null,
   });
 
   // Fetch all plans
-  const { data: plans, isLoading, refetch } = useQuery({
+  const {
+    data: plans,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-plans"],
     queryFn: async () => {
       return await trpcClient.admin.plans.getPlans.query();
@@ -44,7 +61,12 @@ export default function AdminPlansPage() {
 
   // Update plan mutation
   const updatePlanMutation = useMutation({
-    mutationFn: async (input: { id: string; price: number; credits: number; features: string[] }) => {
+    mutationFn: async (input: {
+      id: string;
+      price: number;
+      credits: number;
+      features: string[];
+    }) => {
       return await trpcClient.admin.plans.updatePlan.mutate(input);
     },
     onSuccess: () => {
@@ -79,9 +101,12 @@ export default function AdminPlansPage() {
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter((plan) =>
-        plan.name.toLowerCase().includes(query) ||
-        (plan.features || []).some((f: string) => f.toLowerCase().includes(query))
+      result = result.filter(
+        (plan) =>
+          plan.name.toLowerCase().includes(query) ||
+          (plan.features || []).some((f: string) =>
+            f.toLowerCase().includes(query),
+          ),
       );
     }
 
@@ -144,19 +169,21 @@ export default function AdminPlansPage() {
         },
       ],
       formOptions: {
-        defaultValues: editingPlan ? {
-          id: editingPlan.id,
-          name: editingPlan.name,
-          price: editingPlan.price,
-          credits: editingPlan.credits,
-          features: editingPlan.features || [],
-        } : {
-          id: "",
-          name: "",
-          price: 0,
-          credits: 0,
-          features: [],
-        },
+        defaultValues: editingPlan
+          ? {
+              id: editingPlan.id,
+              name: editingPlan.name,
+              price: editingPlan.price,
+              credits: editingPlan.credits,
+              features: editingPlan.features || [],
+            }
+          : {
+              id: "",
+              name: "",
+              price: 0,
+              credits: 0,
+              features: [],
+            },
         onSubmit: async ({ value }) => {
           await updatePlanMutation.mutateAsync({
             id: value.id,
@@ -174,7 +201,12 @@ export default function AdminPlansPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" variant="accent" message="Loading plans..." centered />
+        <LoadingState
+          size="lg"
+          variant="accent"
+          message="Loading plans..."
+          centered
+        />
       </div>
     );
   }
@@ -187,23 +219,23 @@ export default function AdminPlansPage() {
           <h1 className="text-3xl font-bold text-[var(--foreground)]">
             Subscription Plans
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-[var(--muted-foreground)] mt-2">
             Manage subscription plans and pricing
           </p>
         </div>
-        <Button className="gap-2">
+        <ArcadeButton variant="primary">
           <Plus className="h-4 w-4" />
           Add Plan
-        </Button>
+        </ArcadeButton>
       </div>
 
       {/* Search and Filters */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+              <ArcadeInput
                 placeholder="Search plans..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -211,12 +243,12 @@ export default function AdminPlansPage() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Plans Table */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -228,7 +260,7 @@ export default function AdminPlansPage() {
                   ].map((column) => (
                     <th
                       key={column.field}
-                      className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] transition-colors"
                       onClick={() => handleSort(column.field)}
                     >
                       <div className="flex items-center gap-1">
@@ -237,13 +269,13 @@ export default function AdminPlansPage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
                     Features
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-sm font-medium text-[var(--muted-foreground)]">
                     Actions
                   </th>
                 </tr>
@@ -251,7 +283,11 @@ export default function AdminPlansPage() {
               <tbody>
                 {filteredPlans.length === 0 ? (
                   <tr>
-                    <EmptyState variant="table" message="No plans found" colSpan={6} />
+                    <EmptyState
+                      variant="table"
+                      message="No plans found"
+                      colSpan={6}
+                    />
                   </tr>
                 ) : (
                   filteredPlans.map((plan) => (
@@ -263,45 +299,58 @@ export default function AdminPlansPage() {
                         <div className="font-medium">{plan.name}</div>
                       </td>
                       <td className="px-4 py-3">
-                        ${Math.floor(plan.price / 100)}.{(plan.price % 100).toString().padStart(2, "0")}/mo
+                        ${Math.floor(plan.price / 100)}.
+                        {(plan.price % 100).toString().padStart(2, "0")}/mo
                       </td>
-                      <td className="px-4 py-3">{plan.credits.toLocaleString()} credits</td>
+                      <td className="px-4 py-3">
+                        {plan.credits.toLocaleString()} credits
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {(plan.features || []).slice(0, 2).map((feature, index) => (
-                            <Badge key={`${plan.id}-${feature}`} variant="secondary" className="text-xs">
-                              {feature}
-                            </Badge>
-                          ))}
+                          {(plan.features || [])
+                            .slice(0, 2)
+                            .map((feature, index) => (
+                              <ArcadeBadge
+                                key={`${plan.id}-${feature}`}
+                                text={feature}
+                                variant="default"
+                                className="text-xs"
+                              />
+                            ))}
                           {(plan.features?.length || 0) > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{plan.features!.length - 2} more
-                            </Badge>
+                            <ArcadeBadge
+                              text={`+${plan.features!.length - 2} more`}
+                              variant="pixel"
+                              className="text-xs"
+                            />
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="secondary">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Active
-                        </Badge>
+                        <ArcadeBadge
+                          text="Active"
+                          variant="neon"
+                          icon={<CheckCircle className="h-3 w-3" />}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
+                          <ArcadeButton
+                            variant="outline"
                             size="sm"
                             onClick={() => setEditingPlan(plan)}
                           >
                             <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
+                          </ArcadeButton>
+                          <ArcadeButton
+                            variant="outline"
                             size="sm"
-                            onClick={() => setDeleteDialog({ open: true, plan })}
+                            onClick={() =>
+                              setDeleteDialog({ open: true, plan })
+                            }
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                            <Trash2 className="h-4 w-4 text-[var(--destructive)]" />
+                          </ArcadeButton>
                         </div>
                       </td>
                     </tr>
@@ -310,11 +359,14 @@ export default function AdminPlansPage() {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Edit Plan Dialog */}
-      <Dialog open={!!editingPlan} onOpenChange={(open) => !open && setEditingPlan(null)}>
+      <Dialog
+        open={!!editingPlan}
+        onOpenChange={(open) => !open && setEditingPlan(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Plan</DialogTitle>
@@ -329,36 +381,45 @@ export default function AdminPlansPage() {
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialog.open}
-        onOpenChange={(open) => !open && setDeleteDialog({ open: false, plan: null })}
+        onOpenChange={(open) =>
+          !open && setDeleteDialog({ open: false, plan: null })
+        }
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Plan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteDialog.plan?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{deleteDialog.plan?.name}"? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, plan: null })}>
+            <ArcadeButton
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, plan: null })}
+            >
               Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteDialog.plan && deletePlanMutation.mutate(deleteDialog.plan.id)}
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
+              onClick={() =>
+                deleteDialog.plan &&
+                deletePlanMutation.mutate(deleteDialog.plan.id)
+              }
               disabled={deletePlanMutation.isPending}
             >
               {deletePlanMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-4 w-4" />
                   Delete
                 </>
               )}
-            </Button>
+            </ArcadeButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

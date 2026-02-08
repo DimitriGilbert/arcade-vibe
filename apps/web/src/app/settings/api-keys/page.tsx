@@ -6,9 +6,9 @@ import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArcadeCard } from "@/components/arcade";
+import { ArcadeButton } from "@/components/arcade";
+import { ArcadeBadge } from "@/components/arcade";
 import { Loader2, Key, Plus, Trash2, Copy, Check } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
@@ -32,12 +32,18 @@ const apiKeySchema = z.object({
 // Provider display names and descriptions
 const PROVIDER_INFO: Record<string, { name: string; description: string }> = {
   openai: { name: "OpenAI", description: "GPT models (GPT-4, GPT-4o, etc.)" },
-  anthropic: { name: "Anthropic", description: "Claude models (Claude 3.5 Sonnet, Opus)" },
+  anthropic: {
+    name: "Anthropic",
+    description: "Claude models (Claude 3.5 Sonnet, Opus)",
+  },
   google: { name: "Google", description: "Gemini models" },
   openrouter: { name: "OpenRouter", description: "Access to 400+ AI models" },
   deepseek: { name: "DeepSeek", description: "DeepSeek-V2 models" },
   glm: { name: "GLM", description: "Zhipu AI GLM models" },
-  "glm-coding-plan": { name: "GLM Coding Plan", description: "GLM-4.7 for coding" },
+  "glm-coding-plan": {
+    name: "GLM Coding Plan",
+    description: "GLM-4.7 for coding",
+  },
   moonshot: { name: "Moonshot", description: "Moonshot AI models" },
   custom: { name: "Custom", description: "Custom endpoint" },
 };
@@ -56,7 +62,11 @@ export default function ApiKeysSettingsPage() {
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
 
   // Fetch API keys
-  const { data: apiKeys, isLoading: keysLoading, refetch } = useQuery({
+  const {
+    data: apiKeys,
+    isLoading: keysLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["apiKeys", "list"],
     queryFn: () => trpcClient.apiKeys.listKeys.query(),
     enabled: !!session,
@@ -153,7 +163,7 @@ export default function ApiKeysSettingsPage() {
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--primary)]" />
-          <p className="text-muted-foreground">Loading API keys...</p>
+          <p className="text-[var(--muted-foreground)]">Loading API keys...</p>
         </div>
       </div>
     );
@@ -171,7 +181,7 @@ export default function ApiKeysSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">API Keys</h1>
-            <p className="text-muted-foreground">
+            <p className="text-[var(--muted-foreground)]">
               Manage your BYOK (Bring Your Own Key) API keys
             </p>
           </div>
@@ -179,38 +189,45 @@ export default function ApiKeysSettingsPage() {
       </div>
 
       {/* Security Notice */}
-      <Card className="bg-[var(--muted)]/40 border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard className="">
+        <div className="p-6">
           <h3 className="font-semibold text-[var(--accent)] mb-2">
             Security Notice
           </h3>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Your API keys are encrypted and never displayed in full. We only use them to make requests
-            on your behalf to the AI providers. You can delete keys at any time.
+            Your API keys are encrypted and never displayed in full. We only use
+            them to make requests on your behalf to the AI providers. You can
+            delete keys at any time.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Add API Key Form */}
       {showAddForm ? (
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-2 border-[var(--border)]">
-          <CardHeader>
-            <CardTitle>Add New API Key</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <ArcadeCard className="">
+          <div className="p-4 border-b border-[var(--border)]">
+            <h3 className="font-semibold text-[var(--foreground)]">
+              Add New API Key
+            </h3>
+          </div>
+          <div className="p-4">
             <Form className="space-y-4" />
             <div className="flex gap-2 mt-4">
-              <Button
-                type="button"
+              <ArcadeButton
                 variant="outline"
                 onClick={() => setShowAddForm(false)}
                 disabled={addKeyMutation.isPending}
               >
                 Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
+              </ArcadeButton>
+              <ArcadeButton
+                variant="primary"
+                onClick={() => {
+                  const form = document.querySelector("form");
+                  if (form) {
+                    form.requestSubmit();
+                  }
+                }}
                 disabled={addKeyMutation.isPending}
               >
                 {addKeyMutation.isPending ? (
@@ -224,100 +241,112 @@ export default function ApiKeysSettingsPage() {
                     Add API Key
                   </>
                 )}
-              </Button>
+              </ArcadeButton>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
       ) : (
-        <Button
-          onClick={() => setShowAddForm(true)}
-          className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
-        >
+        <ArcadeButton variant="primary" onClick={() => setShowAddForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add API Key
-        </Button>
+        </ArcadeButton>
       )}
 
       {/* API Keys List */}
       {keys.length === 0 ? (
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardContent className="p-20 text-center">
-            <Key className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+        <ArcadeCard className="">
+          <div className="p-20 text-center">
+            <Key className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-4 opacity-50" />
             <h3 className="text-xl font-semibold mb-2">No API Keys Yet</h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-[var(--muted-foreground)] mb-4">
               Add your first API key to start using your own AI provider credits
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
       ) : (
         <div className="space-y-4">
           {keys.map((apiKey) => {
-            const providerInfo = PROVIDER_INFO[apiKey.provider] || PROVIDER_INFO.custom;
+            const providerInfo =
+              PROVIDER_INFO[apiKey.provider] || PROVIDER_INFO.custom;
             return (
-              <Card key={apiKey.id} className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-                <CardContent className="p-6">
+              <ArcadeCard key={apiKey.id} className="">
+                <div className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apiKey.name}</h3>
-                        <Badge variant="secondary">
-                          {providerInfo.name}
-                        </Badge>
+                        <ArcadeBadge
+                          text={providerInfo.name}
+                          variant="default"
+                        />
                         {apiKey.isActive ? (
-                          <Badge variant="secondary">Active</Badge>
+                          <ArcadeBadge text="Active" variant="neon" />
                         ) : (
-                          <Badge variant="outline">Inactive</Badge>
+                          <ArcadeBadge text="Inactive" variant="default" />
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-sm bg-[var(--muted)] px-3 py-1 rounded">
                           {maskApiKey(apiKey.id.slice(0, 16))}
                         </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyKey(maskApiKey(apiKey.id.slice(0, 16)), apiKey.id)}
+                        <ArcadeButton
+                          variant="outline"
+                          onClick={() =>
+                            handleCopyKey(
+                              maskApiKey(apiKey.id.slice(0, 16)),
+                              apiKey.id,
+                            )
+                          }
+                          className="p-2"
                         >
                           {copiedKeyId === apiKey.id ? (
                             <Check className="h-4 w-4 text-[var(--accent)]" />
                           ) : (
                             <Copy className="h-4 w-4" />
                           )}
-                        </Button>
+                        </ArcadeButton>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Added {new Date(apiKey.createdAt).toLocaleDateString()}</p>
+                      <div className="text-sm text-[var(--muted-foreground)]">
+                        <p>
+                          Added{" "}
+                          {new Date(apiKey.createdAt).toLocaleDateString()}
+                        </p>
                         {apiKey.lastUsedAt && (
-                          <p>Last used {new Date(apiKey.lastUsedAt).toLocaleDateString()}</p>
+                          <p>
+                            Last used{" "}
+                            {new Date(apiKey.lastUsedAt).toLocaleDateString()}
+                          </p>
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
+                    <ArcadeButton
+                      variant="outline"
                       onClick={() => deleteKeyMutation.mutate(apiKey.id)}
                       disabled={deleteKeyMutation.isPending}
+                      className="text-[var(--destructive)] hover:text-[var(--destructive)]"
                     >
                       {deleteKeyMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                    </Button>
+                    </ArcadeButton>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </ArcadeCard>
             );
           })}
         </div>
       )}
 
       {/* Provider Information */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardHeader>
-          <CardTitle>Supported Providers</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ArcadeCard className="">
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)]">
+            Supported Providers
+          </h3>
+        </div>
+        <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(PROVIDER_INFO).map(([provider, info]) => (
               <div
@@ -325,12 +354,14 @@ export default function ApiKeysSettingsPage() {
                 className="p-4 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]"
               >
                 <h4 className="font-semibold mb-1">{info.name}</h4>
-                <p className="text-sm text-muted-foreground">{info.description}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  {info.description}
+                </p>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     </div>
   );
 }

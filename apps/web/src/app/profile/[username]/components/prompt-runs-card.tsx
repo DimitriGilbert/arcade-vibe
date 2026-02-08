@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { ArcadeBadge } from "@/components/arcade";
 import { Gamepad2 } from "lucide-react";
 import type { Game } from "@/types/entities";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
@@ -12,7 +12,7 @@ interface PromptRunsCardProps {
 export function PromptRunsCard({ promptRuns, isLoading }: PromptRunsCardProps) {
   if (isLoading) {
     return (
-      <div className="bg-card border-border rounded-lg p-6">
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
         <LoadingPlaceholder />
       </div>
     );
@@ -20,24 +20,24 @@ export function PromptRunsCard({ promptRuns, isLoading }: PromptRunsCardProps) {
 
   if (promptRuns.length === 0) {
     return (
-      <div className="bg-card border-border rounded-lg p-6">
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
         <EmptyPlaceholder />
       </div>
     );
   }
 
   return (
-    <div className="bg-card border-border rounded-lg p-6">
-      <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-        <Gamepad2 className="h-5 w-5 text-primary" />
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
+      <h2 className="text-xl font-bold text-[var(--foreground)] mb-4 flex items-center gap-2">
+        <Gamepad2 className="h-5 w-5 text-[var(--primary)]" />
         Prompt Runs History
-        <Badge variant="outline">{promptRuns.length}</Badge>
+        <ArcadeBadge text={String(promptRuns.length)} variant="default" />
       </h2>
       <div className="space-y-4">
         {promptRuns.slice(0, 10).map((game) => (
           <div
             key={game.id}
-            className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+            className="flex items-start gap-3 p-3 rounded-lg bg-[var(--muted)]/50"
           >
             {game.imageUrl ? (
               <img
@@ -46,26 +46,23 @@ export function PromptRunsCard({ promptRuns, isLoading }: PromptRunsCardProps) {
                 className="w-16 h-12 object-cover rounded"
               />
             ) : (
-              <div className="w-16 h-12 bg-primary rounded flex items-center justify-center">
-                <Gamepad2 className="h-6 w-6 text-primary-foreground" />
+              <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center">
+                <Gamepad2 className="h-6 w-6 text-[var(--primary-foreground)]" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-foreground">
+              <p className="font-medium text-sm text-[var(--foreground)]">
                 {game.prompt.content.slice(0, 60)}...
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">
                 {game.theme?.title || "No theme"} •{" "}
                 {new Date(game.createdAt).toLocaleString()}
               </p>
             </div>
-            <Badge
-              variant={
-                game.status === "completed" ? "default" : "secondary"
-              }
-            >
-              {game.status}
-            </Badge>
+            <ArcadeBadge
+              text={game.status}
+              variant={game.status === "completed" ? "neon" : "default"}
+            />
           </div>
         ))}
       </div>

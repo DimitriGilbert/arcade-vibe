@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { VariantProps } from "class-variance-authority";
+import type { HTMLAttributes } from "react";
 
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ const arcadeCardVariants = cva(
   },
 );
 
-interface ArcadeCardProps extends VariantProps<typeof arcadeCardVariants> {
+interface ArcadeCardProps extends VariantProps<typeof arcadeCardVariants>, Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: string;
   subtitle?: string;
   icon?: ReactNode;
@@ -35,12 +36,14 @@ export function ArcadeCard({
   variant,
   children,
   className,
+  ...props
 }: ArcadeCardProps) {
   return (
     <div
       data-slot="arcade-card"
       data-variant={variant ?? "default"}
       className={cn(arcadeCardVariants({ variant }), className)}
+      {...props}
     >
       {/* Header section */}
       {(title || icon) && (

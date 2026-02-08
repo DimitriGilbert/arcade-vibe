@@ -6,8 +6,15 @@ import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, Shield, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { ArcadeCard } from "@/components/arcade";
+import {
+  Loader2,
+  User,
+  Shield,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
@@ -79,7 +86,7 @@ export default function ProfileSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Profile Settings</h1>
-            <p className="text-muted-foreground">
+            <p className="text-[var(--muted-foreground)]">
               Update your public profile information
             </p>
           </div>
@@ -87,48 +94,56 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Profile Form */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardHeader>
-          <CardTitle>Public Information</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ArcadeCard className="">
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)]">
+            Public Information
+          </h3>
+        </div>
+        <div className="p-4">
           <Form className="space-y-4" />
 
           {updateProfileMutation.isPending && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
+            <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] mt-4">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Saving changes...</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Email Change Notice */}
-      <Card className="bg-[var(--muted)]/40 border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard className="">
+        <div className="p-6">
           <h3 className="font-semibold text-[var(--accent)] mb-2">
             Email Address
           </h3>
           <p className="text-sm text-[var(--muted-foreground)]">
-            To change your email address, please contact support. Email changes require
-            verification to ensure account security.
+            To change your email address, please contact support. Email changes
+            require verification to ensure account security.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Account Info */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ArcadeCard className="">
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)]">
+            Account Information
+          </h3>
+        </div>
+        <div className="p-4">
           <div className="space-y-6">
             {/* User ID Section */}
             <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <Shield className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">User ID</p>
-                <p className="font-mono text-sm mt-1 bg-muted px-2 py-1 rounded">{user?.id}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                  User ID
+                </p>
+                <p className="font-mono text-sm mt-1 bg-[var(--muted)] px-2 py-1 rounded">
+                  {user?.id}
+                </p>
               </div>
             </div>
 
@@ -140,12 +155,18 @@ export default function ProfileSettingsPage() {
                 <AlertCircle className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                  Email Verified
+                </p>
                 <p className="text-sm mt-1">
                   {user?.emailVerified ? (
-                    <span className="text-[var(--accent)] font-medium">Verified</span>
+                    <span className="text-[var(--accent)] font-medium">
+                      Verified
+                    </span>
                   ) : (
-                    <span className="text-[var(--muted-foreground)] font-medium">Not Verified</span>
+                    <span className="text-[var(--muted-foreground)] font-medium">
+                      Not Verified
+                    </span>
                   )}
                 </p>
               </div>
@@ -153,18 +174,22 @@ export default function ProfileSettingsPage() {
 
             {/* Account Creation Date */}
             <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <Calendar className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Account Created</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                  Account Created
+                </p>
                 <p className="text-sm mt-1">
                   {user?.createdAt ? (
                     <span>{new Date(user.createdAt).toLocaleDateString()}</span>
                   ) : (
-                    <span className="text-muted-foreground">Unknown</span>
+                    <span className="text-[var(--muted-foreground)]">
+                      Unknown
+                    </span>
                   )}
                 </p>
                 {user?.createdAt && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">
                     {new Date(user.createdAt).toLocaleString()}
                   </p>
                 )}
@@ -173,9 +198,11 @@ export default function ProfileSettingsPage() {
 
             {/* Account Status */}
             <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <User className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Account Status</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                  Account Status
+                </p>
                 <p className="text-sm mt-1">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[var(--accent)]/15 text-[var(--accent)]">
                     Active
@@ -184,33 +211,46 @@ export default function ProfileSettingsPage() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Profile Statistics */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardHeader>
-          <CardTitle>Profile Statistics</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ArcadeCard className="">
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)]">
+            Profile Statistics
+          </h3>
+        </div>
+        <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-[var(--muted)]/40 rounded-lg p-4">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Profile Completion</p>
+              <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">
+                Profile Completion
+              </p>
               <p className="text-2xl font-bold text-[var(--primary)]">100%</p>
-              <p className="text-xs text-muted-foreground mt-1">All required fields completed</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                All required fields completed
+              </p>
             </div>
             <div className="bg-[var(--muted)]/40 rounded-lg p-4">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Account Age</p>
+              <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">
+                Account Age
+              </p>
               <p className="text-2xl font-bold text-[var(--accent)]">
                 {user?.createdAt
-                  ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+                  ? Math.floor(
+                      (Date.now() - new Date(user.createdAt).getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    )
                   : 0}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Days since joining</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                Days since joining
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     </div>
   );
 }

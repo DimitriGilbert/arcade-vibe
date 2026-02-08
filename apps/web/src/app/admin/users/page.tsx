@@ -9,10 +9,12 @@ import {
   Shield,
   AlertTriangle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArcadeCard,
+  ArcadeButton,
+  ArcadeInput,
+  ArcadeBadge,
+} from "@/components/arcade";
 import {
   Dialog,
   DialogContent,
@@ -197,7 +199,12 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading users..." variant="accent" centered />
+        <LoadingState
+          size="lg"
+          message="Loading users..."
+          variant="accent"
+          centered
+        />
       </div>
     );
   }
@@ -209,18 +216,18 @@ export default function AdminUsersPage() {
         <h1 className="text-3xl font-bold text-[var(--foreground)]">
           User Management
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-[var(--muted-foreground)] mt-2">
           View and manage platform users
         </p>
       </div>
 
       {/* Search */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+              <ArcadeInput
                 placeholder="Search users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -228,12 +235,12 @@ export default function AdminUsersPage() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Users Table */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -246,7 +253,7 @@ export default function AdminUsersPage() {
                   ].map((column) => (
                     <th
                       key={column.field}
-                      className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] transition-colors"
                       onClick={() => handleSort(column.field)}
                     >
                       <div className="flex items-center gap-1">
@@ -255,10 +262,10 @@ export default function AdminUsersPage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-right text-sm font-medium text-[var(--muted-foreground)]">
                     Actions
                   </th>
                 </tr>
@@ -266,7 +273,11 @@ export default function AdminUsersPage() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <EmptyState variant="table" colSpan={6} message="No users found" />
+                    <EmptyState
+                      variant="table"
+                      colSpan={6}
+                      message="No users found"
+                    />
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
@@ -281,43 +292,41 @@ export default function AdminUsersPage() {
                             <div className="font-medium">
                               {user.name || "Unknown"}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-[var(--muted-foreground)]">
                               {user.email}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
+                        <ArcadeBadge
+                          text={user.role}
                           variant={
                             user.role === "admin"
-                              ? "default"
+                              ? "neon"
                               : user.role === "moderator"
-                                ? "secondary"
-                                : "outline"
+                                ? "default"
+                                : "pixel"
                           }
                           className="capitalize"
-                        >
-                          {user.role}
-                        </Badge>
+                        />
                       </td>
                       <td className="px-4 py-3">
                         {user.credits.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
                         {user.isSuspended ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <Shield className="h-3 w-3" />
-                            Suspended
-                          </Badge>
+                          <ArcadeBadge
+                            text="Suspended"
+                            variant="pixel"
+                            icon={<Shield className="h-3 w-3" />}
+                          />
                         ) : (
-                          <Badge variant="secondary">
-                            Active
-                          </Badge>
+                          <ArcadeBadge text="Active" variant="neon" />
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
+                        <ArcadeButton
                           variant="outline"
                           size="sm"
                           onClick={() => setSuspendDialog({ open: true, user })}
@@ -325,7 +334,7 @@ export default function AdminUsersPage() {
                         >
                           <AlertTriangle className="h-4 w-4" />
                           Suspend
-                        </Button>
+                        </ArcadeButton>
                       </td>
                     </tr>
                   ))
@@ -336,24 +345,26 @@ export default function AdminUsersPage() {
 
           {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
-            <Button
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {page}</span>
-            <Button
+            </ArcadeButton>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              Page {page}
+            </span>
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
               disabled={!users || users.length < pageSize}
             >
               Next
-            </Button>
+            </ArcadeButton>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Suspend User Dialog */}
       <Dialog
@@ -373,14 +384,14 @@ export default function AdminUsersPage() {
           </DialogHeader>
           <UserSuspensionForm />
           <DialogFooter>
-            <Button
+            <ArcadeButton
               variant="outline"
               onClick={() => setSuspendDialog({ open: false, user: null })}
             >
               Cancel
-            </Button>
-            <Button
-              variant="destructive"
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
               onClick={() => {
                 // Form submission is handled by Formedible
               }}
@@ -388,16 +399,16 @@ export default function AdminUsersPage() {
             >
               {suspendUserMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Suspending...
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  <AlertTriangle className="h-4 w-4" />
                   Suspend User
                 </>
               )}
-            </Button>
+            </ArcadeButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

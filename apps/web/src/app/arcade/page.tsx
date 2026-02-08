@@ -3,16 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Search,
-  Gamepad2,
-  Clock,
-  TrendingUp,
-  Star,
-} from "lucide-react";
+import { ArcadeCard, ArcadeButton, ArcadeInput } from "@/components/arcade";
+import { Search, Gamepad2, Clock, TrendingUp, Star } from "lucide-react";
 import { ThemeHeader } from "./components/theme-header";
 import { GameCard } from "./components/game-card";
 import { LoadingState, EmptyState } from "@/components/reusable";
@@ -145,17 +137,19 @@ export default function ArcadePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--background)]">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-primary rounded-xl">
-              <Gamepad2 className="h-8 w-8 text-primary-foreground" />
+            <div className="p-3 bg-[var(--primary)] rounded-xl">
+              <Gamepad2 className="h-8 w-8 text-[var(--primary-foreground)]" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-foreground">Arcade</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-4xl font-bold text-[var(--foreground)]">
+                Arcade
+              </h1>
+              <p className="text-[var(--muted-foreground)]">
                 Discover and play AI-generated games
               </p>
             </div>
@@ -174,13 +168,13 @@ export default function ArcadePage() {
         />
 
         {/* Filters and Search */}
-        <Card className="mb-6 bg-card border-border">
-          <CardContent className="p-6">
+        <ArcadeCard className="mb-6">
+          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Search */}
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+                <ArcadeInput
                   placeholder="Search by creator..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -190,37 +184,37 @@ export default function ArcadePage() {
 
               {/* Sort Options */}
               <div className="flex gap-2">
-                <Button
-                  variant={sortOption === "recent" ? "default" : "outline"}
+                <ArcadeButton
+                  variant={sortOption === "recent" ? "primary" : "outline"}
                   size="sm"
                   onClick={() => setSortOption("recent")}
                   className="gap-2"
                 >
                   <Clock className="h-4 w-4" />
                   Recent
-                </Button>
-                <Button
-                  variant={sortOption === "popular" ? "default" : "outline"}
+                </ArcadeButton>
+                <ArcadeButton
+                  variant={sortOption === "popular" ? "primary" : "outline"}
                   size="sm"
                   onClick={() => setSortOption("popular")}
                   className="gap-2"
                 >
                   <TrendingUp className="h-4 w-4" />
                   Popular
-                </Button>
-                <Button
-                  variant={sortOption === "score" ? "default" : "outline"}
+                </ArcadeButton>
+                <ArcadeButton
+                  variant={sortOption === "score" ? "primary" : "outline"}
                   size="sm"
                   onClick={() => setSortOption("score")}
                   className="gap-2"
                 >
                   <Star className="h-4 w-4" />
                   Score
-                </Button>
+                </ArcadeButton>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
 
         {/* Game Grid */}
         {gamesLoading ? (
@@ -228,8 +222,8 @@ export default function ArcadePage() {
             <LoadingState size="lg" centered message="Loading games..." />
           </div>
         ) : sortedGames.length === 0 ? (
-          <Card className="bg-card border-border">
-            <CardContent className="p-20">
+          <ArcadeCard>
+            <div className="p-20">
               <EmptyState
                 variant="card"
                 icon={<Gamepad2 className="h-16 w-16 opacity-50" />}
@@ -240,8 +234,8 @@ export default function ArcadePage() {
                     : "Select a theme to view available games"
                 }
               />
-            </CardContent>
-          </Card>
+            </div>
+          </ArcadeCard>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedGames.map((game) => (
@@ -258,7 +252,7 @@ export default function ArcadePage() {
 
         {/* Results Count */}
         {sortedGames.length > 0 && (
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-center text-sm text-[var(--muted-foreground)]">
             Showing {sortedGames.length}{" "}
             {sortedGames.length === 1 ? "game" : "games"}
           </div>

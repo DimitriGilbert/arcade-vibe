@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArcadeCard } from "@/components/arcade";
+import { ArcadeButton } from "@/components/arcade";
+import { ArcadeBadge } from "@/components/arcade";
 import { Loader2, CreditCard, Crown, Sparkles, Zap, Check } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
@@ -84,38 +84,34 @@ function PlanCard({
   const isPopular = plan.name === "Starter";
 
   return (
-    <Card
-      className={`relative bg-[var(--card)]/60 backdrop-blur-sm transition-all border-[var(--border)] ${
-        isPopular
-          ? "border-2 border-[var(--primary)]/60 scale-105"
-          : ""
-      } ${isCurrent ? "ring-2 ring-[var(--primary)]/60" : ""}`}
+    <ArcadeCard
+      className={`relative ${isPopular ? "scale-105" : ""} ${isCurrent ? "ring-2 ring-[var(--primary)]/60" : ""}`}
     >
       {isPopular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-[var(--primary)] text-[var(--primary-foreground)]">
-            Most Popular
-          </Badge>
+          <ArcadeBadge text="Most Popular" variant="neon" />
         </div>
       )}
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <div className="p-4 border-b border-[var(--border)]">
+        <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
           {plan.name === "Free" && (
             <Sparkles className="h-5 w-5 text-[var(--muted-foreground)]" />
           )}
           {plan.name === "Starter" && (
             <Zap className="h-5 w-5 text-[var(--primary)]" />
           )}
-          {plan.name === "Pro" && <Crown className="h-5 w-5 text-[var(--accent)]" />}
+          {plan.name === "Pro" && (
+            <Crown className="h-5 w-5 text-[var(--accent)]" />
+          )}
           {plan.name}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </h3>
+      </div>
+      <div className="p-4">
         <div className="mb-4">
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-bold">${plan.price}</span>
             {plan.price > 0 && (
-              <span className="text-muted-foreground">/month</span>
+              <span className="text-[var(--muted-foreground)]">/month</span>
             )}
           </div>
           <p className="text-lg text-[var(--primary)]">
@@ -133,24 +129,21 @@ function PlanCard({
         </ul>
 
         {isCurrent ? (
-          <Button disabled className="w-full">
+          <ArcadeButton variant="outline" disabled className="w-full">
             Current Plan
-          </Button>
+          </ArcadeButton>
         ) : (
-          <Button
-            className={`w-full ${
-              isPopular
-                ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
-                : ""
-            }`}
+          <ArcadeButton
+            variant={isPopular ? "primary" : "outline"}
+            className="w-full"
             onClick={() => onSelect(plan)}
             disabled={isFree}
           >
             {isFree ? "Free Plan" : "Upgrade"}
-          </Button>
+          </ArcadeButton>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ArcadeCard>
   );
 }
 
@@ -165,30 +158,31 @@ function CreditPackage({
   const hasBonus = pkg.bonus > 0;
 
   return (
-    <Card
-      className="bg-[var(--card)]/60 backdrop-blur-sm hover:shadow-lg transition-all cursor-pointer border-[var(--border)]"
-      onClick={() => onSelect(pkg)}
-    >
-      <CardContent className="p-6">
+    // ArcadeCard is shit ! It doesn't support onclick !
+    <ArcadeCard className="cursor-pointer" onClick={() => onSelect(pkg)}>
+      <div className="p-6">
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-1">
             <span className="text-3xl font-bold">
               {pkg.credits.toLocaleString()}
             </span>
-            <span className="text-muted-foreground">credits</span>
+            <span className="text-[var(--muted-foreground)]">credits</span>
           </div>
           {hasBonus && (
-            <Badge className="bg-[var(--accent)]/15 text-[var(--accent)]">
-              +{pkg.bonus.toLocaleString()} bonus
-            </Badge>
+            <ArcadeBadge
+              text={`+${pkg.bonus.toLocaleString()} bonus`}
+              variant="neon"
+            />
           )}
           <div className="text-2xl font-bold text-[var(--primary)]">
             ${pkg.price}
           </div>
-          <Button className="w-full">Purchase</Button>
+          <ArcadeButton variant="outline" className="w-full">
+            Purchase
+          </ArcadeButton>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </ArcadeCard>
   );
 }
 
@@ -256,7 +250,9 @@ export default function SubscriptionSettingsPage() {
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--primary)]" />
-          <p className="text-muted-foreground">Loading subscription...</p>
+          <p className="text-[var(--muted-foreground)]">
+            Loading subscription...
+          </p>
         </div>
       </div>
     );
@@ -272,7 +268,7 @@ export default function SubscriptionSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Subscription & Credits</h1>
-            <p className="text-muted-foreground">
+            <p className="text-[var(--muted-foreground)]">
               Manage your plan and purchase credits
             </p>
           </div>
@@ -280,22 +276,26 @@ export default function SubscriptionSettingsPage() {
       </div>
 
       {/* Current Status */}
-      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard className="">
+        <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold mb-1">Current Plan: Free</h2>
-              <p className="text-muted-foreground">Your credits never expire</p>
+              <p className="text-[var(--muted-foreground)]">
+                Your credits never expire
+              </p>
             </div>
             <div className="text-right">
               <p className="text-4xl font-bold text-[var(--primary)]">
                 {credits.toLocaleString()}
               </p>
-              <p className="text-sm text-muted-foreground">Credits Available</p>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Credits Available
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Subscription Plans */}
       <section className="space-y-4">
@@ -315,7 +315,7 @@ export default function SubscriptionSettingsPage() {
       {/* Purchase Credits */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Purchase Credits</h2>
-        <p className="text-muted-foreground">
+        <p className="text-[var(--muted-foreground)]">
           Buy credits in bulk and get bonus credits. Credits never expire.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -333,8 +333,8 @@ export default function SubscriptionSettingsPage() {
       {!transactionsLoading && transactions.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Recent Transactions</h2>
-          <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-            <CardContent className="p-6">
+          <ArcadeCard className="">
+            <div className="p-6">
               <div className="space-y-4">
                 {transactions.map((transaction) => (
                   <div
@@ -343,19 +343,19 @@ export default function SubscriptionSettingsPage() {
                   >
                     <div>
                       <p className="font-medium">{transaction.description}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-[var(--muted-foreground)]">
                         {new Date(transaction.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <Badge variant={transaction.amount > 0 ? "secondary" : "destructive"}>
-                      {transaction.amount > 0 ? "+" : ""}
-                      {transaction.amount} credits
-                    </Badge>
+                    <ArcadeBadge
+                      text={`${transaction.amount > 0 ? "+" : ""}${transaction.amount} credits`}
+                      variant={transaction.amount > 0 ? "neon" : "default"}
+                    />
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </ArcadeCard>
         </section>
       )}
     </div>

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, ArrowUpDown, Calendar, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArcadeCard,
+  ArcadeButton,
+  ArcadeInput,
+  ArcadeBadge,
+} from "@/components/arcade";
 import { LoadingState } from "@/components/reusable";
 import { EmptyState } from "@/components/reusable";
 
@@ -138,7 +140,12 @@ export default function AdminAuditPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading audit log..." variant="accent" centered />
+        <LoadingState
+          size="lg"
+          message="Loading audit log..."
+          variant="accent"
+          centered
+        />
       </div>
     );
   }
@@ -150,18 +157,18 @@ export default function AdminAuditPage() {
         <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Audit Log
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-[var(--muted-foreground)] mt-2">
           View all admin actions on the platform
         </p>
       </div>
 
       {/* Filters */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+              <ArcadeInput
                 placeholder="Search audit log..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -171,7 +178,7 @@ export default function AdminAuditPage() {
             <select
               value={adminFilter}
               onChange={(e) => setAdminFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background"
+              className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Admins</option>
               <option value="Alice Admin">Alice Admin</option>
@@ -180,7 +187,7 @@ export default function AdminAuditPage() {
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background"
+              className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Actions</option>
               <option value="create_theme">Create Theme</option>
@@ -192,7 +199,7 @@ export default function AdminAuditPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background"
+              className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Types</option>
               <option value="theme">Theme</option>
@@ -203,12 +210,12 @@ export default function AdminAuditPage() {
               <option value="report">Report</option>
             </select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Audit Log Table */}
-      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard>
+        <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -221,7 +228,7 @@ export default function AdminAuditPage() {
                   ].map((column) => (
                     <th
                       key={column.field}
-                      className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                      className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)] cursor-pointer hover:text-[var(--foreground)] transition-colors"
                       onClick={() => handleSort(column.field)}
                     >
                       <div className="flex items-center gap-1">
@@ -230,7 +237,7 @@ export default function AdminAuditPage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
                     Details
                   </th>
                 </tr>
@@ -265,17 +272,21 @@ export default function AdminAuditPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className="capitalize">
-                          {action.actionType.replace(/_/g, " ")}
-                        </Badge>
+                        <ArcadeBadge
+                          text={action.actionType.replace(/_/g, " ")}
+                          variant="default"
+                          className="capitalize"
+                        />
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="secondary" className="capitalize">
-                          {action.targetType}
-                        </Badge>
+                        <ArcadeBadge
+                          text={action.targetType}
+                          variant="neon"
+                          className="capitalize"
+                        />
                       </td>
                       <td className="px-4 py-3 max-w-[300px]">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-sm text-[var(--muted-foreground)] line-clamp-2">
                           {action.reason || "No reason provided"}
                         </p>
                       </td>
@@ -288,24 +299,26 @@ export default function AdminAuditPage() {
 
           {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
-            <Button
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {page}</span>
-            <Button
+            </ArcadeButton>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              Page {page}
+            </span>
+            <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
               disabled={!actions || actions.length < pageSize}
             >
               Next
-            </Button>
+            </ArcadeButton>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     </div>
   );
 }

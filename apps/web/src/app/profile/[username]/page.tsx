@@ -2,8 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { User as UserIcon, AlertCircle, Trophy, Zap } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArcadeCard } from "@/components/arcade";
 import { StatsCard } from "./components/stats-card";
 import { PromptList } from "./components/prompt-list";
 import { ProfileHeader } from "./components/profile-header";
@@ -72,7 +71,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (userLoading || (!user && !userLoading)) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[var(--background)]">
         <div className="container mx-auto py-8 px-4">
           <LoadingPlaceholder />
         </div>
@@ -82,29 +81,30 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[var(--background)]">
         <div className="container mx-auto py-8 px-4">
-          <Card className="bg-card border-border">
-            <CardContent className="p-20 text-center">
-              <AlertCircle className="h-16 w-16 mx-auto text-destructive mb-4 opacity-70" />
-              <h3 className="text-xl font-semibold mb-2 text-foreground">
+          <ArcadeCard className="">
+            <div className="p-20 text-center">
+              <AlertCircle className="h-16 w-16 mx-auto text-[var(--destructive)] mb-4 opacity-70" />
+              <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">
                 User Not Found
               </h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-[var(--muted-foreground)] mb-4">
                 The profile {userEmail} could not be found.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Please check the username and try again, or contact support if the problem persists.
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Please check the username and try again, or contact support if
+                the problem persists.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </ArcadeCard>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--background)]">
       <div className="container mx-auto py-8 px-4">
         <ProfileHeader
           user={user}
@@ -116,7 +116,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         {stats && (
           <div className="mt-8">
             <div className="flex items-center gap-2 mb-4">
-              <Trophy className="h-5 w-5 text-primary" />
+              <Trophy className="h-5 w-5 text-[var(--primary)]" />
               <h2 className="text-2xl font-bold">Statistics Overview</h2>
             </div>
             <StatsCard
@@ -129,37 +129,43 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" />
+          <ArcadeCard className="">
+            <div className="p-4 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
+                <Zap className="h-5 w-5 text-[var(--primary)]" />
                 Prompts Created
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
+            </div>
+            <div className="p-4">
               <PromptList prompts={prompts || []} isLoading={promptsLoading} />
-            </CardContent>
-          </Card>
+            </div>
+          </ArcadeCard>
 
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
+          <ArcadeCard className="">
+            <div className="p-4 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-[var(--primary)]" />
                 Games & Rankings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
+            </div>
+            <div className="p-4">
               <GamesListCard
                 games={userGamesWithRankings}
                 isLoading={gamesLoading}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </ArcadeCard>
         </div>
 
         <div className="mt-8 space-y-6">
-          <RatingsHistoryCard ratings={ratings || []} isLoading={ratingsLoading} />
-          <PromptRunsCard promptRuns={promptRunsHistory || []} isLoading={promptRunsLoading} />
+          <RatingsHistoryCard
+            ratings={ratings || []}
+            isLoading={ratingsLoading}
+          />
+          <PromptRunsCard
+            promptRuns={promptRunsHistory || []}
+            isLoading={promptRunsLoading}
+          />
         </div>
       </div>
     </div>

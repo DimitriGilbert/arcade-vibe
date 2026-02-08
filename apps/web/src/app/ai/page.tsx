@@ -1,14 +1,13 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { env } from "@arcade-vibe/env/web";
 import { DefaultChatTransport } from "ai";
 import { Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ArcadeButton } from "@/components/arcade";
+import { ArcadeInput } from "@/components/arcade";
 
 export default function AIPage() {
   const [input, setInput] = useState("");
@@ -36,7 +35,7 @@ export default function AIPage() {
     <div className="grid grid-rows-[1fr_auto] overflow-hidden w-full mx-auto p-4">
       <div className="overflow-y-auto space-y-4 pb-4">
         {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground mt-8">
+          <div className="text-center text-[var(--muted-foreground)] mt-8">
             Ask me anything to get started!
           </div>
         ) : (
@@ -44,7 +43,9 @@ export default function AIPage() {
             <div
               key={message.id}
               className={`p-3 rounded-lg ${
-                message.role === "user" ? "bg-primary/10 ml-8" : "bg-secondary/20 mr-8"
+                message.role === "user"
+                  ? "bg-[var(--primary)]/10 ml-8"
+                  : "bg-[var(--secondary)]/20 mr-8"
               }`}
             >
               <p className="text-sm font-semibold mb-1">
@@ -55,7 +56,9 @@ export default function AIPage() {
                   return (
                     <Streamdown
                       key={index}
-                      isAnimating={status === "streaming" && message.role === "assistant"}
+                      isAnimating={
+                        status === "streaming" && message.role === "assistant"
+                      }
                     >
                       {part.text}
                     </Streamdown>
@@ -69,8 +72,11 @@ export default function AIPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full flex items-center space-x-2 pt-2 border-t">
-        <Input
+      <form
+        onSubmit={handleSubmit}
+        className="w-full flex items-center space-x-2 pt-2 border-t border-[var(--border)]"
+      >
+        <ArcadeInput
           name="prompt"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -79,9 +85,9 @@ export default function AIPage() {
           autoComplete="off"
           autoFocus
         />
-        <Button type="submit" size="icon">
+        <ArcadeButton type="submit">
           <Send size={18} />
-        </Button>
+        </ArcadeButton>
       </form>
     </div>
   );

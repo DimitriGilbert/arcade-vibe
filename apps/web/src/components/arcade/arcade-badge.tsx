@@ -24,15 +24,22 @@ const arcadeBadgeVariants = cva(
 interface ArcadeBadgeProps extends VariantProps<typeof arcadeBadgeVariants> {
   text: string;
   className?: string;
+  icon?: React.ReactNode;
 }
 
-export function ArcadeBadge({ text, variant, className }: ArcadeBadgeProps) {
+export function ArcadeBadge({
+  text,
+  variant,
+  className,
+  icon,
+}: ArcadeBadgeProps) {
   return (
     <span
       data-slot="arcade-badge"
       data-variant={variant ?? "default"}
       className={cn(arcadeBadgeVariants({ variant }), className)}
     >
+      {icon && <span className="mr-1">{icon}</span>}
       {text}
     </span>
   );

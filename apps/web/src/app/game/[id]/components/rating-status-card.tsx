@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { ArcadeButton } from "@/components/arcade";
 import { InfoCard } from "@/components/reusable";
 import LoadingState from "@/components/reusable/loading-state";
 import StarRatingDisplay from "@/components/reusable/star-rating-display";
@@ -12,16 +12,24 @@ interface RatingStatusCardProps {
   onRate: () => void;
 }
 
-export function RatingStatusCard({ myRating, isGameLoaded, playtime, onRate }: RatingStatusCardProps) {
+export function RatingStatusCard({
+  myRating,
+  isGameLoaded,
+  playtime,
+  onRate,
+}: RatingStatusCardProps) {
   return (
-    <InfoCard title="Rating Status" icon={<Trophy className="h-4 w-4 text-accent" />}>
+    <InfoCard
+      title="Rating Status"
+      icon={<Trophy className="h-4 w-4 text-[var(--accent)]" />}
+    >
       {myRating ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-card-foreground">
+          <p className="text-sm font-medium text-[var(--foreground)]">
             You rated this game
           </p>
           <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold text-accent">
+            <div className="text-2xl font-bold text-[var(--accent)]">
               {myRating.overall}/5
             </div>
             <StarRatingDisplay rating={myRating.overall} size="sm" />
@@ -33,13 +41,13 @@ export function RatingStatusCard({ myRating, isGameLoaded, playtime, onRate }: R
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-[var(--muted-foreground)]">
               Play for {60 - playtime} more seconds to rate
             </span>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary transition-all duration-1000"
+              className="h-full bg-[var(--primary)] transition-all duration-1000"
               style={{ width: `${(playtime / 60) * 100}%` }}
             />
           </div>
@@ -47,14 +55,14 @@ export function RatingStatusCard({ myRating, isGameLoaded, playtime, onRate }: R
       ) : (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-secondary" />
-            <span className="text-sm text-secondary">
+            <Trophy className="h-4 w-4 text-[var(--secondary)]" />
+            <span className="text-sm text-[var(--secondary)]">
               You can now rate this game!
             </span>
           </div>
-          <Button onClick={onRate} size="sm" className="w-full">
+          <ArcadeButton variant="primary" onClick={onRate} className="w-full">
             Rate Now
-          </Button>
+          </ArcadeButton>
         </div>
       )}
     </InfoCard>

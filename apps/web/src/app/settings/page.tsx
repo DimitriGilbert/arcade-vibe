@@ -3,9 +3,9 @@
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ArcadeCard } from "@/components/arcade";
+import { ArcadeBadge } from "@/components/arcade";
+import { ArcadeButton } from "@/components/arcade";
 import {
   User,
   Key,
@@ -26,11 +26,17 @@ interface SettingsSectionProps {
   badge?: string;
 }
 
-function SettingsSection({ title, description, icon, href, badge }: SettingsSectionProps) {
+function SettingsSection({
+  title,
+  description,
+  icon,
+  href,
+  badge,
+}: SettingsSectionProps) {
   return (
     <Link href={href as Route}>
-      <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 border-[var(--border)] hover:border-[var(--primary)]/40">
-        <CardContent className="p-6">
+      <ArcadeCard className="group hover:shadow-lg transition-all cursor-pointer">
+        <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-[var(--muted)]/60 rounded-lg group-hover:scale-110 transition-transform">
               {icon}
@@ -38,18 +44,16 @@ function SettingsSection({ title, description, icon, href, badge }: SettingsSect
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="text-lg font-semibold">{title}</h3>
-                {badge && (
-                  <Badge variant="secondary" className="text-xs">
-                    {badge}
-                  </Badge>
-                )}
+                {badge && <ArcadeBadge text={badge} variant="default" />}
               </div>
-              <p className="text-muted-foreground text-sm">{description}</p>
+              <p className="text-[var(--muted-foreground)] text-sm">
+                {description}
+              </p>
             </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="h-5 w-5 text-[var(--muted-foreground)] group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
     </Link>
   );
 }
@@ -85,7 +89,10 @@ export default function SettingsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-[var(--muted)]/60 rounded-lg animate-pulse" />
+            <div
+              key={i}
+              className="h-32 bg-[var(--muted)]/60 rounded-lg animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -101,69 +108,81 @@ export default function SettingsPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">
+        <p className="text-[var(--muted-foreground)]">
           Manage your account settings and preferences
         </p>
       </div>
 
       {/* User Overview */}
-      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
-        <CardContent className="p-6">
+      <ArcadeCard className="">
+        <div className="p-6">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--primary-foreground)] text-2xl font-bold">
               {user?.name?.[0] || "U"}
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold">{user?.name || "User"}</h2>
-              <p className="text-muted-foreground">{user?.email}</p>
+              <p className="text-[var(--muted-foreground)]">{user?.email}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ArcadeCard>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardContent className="p-6">
+        <ArcadeCard className="">
+          <div className="p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
                 <Coins className="h-6 w-6 text-[var(--accent)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-[var(--accent)]">{credits}</p>
-                <p className="text-sm text-muted-foreground">Credits Available</p>
+                <p className="text-3xl font-bold text-[var(--accent)]">
+                  {credits}
+                </p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Credits Available
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
 
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardContent className="p-6">
+        <ArcadeCard className="">
+          <div className="p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-[var(--primary)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-[var(--primary)]">{reputation}</p>
-                <p className="text-sm text-muted-foreground">Reputation</p>
+                <p className="text-3xl font-bold text-[var(--primary)]">
+                  {reputation}
+                </p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Reputation
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
 
-        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
-          <CardContent className="p-6">
+        <ArcadeCard className="">
+          <div className="p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
                 <Shield className="h-6 w-6 text-[var(--secondary)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-[var(--secondary)]">{apiKeysCount}</p>
-                <p className="text-sm text-muted-foreground">API Keys</p>
+                <p className="text-3xl font-bold text-[var(--secondary)]">
+                  {apiKeysCount}
+                </p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  API Keys
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </ArcadeCard>
       </div>
 
       {/* Settings Sections */}
@@ -196,24 +215,27 @@ export default function SettingsPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
-        <CardHeader>
-          <CardTitle>Need More Credits?</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">
-            Purchase additional credits to continue generating games and participating in the arcade.
+      <ArcadeCard className="">
+        <div className="p-4 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-[var(--foreground)]">
+            Need More Credits?
+          </h3>
+        </div>
+        <div className="p-4">
+          <p className="text-[var(--muted-foreground)] mb-4">
+            Purchase additional credits to continue generating games and
+            participating in the arcade.
           </p>
-          <Button
-            className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
+          <ArcadeButton
+            variant="primary"
             onClick={() => {
               window.location.href = "/settings/subscription";
             }}
           >
             Purchase Credits
-          </Button>
-        </CardContent>
-      </Card>
+          </ArcadeButton>
+        </div>
+      </ArcadeCard>
     </div>
   );
 }

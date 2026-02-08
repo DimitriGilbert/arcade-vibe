@@ -1,7 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ArcadeBadge } from "@/components/arcade";
 import {
   Select,
   SelectContent,
@@ -50,17 +49,6 @@ export interface ModelSelectorProps {
   showTierBadge?: boolean;
 }
 
-const tierBadgeVariants: Record<
-  ModelTier,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  cheater: "destructive",
-  easy: "secondary",
-  normal: "default",
-  hard: "outline",
-  impossible: "secondary",
-};
-
 // Credit costs by tier
 const creditCosts: Record<string, number> = {
   cheater: 20,
@@ -78,37 +66,40 @@ export function ModelSelector({
   showTierBadge = true,
 }: ModelSelectorProps) {
   const selectedModelData = models.find((m) => m.modelName === selectedModel);
-  const creditCost = selectedModelData ? creditCosts[selectedModelData.tier] : 0;
+  const creditCost = selectedModelData
+    ? creditCosts[selectedModelData.tier]
+    : 0;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Model</span>
         {creditCost > 0 && (
-          <Badge variant="outline" className="text-xs">
-            {creditCost} credits
-          </Badge>
+          <ArcadeBadge text={`${creditCost} credits`} variant="default" />
         )}
       </div>
 
-      <Select value={selectedModel} onValueChange={onSelectModel} disabled={disabled}>
+      <Select
+        value={selectedModel}
+        onValueChange={onSelectModel}
+        disabled={disabled}
+      >
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select a model" />
         </SelectTrigger>
         <SelectContent>
           {models.map((model) => {
             const isSelected = model.modelName === selectedModel;
-            const tierVariant = tierBadgeVariants[model.tier];
 
             return (
               <SelectItem key={model.id} value={model.modelName}>
                 <div className="flex items-center gap-2">
-                  {isSelected && <Check className="h-4 w-4 text-primary" />}
+                  {isSelected && (
+                    <Check className="h-4 w-4 text-[var(--primary)]" />
+                  )}
                   <span className="flex-1">{model.modelName}</span>
                   {showTierBadge && (
-                    <Badge className="text-xs" variant={tierVariant}>
-                      {model.tier}
-                    </Badge>
+                    <ArcadeBadge text={model.tier} variant="default" />
                   )}
                 </div>
               </SelectItem>
@@ -118,9 +109,11 @@ export function ModelSelector({
       </Select>
 
       {selectedModelData && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
           <span>Provider: {selectedModelData.provider}</span>
-          <span>Max: {selectedModelData.maxTokens.toLocaleString()} tokens</span>
+          <span>
+            Max: {selectedModelData.maxTokens.toLocaleString()} tokens
+          </span>
         </div>
       )}
     </div>

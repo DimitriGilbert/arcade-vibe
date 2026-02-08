@@ -3,10 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ArcadeButton } from "@/components/arcade";
+import { ArcadeBadge } from "@/components/arcade";
+import { ArcadeCard } from "@/components/arcade";
 import { Loader2, Save, Play, GitBranch, Copy } from "lucide-react";
 import { trpc, trpcClient } from "@/utils/trpc";
 import {
@@ -379,8 +379,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   if (promptLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -389,20 +389,20 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const isForking = !!searchParams?.forkId;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--background)]">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-3xl font-bold text-[var(--foreground)]">
                 {isForking
                   ? "Fork Prompt"
                   : isEditing
                     ? "Edit Prompt"
                     : "Create Prompt"}
               </h1>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-[var(--muted-foreground)] mt-1">
                 {isForking
                   ? "Create your own version of this prompt"
                   : "Write a prompt to generate games"}
@@ -410,20 +410,20 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             </div>
             <div className="flex items-center gap-2">
               {isForking && (
-                <Button
+                <ArcadeButton
                   variant="outline"
-                  size="sm"
                   onClick={handleFork}
                   disabled={forkPromptMutation.isPending}
                 >
                   <Copy className="h-4 w-4 mr-2" />
                   {forkPromptMutation.isPending ? "Forking..." : "Fork"}
-                </Button>
+                </ArcadeButton>
               )}
               {credits && (
-                <Badge variant="secondary" className="text-sm">
-                  {credits.balance} credits
-                </Badge>
+                <ArcadeBadge
+                  text={`${credits.balance} credits`}
+                  variant="default"
+                />
               )}
             </div>
           </div>
@@ -432,20 +432,20 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Editor Panel */}
           <div className="lg:col-span-2 space-y-4">
-            <Card>
-              <CardContent className="p-6">
+            <ArcadeCard>
+              <div className="p-6">
                 <div className="space-y-4">
                   {/* Theme Selection */}
                   <div className="space-y-2">
                     <Label htmlFor="theme">Theme</Label>
                     {themesLoading ? (
-                      <div className="h-10 bg-muted rounded animate-pulse" />
+                      <div className="h-10 bg-[var(--muted)] rounded animate-pulse" />
                     ) : (
                       <select
                         id="theme"
                         value={selectedTheme}
                         onChange={(e) => setSelectedTheme(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md bg-background"
+                        className="w-full px-3 py-2 border rounded-md bg-[var(--background)]"
                       >
                         <option value="">Select a theme</option>
                         {themes?.map((theme: { id: string; title: string }) => (
@@ -482,7 +482,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-4">
-                    <Button
+                    <ArcadeButton
                       onClick={handleSave}
                       disabled={
                         !promptContent.trim() ||
@@ -503,8 +503,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                           {isEditing ? "Update" : "Save"}
                         </>
                       )}
-                    </Button>
-                    <Button
+                    </ArcadeButton>
+                    <ArcadeButton
                       onClick={handleGenerate}
                       disabled={isGenerating || !promptContent.trim()}
                       className="flex-1"
@@ -520,17 +520,17 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                           Generate
                         </>
                       )}
-                    </Button>
+                    </ArcadeButton>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </ArcadeCard>
 
             {/* Generated Output */}
             {(generatedCode || isGenerating) && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4 text-foreground">
+              <ArcadeCard>
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-[var(--foreground)]">
                     Generated Game
                   </h3>
                   <StreamingCodeViewer
@@ -539,16 +539,16 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     isStreaming={isGenerating}
                     fileName="game.html"
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </ArcadeCard>
             )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
             {/* Model Selection */}
-            <Card>
-              <CardContent className="p-6">
+            <ArcadeCard>
+              <div className="p-6">
                 <ModelSelector
                   models={models || MOCK_MODELS}
                   selectedModel={selectedModel}
@@ -558,13 +558,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     }
                   }}
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </ArcadeCard>
 
             {/* Version History */}
             {isEditing && versions && versions.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
+              <ArcadeCard>
+                <div className="p-6">
                   <VersionHistory
                     versions={versions.map(
                       (v: {
@@ -587,46 +587,56 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     currentVersion={existingPrompt.version}
                     onCompareVersions={handleCompare}
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </ArcadeCard>
             )}
 
             {/* Prompt Info */}
             {existingPrompt && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3 text-foreground">
+              <ArcadeCard>
+                <div className="p-6">
+                  <h3 className="font-semibold mb-3 text-[var(--foreground)]">
                     Prompt Info
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Version</span>
-                      <Badge variant="secondary">
-                        v{existingPrompt.version}
-                      </Badge>
+                      <span className="text-[var(--muted-foreground)]">
+                        Version
+                      </span>
+                      <ArcadeBadge
+                        text={`v${existingPrompt.version}`}
+                        variant="default"
+                      />
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tokens</span>
-                      <span className="text-foreground">
+                      <span className="text-[var(--muted-foreground)]">
+                        Tokens
+                      </span>
+                      <span className="text-[var(--foreground)]">
                         {existingPrompt.tokenCount}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Visibility</span>
-                      <Badge variant="outline">
-                        {existingPrompt.visibility}
-                      </Badge>
+                      <span className="text-[var(--muted-foreground)]">
+                        Visibility
+                      </span>
+                      <ArcadeBadge
+                        text={existingPrompt.visibility}
+                        variant="default"
+                      />
                     </div>
-                    <div className="border-t border-border my-2" />
+                    <div className="border-t border-[var(--border)] my-2" />
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Created</span>
-                      <span className="text-xs text-foreground">
+                      <span className="text-[var(--muted-foreground)]">
+                        Created
+                      </span>
+                      <span className="text-xs text-[var(--foreground)]">
                         {new Date(existingPrompt.createdAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </ArcadeCard>
             )}
           </div>
         </div>
