@@ -2,7 +2,13 @@
 
 import React, { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, User as UserIcon, Gamepad2, Star, GitBranch } from "lucide-react";
+import {
+  Loader2,
+  User as UserIcon,
+  Gamepad2,
+  Star,
+  GitBranch,
+} from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -157,15 +163,18 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
       // Try to fetch via auth API
       try {
-        const response = await fetch("/api/auth/user?email=" + encodeURIComponent(userEmail), {
-          credentials: "include",
-        });
+        const response = await fetch(
+          "/api/auth/user?email=" + encodeURIComponent(userEmail),
+          {
+            credentials: "include",
+          },
+        );
 
         if (!response.ok) {
           return null;
         }
 
-        const data = await response.json() as User | null;
+        const data = (await response.json()) as User | null;
         return data;
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -192,7 +201,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         });
 
         if (sessionResponse.ok) {
-          const session = await sessionResponse.json() as { user?: { id: string } } | null;
+          const session = (await sessionResponse.json()) as {
+            user?: { id: string };
+          } | null;
           const currentUserId = session?.user?.id;
           setIsOwnProfile(currentUserId === user.id);
         }
@@ -211,7 +222,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       if (!user?.id) return [];
 
       const allPrompts = await trpcClient.prompts.listPublic.query();
-      const userPrompts = allPrompts.filter((prompt) => prompt.authorId === user.id);
+      const userPrompts = allPrompts.filter(
+        (prompt) => prompt.authorId === user.id,
+      );
       return userPrompts;
     },
     enabled: !!user?.id,
@@ -277,7 +290,8 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   // Compute rankings for user's games
   const userGamesWithRankings = useMemo((): GameWithRanking[] => {
-    if (!userGames || !leaderboard) return userGames.map((game) => ({ ...game, ranking: null }));
+    if (!userGames || !leaderboard)
+      return userGames.map((game) => ({ ...game, ranking: null }));
 
     const rankingMap = new Map<string, number>();
     leaderboard.forEach((entry: LeaderboardEntry, index: number) => {
@@ -342,11 +356,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (userLoading || (!user && !userLoading)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
           <div className="flex items-center justify-center py-20">
             <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
               <p className="text-muted-foreground">Loading profile...</p>
             </div>
           </div>
@@ -357,12 +371,14 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <Card className="bg-card border-border">
             <CardContent className="p-20 text-center">
               <UserIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">User Not Found</h3>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                User Not Found
+              </h3>
               <p className="text-muted-foreground">
                 The profile {userEmail} could not be found.
               </p>
@@ -374,7 +390,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
@@ -384,26 +400,28 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               <img
                 src={user.image}
                 alt={user.name || user.email}
-                className="w-20 h-20 rounded-full border-4 border-white dark:border-gray-800 shadow-lg"
+                className="w-20 h-20 rounded-full border-4 border-border shadow-lg"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold shadow-lg">
                 {(user.name || user.email).charAt(0).toUpperCase()}
               </div>
             )}
 
             {/* User Info */}
             <div className="flex-1">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-4xl font-bold text-foreground mb-2">
                 {user.name || user.email}
               </h1>
               <p className="text-muted-foreground mb-3">{user.email}</p>
 
               {/* Badges */}
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Member since {new Date(user.createdAt).getFullYear()}</Badge>
+                <Badge variant="secondary">
+                  Member since {new Date(user.createdAt).getFullYear()}
+                </Badge>
                 {isOwnProfile && credits && (
-                  <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500">
+                  <Badge variant="default" className="bg-primary">
                     {credits.balance} credits
                   </Badge>
                 )}
@@ -425,11 +443,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* User's Prompts */}
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <Card className="bg-card border-border">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5 text-purple-500" />
+                  <GitBranch className="h-5 w-5 text-primary" />
                   Prompts
                 </CardTitle>
                 <Badge variant="outline">{prompts?.length || 0}</Badge>
@@ -438,7 +456,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             <CardContent>
               {promptsLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : !prompts || prompts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -451,11 +469,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           </Card>
 
           {/* User's Games */}
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <Card className="bg-card border-border">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5 text-purple-500" />
+                  <Gamepad2 className="h-5 w-5 text-primary" />
                   Games
                 </CardTitle>
                 <Badge variant="outline">{userGames.length}</Badge>
@@ -464,7 +482,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             <CardContent>
               {gamesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : userGames.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -473,12 +491,14 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ) : (
                 <div className="space-y-4">
                   {userGamesWithRankings.slice(0, 5).map((game) => {
-                    const ranking = userGamesWithRankings.find((g) => g.id === game.id)?.ranking;
+                    const ranking = userGamesWithRankings.find(
+                      (g) => g.id === game.id,
+                    )?.ranking;
                     return (
                       <button
                         key={game.id}
                         type="button"
-                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-colors cursor-pointer text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer text-left"
                         onClick={() => {
                           const target = `/play?gameId=${game.id}`;
                           window.location.href = target;
@@ -491,16 +511,17 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                             className="w-16 h-12 object-cover rounded"
                           />
                         ) : (
-                          <div className="w-16 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex items-center justify-center">
-                            <Gamepad2 className="h-6 w-6 text-white" />
+                          <div className="w-16 h-12 bg-primary rounded flex items-center justify-center">
+                            <Gamepad2 className="h-6 w-6 text-primary-foreground" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
+                          <p className="font-medium text-sm truncate text-foreground">
                             {game.prompt.content.slice(0, 50)}...
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {game.theme?.title || "No theme"} • {new Date(game.createdAt).toLocaleDateString()}
+                            {game.theme?.title || "No theme"} •{" "}
+                            {new Date(game.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -509,7 +530,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                               Rank #{ranking}
                             </Badge>
                           )}
-                          <Badge variant={game.status === "completed" ? "default" : "secondary"}>
+                          <Badge
+                            variant={
+                              game.status === "completed"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
                             {game.status}
                           </Badge>
                         </div>
@@ -523,11 +550,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         </div>
 
         {/* Ratings History */}
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm mt-6">
+        <Card className="bg-card border-border mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-purple-500" />
+                <Star className="h-5 w-5 text-primary" />
                 Ratings History
               </CardTitle>
               <Badge variant="outline">{ratings?.length || 0}</Badge>
@@ -536,7 +563,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <CardContent>
             {ratingsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : !ratings || ratings.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -547,7 +574,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 {ratings.slice(0, 10).map((rating) => (
                   <div
                     key={rating.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-700/50"
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
                   >
                     <div className="flex-shrink-0">
                       <div className="flex items-center gap-1">
@@ -556,17 +583,21 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                             key={star}
                             className={`h-4 w-4 ${
                               star <= rating.overall
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-gray-300 dark:text-gray-600"
+                                ? "fill-accent text-accent"
+                                : "text-muted-foreground/30"
                             }`}
                           />
                         ))}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">Game ID: {rating.gameId}</p>
+                      <p className="font-medium text-sm text-foreground">
+                        Game ID: {rating.gameId}
+                      </p>
                       {rating.feedback && (
-                        <p className="text-sm text-muted-foreground mt-1">{rating.feedback}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {rating.feedback}
+                        </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
                         {new Date(rating.createdAt).toLocaleDateString()}
@@ -580,11 +611,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         </Card>
 
         {/* Prompt Runs History */}
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm mt-6">
+        <Card className="bg-card border-border mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Gamepad2 className="h-5 w-5 text-purple-500" />
+                <Gamepad2 className="h-5 w-5 text-primary" />
                 Prompt Runs History
               </CardTitle>
               <Badge variant="outline">{promptRunsHistory?.length || 0}</Badge>
@@ -593,7 +624,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <CardContent>
             {promptRunsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : !promptRunsHistory || promptRunsHistory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -604,7 +635,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 {promptRunsHistory.slice(0, 10).map((game) => (
                   <div
                     key={game.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-700/50"
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
                   >
                     {game.imageUrl ? (
                       <img
@@ -613,19 +644,24 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                         className="w-16 h-12 object-cover rounded"
                       />
                     ) : (
-                      <div className="w-16 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex items-center justify-center">
-                        <Gamepad2 className="h-6 w-6 text-white" />
+                      <div className="w-16 h-12 bg-primary rounded flex items-center justify-center">
+                        <Gamepad2 className="h-6 w-6 text-primary-foreground" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm text-foreground">
                         {game.prompt.content.slice(0, 60)}...
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {game.theme?.title || "No theme"} • {new Date(game.createdAt).toLocaleString()}
+                        {game.theme?.title || "No theme"} •{" "}
+                        {new Date(game.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <Badge variant={game.status === "completed" ? "default" : "secondary"}>
+                    <Badge
+                      variant={
+                        game.status === "completed" ? "default" : "secondary"
+                      }
+                    >
                       {game.status}
                     </Badge>
                   </div>

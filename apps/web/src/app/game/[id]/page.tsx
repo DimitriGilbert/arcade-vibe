@@ -84,11 +84,23 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   // Report mutation
   const reportMutation = useMutation({
-    mutationFn: async ({ reason, description }: { reason: string; description: string }) => {
+    mutationFn: async ({
+      reason,
+      description,
+    }: {
+      reason: string;
+      description: string;
+    }) => {
       return await trpcClient.moderation.submitReport.mutate({
         targetType: "game",
         targetId: gameId,
-        reason: reason as "inappropriate" | "spam" | "malicious" | "copyright" | "harassment" | "other",
+        reason: reason as
+          | "inappropriate"
+          | "spam"
+          | "malicious"
+          | "copyright"
+          | "harassment"
+          | "other",
         description,
       });
     },
@@ -139,14 +151,14 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
       reportMutation.mutate({ reason, description });
     },
-    [reportMutation]
+    [reportMutation],
   );
 
   if (gameLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Loading game...</p>
         </div>
       </div>
@@ -155,10 +167,14 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   if (!game) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-semibold">Game not found</h2>
-          <p className="text-muted-foreground">The game you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-semibold text-foreground">
+            Game not found
+          </h2>
+          <p className="text-muted-foreground">
+            The game you're looking for doesn't exist.
+          </p>
         </div>
       </div>
     );
@@ -168,12 +184,12 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
   const playtimeDisplay = `${Math.floor(playtime / 60)}:${(playtime % 60).toString().padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold truncate max-w-md">
+            <h1 className="text-2xl font-bold truncate max-w-md text-foreground">
               {game.prompt?.content?.slice(0, 50)}...
             </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -262,10 +278,12 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
                 {myRating ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm font-medium">You rated this game</span>
+                      <Trophy className="h-4 w-4 text-accent" />
+                      <span className="text-sm font-medium text-card-foreground">
+                        You rated this game
+                      </span>
                     </div>
-                    <div className="text-2xl font-bold text-yellow-500">
+                    <div className="text-2xl font-bold text-accent">
                       {myRating.overall}/5
                     </div>
                   </div>
@@ -291,8 +309,8 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-green-600 dark:text-green-400">
+                      <Trophy className="h-4 w-4 text-secondary" />
+                      <span className="text-sm text-secondary">
                         You can now rate this game!
                       </span>
                     </div>
@@ -316,7 +334,10 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
       {/* View Prompt Dialog */}
       {showPromptDialog && (
-        <DialogPrimitive.Root open={showPromptDialog} onOpenChange={setShowPromptDialog}>
+        <DialogPrimitive.Root
+          open={showPromptDialog}
+          onOpenChange={setShowPromptDialog}
+        >
           <DialogPortal>
             <DialogOverlay />
             <DialogPrimitive.Popup className="bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-none p-4 text-xs/relaxed ring-1 duration-100 sm:max-w-2xl fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none max-h-[90vh] overflow-y-auto">
@@ -334,7 +355,9 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
                 </p>
               </div>
               <div className="p-4 bg-muted rounded-md max-h-[60vh] overflow-y-auto">
-                <p className="whitespace-pre-wrap text-sm">{game.prompt?.content}</p>
+                <p className="whitespace-pre-wrap text-sm">
+                  {game.prompt?.content}
+                </p>
               </div>
             </DialogPrimitive.Popup>
           </DialogPortal>
@@ -343,7 +366,10 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
       {/* Report Dialog */}
       {showReportDialog && (
-        <DialogPrimitive.Root open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogPrimitive.Root
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+        >
           <DialogPortal>
             <DialogOverlay />
             <DialogPrimitive.Popup className="bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-none p-4 text-xs/relaxed ring-1 duration-100 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none">
@@ -419,7 +445,10 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
       {/* Rating Dialog */}
       {showRatingDialog && (
-        <DialogPrimitive.Root open={showRatingDialog} onOpenChange={setShowRatingDialog}>
+        <DialogPrimitive.Root
+          open={showRatingDialog}
+          onOpenChange={setShowRatingDialog}
+        >
           <DialogPortal>
             <DialogOverlay />
             <DialogPrimitive.Popup className="bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-none p-4 text-xs/relaxed ring-1 duration-100 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none">

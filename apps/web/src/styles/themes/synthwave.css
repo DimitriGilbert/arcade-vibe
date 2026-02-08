@@ -1,0 +1,236 @@
+/**
+ * Synthwave Sunset Theme
+ * 
+ * 80s retro sunset aesthetic with perspective grid, chrome gradients, and palm silhouettes.
+ * Inspired by the neo-retro wave aesthetic of the 2010s.
+ * 
+ * Key characteristics:
+ * - Deep purple to orange sunset gradient background
+ * - Neon pink/magenta accent colors
+ * - Chrome metallic text effects
+ * - Animated perspective grid floor
+ * - Scanline overlay effect
+ */
+
+/* Theme class - applied to html element */
+:is(.synthwave, .theme-synthwave) {
+  /* Core semantic colors */
+  --background: oklch(0.25 0.08 280);
+  --foreground: oklch(0.98 0.005 280);
+  --card: oklch(0.2 0.06 280 / 0.8);
+  --card-foreground: oklch(0.98 0.005 280);
+  --popover: oklch(0.15 0.05 280);
+  --popover-foreground: oklch(0.98 0.005 280);
+  --primary: oklch(0.68 0.28 345);
+  --primary-foreground: oklch(0.98 0.005 280);
+  --secondary: oklch(0.78 0.2 195);
+  --secondary-foreground: oklch(0.25 0.08 280);
+  --muted: oklch(0.35 0.1 300 / 0.5);
+  --muted-foreground: oklch(0.7 0.01 280);
+  --accent: oklch(0.74 0.26 42);
+  --accent-foreground: oklch(0.25 0.08 280);
+  --destructive: oklch(0.65 0.28 345);
+  --border: oklch(0.68 0.28 345 / 0.3);
+  --input: oklch(0.1 0.02 280 / 0.8);
+  --ring: oklch(0.68 0.28 345);
+
+  --radius: 1rem;
+
+  --sidebar: oklch(0.15 0.05 280);
+  --sidebar-foreground: oklch(0.98 0.005 280);
+  --sidebar-primary: oklch(0.68 0.28 345);
+  --sidebar-primary-foreground: oklch(0.98 0.005 280);
+  --sidebar-accent: oklch(0.35 0.15 320 / 0.4);
+  --sidebar-accent-foreground: oklch(0.98 0.005 280);
+  --sidebar-border: oklch(0.68 0.28 345 / 0.3);
+  --sidebar-ring: oklch(0.68 0.28 345);
+
+  /* Theme-specific colors */
+  --neon-pink: oklch(0.68 0.28 345);
+  --neon-cyan: oklch(0.78 0.2 195);
+  --neon-yellow: oklch(0.85 0.2 80);
+  --neon-orange: oklch(0.74 0.26 42);
+  --chrome-light: oklch(0.98 0.005 280);
+  --chrome-dark: oklch(0.6 0.02 280);
+  --grid-color: oklch(0.68 0.28 345 / 0.6);
+  --glow-color: oklch(0.68 0.28 345 / 0.5);
+
+  /* Background layers */
+  --bg-gradient-sunset: linear-gradient(
+    180deg,
+    oklch(0.25 0.08 280) 0%,
+    oklch(0.35 0.15 320) 30%,
+    oklch(0.55 0.25 25) 60%,
+    oklch(0.75 0.22 50) 80%,
+    oklch(0.85 0.2 80) 100%
+  );
+
+  --bg-gradient-sun: linear-gradient(
+    180deg,
+    oklch(0.9 0.18 80) 0%,
+    oklch(0.8 0.22 60) 40%,
+    oklch(0.7 0.26 42) 70%,
+    oklch(0.65 0.28 345) 100%
+  );
+
+  --gradient-chrome: linear-gradient(
+    180deg,
+    oklch(0.98 0.005 280) 0%,
+    oklch(0.75 0.015 280) 40%,
+    oklch(0.98 0.005 280) 50%,
+    oklch(0.6 0.02 280) 100%
+  );
+
+  --gradient-accent: linear-gradient(
+    135deg,
+    oklch(0.68 0.28 345),
+    oklch(0.74 0.26 42)
+  );
+
+  --gradient-accent-full: linear-gradient(
+    180deg,
+    oklch(0.85 0.2 80),
+    oklch(0.74 0.26 42),
+    oklch(0.68 0.28 345)
+  );
+
+  /* Animation timings */
+  --animation-grid-speed: 10s;
+  --animation-glow-pulse: 2s;
+  --animation-scanline-speed: 0.1s;
+}
+
+/* Custom keyframes for Synthwave theme */
+@keyframes synthwave-grid-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 40px;
+  }
+}
+
+@keyframes synthwave-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    filter: blur(20px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(30px);
+  }
+}
+
+@keyframes synthwave-sun-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+}
+
+/* Utility classes for Synthwave theme */
+:is(.synthwave, .theme-synthwave) .synthwave-bg {
+  background: var(--bg-gradient-sunset);
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-sun {
+  background: var(--bg-gradient-sun);
+  mask-image: repeating-linear-gradient(
+    180deg,
+    black 0px,
+    black 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-grid-floor {
+  background:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: synthwave-grid-move var(--animation-grid-speed) linear infinite;
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-chrome-text {
+  background: var(--gradient-chrome);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-accent-text {
+  background: var(--gradient-accent-full);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-glow {
+  box-shadow:
+    0 0 30px var(--glow-color),
+    0 4px 15px oklch(0 0 0 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.3);
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-card {
+  background: linear-gradient(
+    135deg,
+    oklch(0.25 0.08 280 / 0.6),
+    oklch(0.35 0.15 320 / 0.4)
+  );
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px oklch(0 0 0 / 0.3);
+}
+
+:is(.synthwave, .theme-synthwave) .synthwave-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0 0 0 / 0.15) 0px,
+    oklch(0 0 0 / 0.15) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* Button styles */
+:is(.synthwave, .theme-synthwave) .btn-primary {
+  background: var(--gradient-accent);
+  box-shadow:
+    0 0 30px var(--glow-color),
+    0 4px 15px oklch(0 0 0 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.3);
+  color: var(--primary-foreground);
+}
+
+:is(.synthwave, .theme-synthwave) .btn-secondary {
+  border: 2px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 20px oklch(0.78 0.2 195 / 0.3);
+}
+
+:is(.synthwave, .theme-synthwave) .btn-secondary:hover {
+  background: oklch(0.78 0.2 195 / 0.2);
+}
+
+/* Input styles */
+:is(.synthwave, .theme-synthwave) .input-field {
+  background: oklch(0.1 0.02 280 / 0.8);
+  border: 2px solid var(--border);
+  color: var(--foreground);
+}
+
+:is(.synthwave, .theme-synthwave) .input-field::placeholder {
+  color: oklch(0.4 0.01 280);
+}
+
+:is(.synthwave, .theme-synthwave) .input-field:focus {
+  border-color: var(--neon-pink);
+  box-shadow: 0 0 20px var(--glow-color);
+}

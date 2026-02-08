@@ -1,0 +1,408 @@
+/**
+ * Arcade Cabinet Theme
+ * 
+ * Classic arcade cabinet aesthetic with wood grain textures, CRT screen effects,
+ * and authentic arcade button styling.
+ * 
+ * Key characteristics:
+ * - Dark wood brown cabinet body
+ * - CRT screen with phosphor green glow and scanlines
+ * - 3D arcade button effects (red, yellow, cyan)
+ * - Neon text effects reminiscent of 80s arcades
+ * - Wood grain texture patterns
+ */
+
+/* Theme class - applied to html element */
+:is(.cabinet, .theme-cabinet) {
+  /* Core semantic colors */
+  --background: oklch(0.18 0.02 70);
+  --foreground: oklch(0.95 0.02 70);
+  --card: oklch(0.22 0.02 70 / 0.9);
+  --card-foreground: oklch(0.95 0.02 70);
+  --popover: oklch(0.15 0.02 70);
+  --popover-foreground: oklch(0.95 0.02 70);
+  --primary: oklch(0.78 0.22 145);
+  --primary-foreground: oklch(0.1 0.02 70);
+  --secondary: oklch(0.75 0.15 85);
+  --secondary-foreground: oklch(0.18 0.02 70);
+  --muted: oklch(0.35 0.02 70 / 0.5);
+  --muted-foreground: oklch(0.6 0.02 70);
+  --accent: oklch(0.65 0.24 25);
+  --accent-foreground: oklch(0.95 0.02 70);
+  --destructive: oklch(0.6 0.24 25);
+  --border: oklch(0.35 0.02 70 / 0.5);
+  --input: oklch(0.12 0.02 70 / 0.9);
+  --ring: oklch(0.78 0.22 145);
+
+  --radius: 0.5rem;
+
+  --sidebar: oklch(0.15 0.02 70);
+  --sidebar-foreground: oklch(0.95 0.02 70);
+  --sidebar-primary: oklch(0.78 0.22 145);
+  --sidebar-primary-foreground: oklch(0.1 0.02 70);
+  --sidebar-accent: oklch(0.45 0.08 55 / 0.4);
+  --sidebar-accent-foreground: oklch(0.95 0.02 70);
+  --sidebar-border: oklch(0.35 0.02 70 / 0.5);
+  --sidebar-ring: oklch(0.78 0.22 145);
+
+  /* Theme-specific colors - Wood tones */
+  --cabinet-wood-dark: oklch(0.18 0.02 70);
+  --cabinet-wood-medium: oklch(0.22 0.02 70);
+  --cabinet-wood-light: oklch(0.28 0.02 70);
+  --cabinet-wood-border: oklch(0.32 0.02 70);
+  --cabinet-wood-accent: oklch(0.5 0.08 55);
+
+  /* CRT screen colors */
+  --crt-screen: oklch(0.08 0 0);
+  --crt-green: oklch(0.78 0.22 145);
+  --crt-green-glow: oklch(0.78 0.22 145 / 0.5);
+  --crt-screen-glow: oklch(0.7 0.12 200 / 0.1);
+
+  /* Arcade button colors */
+  --button-red: oklch(0.6 0.24 25);
+  --button-red-light: oklch(0.7 0.24 25);
+  --button-yellow: oklch(0.85 0.18 85);
+  --button-yellow-light: oklch(0.9 0.18 85);
+  --button-cyan: oklch(0.75 0.15 195);
+  --button-cyan-light: oklch(0.85 0.15 195);
+  --button-purple: oklch(0.55 0.25 300);
+  --button-purple-light: oklch(0.65 0.25 300);
+
+  /* Title gradient colors */
+  --title-yellow: oklch(0.9 0.18 90);
+  --title-orange: oklch(0.75 0.2 60);
+  --title-red: oklch(0.6 0.26 25);
+
+  /* Background layers */
+  --bg-gradient-cabinet: linear-gradient(
+    180deg,
+    oklch(0.22 0.02 70) 0%,
+    oklch(0.18 0.02 70) 100%
+  );
+
+  --bg-gradient-title: linear-gradient(
+    180deg,
+    oklch(0.9 0.18 90) 0%,
+    oklch(0.75 0.2 60) 50%,
+    oklch(0.6 0.26 25) 100%
+  );
+
+  --bg-wood-texture:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      oklch(0 0 0 / 0.1) 2px,
+      oklch(0 0 0 / 0.1) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      oklch(0 0 0 / 0.05) 2px,
+      oklch(0 0 0 / 0.05) 4px
+    );
+
+  --bg-floor-lighting: radial-gradient(
+    ellipse 80% 100% at 50% 100%,
+    oklch(0.6 0.24 25 / 0.2),
+    transparent
+  );
+
+  --bg-screen-bezel: linear-gradient(
+    180deg,
+    oklch(0.22 0.02 70),
+    oklch(0.18 0.02 70)
+  );
+
+  /* Animation timings */
+  --animation-scanline-speed: 0.1s;
+  --animation-flicker-speed: 0.15s;
+  --animation-glow-pulse: 2s;
+}
+
+/* Custom keyframes for Cabinet theme */
+@keyframes cabinet-scanline {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 4px;
+  }
+}
+
+@keyframes cabinet-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.98;
+  }
+  75% {
+    opacity: 0.96;
+  }
+}
+
+@keyframes cabinet-glow {
+  0%,
+  100% {
+    text-shadow:
+      0 0 20px var(--crt-green-glow),
+      0 0 40px var(--crt-green-glow);
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow:
+      0 0 25px var(--crt-green-glow),
+      0 0 50px var(--crt-green-glow);
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes cabinet-button-press {
+  0% {
+    transform: translateY(0);
+    box-shadow:
+      0 10px 30px oklch(0 0 0 / 0.5),
+      inset 0 -5px 10px oklch(0 0 0 / 0.3);
+  }
+  100% {
+    transform: translateY(2px);
+    box-shadow:
+      0 5px 15px oklch(0 0 0 / 0.5),
+      inset 0 -2px 5px oklch(0 0 0 / 0.3);
+  }
+}
+
+/* Utility classes for Cabinet theme */
+:is(.cabinet, .theme-cabinet) .cabinet-bg {
+  background: var(--cabinet-wood-dark);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-wood-texture {
+  background-image: var(--bg-wood-texture);
+  background-size:
+    100px 100px,
+    100% 20px;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-floor-lighting {
+  background: var(--bg-floor-lighting);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-screen {
+  background: var(--crt-screen);
+  border: 20px solid var(--cabinet-wood-medium);
+  border-radius: 40px;
+  box-shadow:
+    inset 0 0 100px oklch(0 0 0 / 0.8),
+    0 0 0 10px var(--cabinet-wood-dark),
+    0 0 0 14px var(--cabinet-wood-border),
+    0 20px 60px oklch(0 0 0 / 0.8);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-screen-bezel {
+  box-shadow: inset 0 0 50px oklch(0 0 0 / 0.5);
+  border: 2px solid oklch(0.1 0 0);
+  border-radius: 20px;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-screen-glow {
+  background: radial-gradient(
+    ellipse at center,
+    var(--crt-screen-glow) 0%,
+    transparent 70%
+  );
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0 0 0 / 0.3) 0px,
+    oklch(0 0 0 / 0.3) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  background-size: 100% 4px;
+  animation: cabinet-scanline var(--animation-scanline-speed) linear infinite;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-scanlines-static {
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0 0 0 / 0.3) 0px,
+    oklch(0 0 0 / 0.3) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  background-size: 100% 4px;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-text-glow {
+  color: var(--crt-green);
+  text-shadow:
+    0 0 20px var(--crt-green-glow),
+    0 0 40px var(--crt-green-glow);
+  animation: cabinet-glow var(--animation-glow-pulse) ease-in-out infinite;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-text-glow-static {
+  color: var(--crt-green);
+  text-shadow:
+    0 0 20px var(--crt-green-glow),
+    0 0 40px var(--crt-green-glow);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-title-gradient {
+  background: var(--bg-gradient-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 20px oklch(0.75 0.2 60 / 0.5));
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-button {
+  position: relative;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-button:active {
+  animation: cabinet-button-press 0.1s ease forwards;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-button-red {
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--button-red-light),
+    var(--button-red)
+  );
+  box-shadow:
+    0 10px 30px oklch(0 0 0 / 0.5),
+    inset 0 -5px 10px oklch(0 0 0 / 0.3),
+    0 0 20px oklch(0.6 0.24 25 / 0.3);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-button-yellow {
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--button-yellow-light),
+    var(--button-yellow)
+  );
+  box-shadow:
+    0 10px 30px oklch(0 0 0 / 0.5),
+    inset 0 -5px 10px oklch(0 0 0 / 0.3),
+    0 0 20px oklch(0.85 0.18 85 / 0.3);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-button-cyan {
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--button-cyan-light),
+    var(--button-cyan)
+  );
+  box-shadow:
+    0 10px 30px oklch(0 0 0 / 0.5),
+    inset 0 -5px 10px oklch(0 0 0 / 0.3),
+    0 0 20px oklch(0.75 0.15 195 / 0.3);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-joystick {
+  background: radial-gradient(
+    circle at 30% 30%,
+    oklch(0.6 0.22 25),
+    oklch(0.45 0.2 25)
+  );
+  box-shadow:
+    0 10px 30px oklch(0 0 0 / 0.5),
+    inset 0 -5px 10px oklch(0 0 0 / 0.3);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-joystick-handle {
+  background: radial-gradient(
+    circle at 30% 30%,
+    oklch(0.7 0.22 25),
+    oklch(0.5 0.2 25)
+  );
+  box-shadow: 0 5px 15px oklch(0 0 0 / 0.3);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-coin-slot {
+  background: linear-gradient(
+    90deg,
+    oklch(0.1 0 0),
+    oklch(0.3 0 0),
+    oklch(0.1 0 0)
+  );
+  box-shadow: inset 0 0 10px oklch(0 0 0 / 0.8);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-header {
+  background: var(--bg-gradient-cabinet);
+  border: 4px solid var(--cabinet-wood-border);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  box-shadow:
+    inset 0 2px 10px oklch(0 0 0 / 0.5),
+    0 -10px 40px oklch(0.6 0.24 25 / 0.2);
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-control-panel {
+  background: var(--bg-gradient-cabinet);
+  border: 4px solid var(--cabinet-wood-border);
+  border-top: none;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 20px 60px oklch(0 0 0 / 0.5);
+}
+
+/* Card styles */
+:is(.cabinet, .theme-cabinet) .cabinet-card {
+  background: oklch(0 0 0 / 0.5);
+  border: 2px solid oklch(0.6 0.24 25 / 0.25);
+  transition: all 0.2s ease;
+}
+
+:is(.cabinet, .theme-cabinet) .cabinet-card:hover {
+  border-color: var(--button-red);
+  box-shadow:
+    inset 0 0 20px oklch(0.6 0.24 25 / 0.3),
+    0 0 20px oklch(0.6 0.24 25);
+}
+
+/* Button styles */
+:is(.cabinet, .theme-cabinet) .btn-primary {
+  background: var(--bg-gradient-title);
+  box-shadow:
+    0 0 30px oklch(0.75 0.2 60 / 0.3),
+    0 4px 15px oklch(0 0 0 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.3);
+  color: var(--cabinet-wood-dark);
+}
+
+:is(.cabinet, .theme-cabinet) .btn-secondary {
+  border: 2px solid var(--crt-green);
+  color: var(--crt-green);
+  box-shadow: 0 0 20px var(--crt-green-glow);
+}
+
+:is(.cabinet, .theme-cabinet) .btn-secondary:hover {
+  background: oklch(0.78 0.22 145 / 0.2);
+}
+
+/* Input styles */
+:is(.cabinet, .theme-cabinet) .input-field {
+  background: oklch(0.12 0.02 70 / 0.9);
+  border: 2px solid var(--border);
+  color: var(--foreground);
+}
+
+:is(.cabinet, .theme-cabinet) .input-field::placeholder {
+  color: oklch(0.4 0.02 70);
+}
+
+:is(.cabinet, .theme-cabinet) .input-field:focus {
+  border-color: var(--crt-green);
+  box-shadow: 0 0 20px var(--crt-green-glow);
+}

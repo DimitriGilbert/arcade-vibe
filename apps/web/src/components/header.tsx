@@ -13,12 +13,16 @@ export default function Header() {
   ] as const;
 
   return (
-    <div>
+    <div className="bg-background border-b border-border">
       <div className="flex flex-row items-center justify-between px-2 py-1">
-        <nav className="flex gap-4 text-lg">
+        <nav className="flex gap-4 text-lg text-foreground">
           {links.map(({ to, label }) => {
             return (
-              <Link key={to} href={to}>
+              <Link
+                key={to}
+                href={to}
+                className="hover:text-primary transition-colors"
+              >
                 {label}
               </Link>
             );
@@ -29,7 +33,6 @@ export default function Header() {
           <UserMenu />
         </div>
       </div>
-      <hr />
     </div>
   );
 }

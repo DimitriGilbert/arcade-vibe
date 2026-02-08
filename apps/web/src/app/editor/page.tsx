@@ -379,8 +379,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   if (promptLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -389,13 +389,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const isForking = !!searchParams?.forkId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-3xl font-bold text-foreground">
                 {isForking
                   ? "Fork Prompt"
                   : isEditing
@@ -439,7 +439,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                   <div className="space-y-2">
                     <Label htmlFor="theme">Theme</Label>
                     {themesLoading ? (
-                      <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                      <div className="h-10 bg-muted rounded animate-pulse" />
                     ) : (
                       <select
                         id="theme"
@@ -530,7 +530,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             {(generatedCode || isGenerating) && (
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Generated Game</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">
+                    Generated Game
+                  </h3>
                   <StreamingCodeViewer
                     code={generatedCode}
                     language="html"
@@ -593,7 +595,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             {existingPrompt && (
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3">Prompt Info</h3>
+                  <h3 className="font-semibold mb-3 text-foreground">
+                    Prompt Info
+                  </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Version</span>
@@ -603,7 +607,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tokens</span>
-                      <span>{existingPrompt.tokenCount}</span>
+                      <span className="text-foreground">
+                        {existingPrompt.tokenCount}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Visibility</span>
@@ -611,10 +617,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                         {existingPrompt.visibility}
                       </Badge>
                     </div>
-                    <div className="border-t my-2" />
+                    <div className="border-t border-border my-2" />
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Created</span>
-                      <span className="text-xs">
+                      <span className="text-xs text-foreground">
                         {new Date(existingPrompt.createdAt).toLocaleString()}
                       </span>
                     </div>

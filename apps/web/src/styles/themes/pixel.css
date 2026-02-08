@@ -1,0 +1,293 @@
+/**
+ * Pixel Perfect Theme
+ * 
+ * Playful 8-bit/16-bit inspired aesthetic with hard shadows, bold borders,
+ * and bright saturated colors. Inspired by classic arcade games and platformers.
+ * 
+ * Key characteristics:
+ * - Bright sky blue background
+ * - Hard edge shadows (no blur)
+ * - Bold 4px black borders
+ * - Saturated primary colors (red, yellow, green, blue, purple)
+ * - Playful game-ui aesthetic with bounce animations
+ */
+
+/* Theme class - applied to html element */
+:is(.pixel, .theme-pixel) {
+  /* Core semantic colors */
+  --background: oklch(0.74 0.15 250);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0.55 0.2 250);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.78 0.18 140);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(0.88 0.06 200);
+  --muted-foreground: oklch(0.3 0 0);
+  --accent: oklch(0.88 0.18 90);
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.63 0.25 25);
+  --border: oklch(0 0 0);
+  --input: oklch(1 0 0);
+  --ring: oklch(0.55 0.2 250);
+
+  --radius: 0;
+
+  --sidebar: oklch(0.6 0.2 300);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.88 0.18 90);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.78 0.18 140);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0 0 0);
+  --sidebar-ring: oklch(0.55 0.2 250);
+
+  /* Theme-specific colors */
+  --pixel-blue: oklch(0.74 0.15 250);
+  --pixel-blue-dark: oklch(0.55 0.2 250);
+  --pixel-red: oklch(0.63 0.25 25);
+  --pixel-red-dark: oklch(0.55 0.24 25);
+  --pixel-yellow: oklch(0.88 0.18 90);
+  --pixel-yellow-light: oklch(0.92 0.14 90);
+  --pixel-green: oklch(0.78 0.18 140);
+  --pixel-green-dark: oklch(0.58 0.16 140);
+  --pixel-purple: oklch(0.6 0.2 300);
+  --pixel-sky: oklch(0.88 0.06 200);
+  --pixel-white: oklch(1 0 0);
+  --pixel-black: oklch(0 0 0);
+
+  /* Hard shadow style */
+  --hard-shadow: 8px 8px 0 0 oklch(0 0 0);
+  --hard-shadow-sm: 4px 4px 0 0 oklch(0 0 0);
+  --hard-shadow-lg: 12px 12px 0 0 oklch(0 0 0);
+  --hard-shadow-active: 2px 2px 0 0 oklch(0 0 0);
+
+  /* Text shadows */
+  --text-shadow-hard: 3px 3px 0 oklch(0 0 0);
+  --text-shadow-hard-lg: 6px 6px 0 oklch(0 0 0);
+
+  /* Animation timings */
+  --animation-bounce-speed: 0.5s;
+  --animation-pulse-speed: 1s;
+}
+
+/* Custom keyframes for Pixel theme */
+@keyframes pixel-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pixel-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes pixel-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* Utility classes for Pixel theme */
+:is(.pixel, .theme-pixel) .pixel-bg {
+  background-color: var(--pixel-blue);
+}
+
+:is(.pixel, .theme-pixel) .pixel-card {
+  background-color: var(--pixel-white);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-lg);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+:is(.pixel, .theme-pixel) .pixel-card:hover {
+  transform: translateY(-8px);
+}
+
+:is(.pixel, .theme-pixel) .pixel-card-green {
+  background-color: var(--pixel-green);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-lg);
+}
+
+:is(.pixel, .theme-pixel) .pixel-card-purple {
+  background-color: var(--pixel-purple);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-lg);
+}
+
+:is(.pixel, .theme-pixel) .pixel-card-sky {
+  background-color: var(--pixel-sky);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow);
+}
+
+:is(.pixel, .theme-pixel) .pixel-button {
+  background-color: var(--pixel-red);
+  color: var(--pixel-white);
+  font-weight: 700;
+  border: 2px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-sm);
+  text-transform: uppercase;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+:is(.pixel, .theme-pixel) .pixel-button:hover {
+  background-color: var(--pixel-red-dark);
+  box-shadow: 2px 2px 0 0 oklch(0 0 0);
+  transform: translate(2px, 2px);
+}
+
+:is(.pixel, .theme-pixel) .pixel-button:active {
+  box-shadow: var(--hard-shadow-active);
+  transform: translate(4px, 4px);
+}
+
+:is(.pixel, .theme-pixel) .pixel-button-primary {
+  background-color: var(--pixel-blue-dark);
+  color: var(--pixel-white);
+  font-weight: 700;
+  border: 4px solid var(--pixel-black);
+  box-shadow: 6px 6px 0 0 oklch(0 0 0);
+  text-transform: uppercase;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+:is(.pixel, .theme-pixel) .pixel-button-primary:active {
+  box-shadow: 2px 2px 0 0 oklch(0 0 0);
+  transform: translate(4px, 4px);
+}
+
+:is(.pixel, .theme-pixel) .pixel-text-shadow {
+  text-shadow: var(--text-shadow-hard);
+}
+
+:is(.pixel, .theme-pixel) .pixel-text-shadow-lg {
+  text-shadow: var(--text-shadow-hard-lg);
+}
+
+:is(.pixel, .theme-pixel) .pixel-badge {
+  background-color: var(--pixel-yellow);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-sm);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+:is(.pixel, .theme-pixel) .pixel-coin {
+  animation: pixel-bounce var(--animation-bounce-speed) ease-in-out infinite;
+}
+
+:is(.pixel, .theme-pixel) .pixel-star {
+  animation: pixel-pulse var(--animation-pulse-speed) ease-in-out infinite;
+}
+
+:is(.pixel, .theme-pixel) .pixel-cloud {
+  background-color: var(--pixel-white);
+  border-radius: 9999px;
+  opacity: 0.8;
+}
+
+/* Button styles */
+:is(.pixel, .theme-pixel) .btn-primary {
+  background-color: var(--pixel-blue-dark);
+  color: var(--pixel-white);
+  font-weight: 700;
+  border: 4px solid var(--pixel-black);
+  box-shadow: 6px 6px 0 0 oklch(0 0 0);
+  text-transform: uppercase;
+}
+
+:is(.pixel, .theme-pixel) .btn-primary:hover {
+  background-color: oklch(0.5 0.2 250);
+}
+
+:is(.pixel, .theme-pixel) .btn-primary:active {
+  box-shadow: 2px 2px 0 0 oklch(0 0 0);
+  transform: translate(4px, 4px);
+}
+
+:is(.pixel, .theme-pixel) .btn-secondary {
+  background-color: var(--pixel-red);
+  color: var(--pixel-white);
+  font-weight: 700;
+  border: 2px solid var(--pixel-black);
+  box-shadow: 4px 4px 0 0 oklch(0 0 0);
+  text-transform: uppercase;
+}
+
+:is(.pixel, .theme-pixel) .btn-secondary:hover {
+  background-color: var(--pixel-red-dark);
+  box-shadow: 2px 2px 0 0 oklch(0 0 0);
+  transform: translate(2px, 2px);
+}
+
+/* Input styles */
+:is(.pixel, .theme-pixel) .input-field {
+  background-color: var(--pixel-white);
+  border: 4px solid var(--pixel-black);
+  color: var(--pixel-black);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+:is(.pixel, .theme-pixel) .input-field::placeholder {
+  color: oklch(0.5 0 0);
+}
+
+:is(.pixel, .theme-pixel) .input-field:focus {
+  outline: none;
+  box-shadow: var(--hard-shadow-sm);
+}
+
+/* Selection */
+:is(.pixel, .theme-pixel) ::selection {
+  background-color: var(--pixel-yellow);
+  color: var(--pixel-black);
+}
+
+/* Scrollbar styling for pixel theme */
+:is(.pixel, .theme-pixel)::-webkit-scrollbar {
+  width: 16px;
+}
+
+:is(.pixel, .theme-pixel)::-webkit-scrollbar-track {
+  background: var(--pixel-sky);
+  border: 4px solid var(--pixel-black);
+}
+
+:is(.pixel, .theme-pixel)::-webkit-scrollbar-thumb {
+  background: var(--pixel-green);
+  border: 4px solid var(--pixel-black);
+}
+
+:is(.pixel, .theme-pixel)::-webkit-scrollbar-thumb:hover {
+  background: var(--pixel-green-dark);
+}

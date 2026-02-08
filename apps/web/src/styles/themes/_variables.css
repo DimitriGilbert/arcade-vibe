@@ -1,0 +1,55 @@
+/**
+ * Theme Variables Structure
+ * 
+ * This file defines the naming convention and structure for all arcade themes.
+ * Each theme should define:
+ * - Core semantic colors (background, foreground, primary, secondary, etc.)
+ * - Theme-specific accent colors (neon colors, gradients)
+ * - Animation timing variables
+ */
+
+/* 
+ * Theme class naming convention:
+ * .theme-{name} - Applied to html element by next-themes
+ * 
+ * Variable naming:
+ * --{semantic}-{variant} - Core semantic variables (e.g., --background, --primary)
+ * --{theme}-accent-{name} - Theme-specific accent colors (e.g., --neon-pink, --grid-color)
+ * --gradient-{name} - Gradient definitions
+ * --animation-{name}-{property} - Animation timing/easing
+ */
+
+/* Base theme structure (for reference - do not edit) */
+/*
+.theme-template {
+  --background: ;
+  --foreground: ;
+  --card: ;
+  --card-foreground: ;
+  --popover: ;
+  --popover-foreground: ;
+  --primary: ;
+  --primary-foreground: ;
+  --secondary: ;
+  --secondary-foreground: ;
+  --muted: ;
+  --muted-foreground: ;
+  --accent: ;
+  --accent-foreground: ;
+  --destructive: ;
+  --border: ;
+  --input: ;
+  --ring: ;
+  
+  --radius: 0.625rem;
+  
+  --sidebar: ;
+  --sidebar-foreground: ;
+  --sidebar-primary: ;
+  --sidebar-primary-foreground: ;
+  --sidebar-accent: ;
+  --sidebar-accent-foreground: ;
+  --sidebar-border: ;
+  --sidebar-ring: ;
+}
+*/

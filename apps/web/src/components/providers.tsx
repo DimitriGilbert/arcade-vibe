@@ -8,9 +8,15 @@ import { queryClient } from "@/utils/trpc";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
 
+const themes = ["synthwave", "tron", "pixel", "cabinet", "vaporwave"] as const;
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="synthwave"
+      themes={[...themes]}
+    >
       <QueryClientProvider client={queryClient}>
         {children}
         <ReactQueryDevtools />

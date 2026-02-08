@@ -6,7 +6,14 @@ import { trpcClient } from "@/utils/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Gamepad2, Clock, TrendingUp, Star } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  Gamepad2,
+  Clock,
+  TrendingUp,
+  Star,
+} from "lucide-react";
 import { ThemeHeader } from "./components/theme-header";
 import { GameCard } from "./components/game-card";
 
@@ -65,10 +72,7 @@ export default function ArcadePage() {
     return games.filter((game) => {
       const creatorName = game.prompt.user.name?.toLowerCase() || "";
       const creatorEmail = game.prompt.user.email.toLowerCase();
-      return (
-        creatorName.includes(query) ||
-        creatorEmail.includes(query)
-      );
+      return creatorName.includes(query) || creatorEmail.includes(query);
     });
   }, [games, searchQuery]);
 
@@ -141,18 +145,16 @@ export default function ArcadePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-              <Gamepad2 className="h-8 w-8 text-white" />
+            <div className="p-3 bg-primary rounded-xl">
+              <Gamepad2 className="h-8 w-8 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Arcade
-              </h1>
+              <h1 className="text-4xl font-bold text-foreground">Arcade</h1>
               <p className="text-muted-foreground">
                 Discover and play AI-generated games
               </p>
@@ -172,7 +174,7 @@ export default function ArcadePage() {
         />
 
         {/* Filters and Search */}
-        <Card className="mb-6 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="mb-6 bg-card border-border">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Search */}
@@ -224,15 +226,17 @@ export default function ArcadePage() {
         {gamesLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
               <p className="text-muted-foreground">Loading games...</p>
             </div>
           </div>
         ) : sortedGames.length === 0 ? (
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <Card className="bg-card border-border">
             <CardContent className="p-20 text-center">
               <Gamepad2 className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">No Games Found</h3>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                No Games Found
+              </h3>
               <p className="text-muted-foreground">
                 {selectedTheme
                   ? `No games available for ${selectedTheme.title}`
@@ -257,7 +261,8 @@ export default function ArcadePage() {
         {/* Results Count */}
         {sortedGames.length > 0 && (
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Showing {sortedGames.length} {sortedGames.length === 1 ? "game" : "games"}
+            Showing {sortedGames.length}{" "}
+            {sortedGames.length === 1 ? "game" : "games"}
           </div>
         )}
       </div>

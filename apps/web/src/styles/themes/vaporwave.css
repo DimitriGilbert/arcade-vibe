@@ -1,0 +1,331 @@
+/**
+ * Vaporwave Grid Theme
+ * 
+ * 80s/90s retro-futuristic aesthetic with perspective grid, floating geometric shapes,
+ * and pink/purple/blue gradients. Inspired by the vaporwave internet art movement.
+ * 
+ * Key characteristics:
+ * - Deep purple background with gradient sun
+ * - Hot pink, violet, and bright blue accent colors
+ * - Turquoise/cyan highlights
+ * - Animated perspective grid floor
+ * - Floating geometric shapes (triangles)
+ * - Japanese text aesthetic support
+ */
+
+/* Theme class - applied to html element */
+:is(.vaporwave, .theme-vaporwave) {
+  /* Core semantic colors */
+  --background: oklch(0.15 0.08 280);
+  --foreground: oklch(0.98 0.005 280);
+  --card: oklch(0.12 0.06 280 / 0.8);
+  --card-foreground: oklch(0.98 0.005 280);
+  --popover: oklch(0.1 0.05 280);
+  --popover-foreground: oklch(0.98 0.005 280);
+  --primary: oklch(0.65 0.28 350);
+  --primary-foreground: oklch(0.98 0.005 280);
+  --secondary: oklch(0.85 0.18 180);
+  --secondary-foreground: oklch(0.15 0.08 280);
+  --muted: oklch(0.35 0.1 290 / 0.5);
+  --muted-foreground: oklch(0.7 0.01 280);
+  --accent: oklch(0.55 0.24 290);
+  --accent-foreground: oklch(0.98 0.005 280);
+  --destructive: oklch(0.65 0.28 350);
+  --border: oklch(0.65 0.28 350 / 0.3);
+  --input: oklch(0.1 0.02 280 / 0.8);
+  --ring: oklch(0.65 0.28 350);
+
+  --radius: 0;
+
+  --sidebar: oklch(0.1 0.05 280);
+  --sidebar-foreground: oklch(0.98 0.005 280);
+  --sidebar-primary: oklch(0.65 0.28 350);
+  --sidebar-primary-foreground: oklch(0.98 0.005 280);
+  --sidebar-accent: oklch(0.35 0.15 290 / 0.4);
+  --sidebar-accent-foreground: oklch(0.98 0.005 280);
+  --sidebar-border: oklch(0.65 0.28 350 / 0.3);
+  --sidebar-ring: oklch(0.65 0.28 350);
+
+  /* Theme-specific colors */
+  --vaporwave-pink: oklch(0.65 0.28 350);
+  --vaporwave-purple: oklch(0.55 0.24 290);
+  --vaporwave-blue: oklch(0.65 0.22 250);
+  --vaporwave-cyan: oklch(0.85 0.18 180);
+  --grid-color: oklch(0.65 0.28 350 / 0.3);
+  --glow-color: oklch(0.65 0.28 350 / 0.5);
+
+  /* Background layers */
+  --bg-gradient-sun: linear-gradient(
+    180deg,
+    oklch(0.65 0.28 350) 0%,
+    oklch(0.55 0.24 290) 20%,
+    oklch(0.65 0.22 250) 40%,
+    oklch(0.15 0.08 280) 60%,
+    oklch(0.15 0.08 280) 100%
+  );
+
+  --gradient-horizon: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.65 0.28 350),
+    oklch(0.55 0.24 290),
+    oklch(0.65 0.22 250),
+    transparent
+  );
+
+  --gradient-text: linear-gradient(
+    180deg,
+    oklch(0.65 0.28 350) 0%,
+    oklch(0.55 0.24 290) 50%,
+    oklch(0.65 0.22 250) 100%
+  );
+
+  --gradient-accent: linear-gradient(
+    135deg,
+    oklch(0.65 0.28 350),
+    oklch(0.55 0.24 290)
+  );
+
+  --gradient-accent-alt: linear-gradient(
+    135deg,
+    oklch(0.85 0.18 180),
+    oklch(0.65 0.22 250)
+  );
+
+  --gradient-card: linear-gradient(
+    135deg,
+    oklch(0.65 0.28 350 / 0.1),
+    oklch(0.55 0.24 290 / 0.1)
+  );
+
+  /* Animation timings */
+  --animation-float-speed-1: 8s;
+  --animation-float-speed-2: 10s;
+  --animation-float-speed-3: 12s;
+  --animation-grid-scroll: 15s;
+  --animation-glow-pulse: 2s;
+}
+
+/* Custom keyframes for Vaporwave theme */
+@keyframes vaporwave-float-1 {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes vaporwave-float-2 {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-30px) rotate(-5deg);
+  }
+}
+
+@keyframes vaporwave-float-3 {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
+}
+
+@keyframes vaporwave-grid-scroll {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 80px;
+  }
+}
+
+@keyframes vaporwave-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    filter: blur(20px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(30px);
+  }
+}
+
+/* Utility classes for Vaporwave theme */
+:is(.vaporwave, .theme-vaporwave) .vaporwave-bg {
+  background: oklch(0.15 0.08 280);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-sun-bg {
+  background: var(--bg-gradient-sun);
+  opacity: 0.4;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-grid-floor {
+  background:
+    linear-gradient(transparent 0%, oklch(0.65 0.28 350) 100%),
+    linear-gradient(90deg, oklch(0.65 0.28 350) 1px, transparent 1px),
+    linear-gradient(0deg, oklch(0.65 0.28 350) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    80px 80px,
+    80px 80px;
+  transform: perspective(500px) rotateX(60deg);
+  transform-origin: bottom;
+  opacity: 0.3;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-grid-animated {
+  background:
+    linear-gradient(oklch(0.65 0.28 350 / 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.65 0.28 350 / 0.6) 1px, transparent 1px);
+  background-size: 80px 80px;
+  animation: vaporwave-grid-scroll var(--animation-grid-scroll) linear infinite;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-float {
+  animation: vaporwave-float-1 var(--animation-float-speed-1) ease-in-out
+    infinite;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-float-2 {
+  animation: vaporwave-float-2 var(--animation-float-speed-2) ease-in-out
+    infinite;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-float-3 {
+  animation: vaporwave-float-3 var(--animation-float-speed-3) ease-in-out
+    infinite;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 40px oklch(0.65 0.28 350 / 0.5));
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-horizon-line {
+  background: var(--gradient-horizon);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-card {
+  background: oklch(0.15 0.08 280 / 0.8);
+  border: 1px solid oklch(0.65 0.28 350 / 0.3);
+  box-shadow: 0 0 40px oklch(0.65 0.28 350 / 0.1);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-card:hover {
+  box-shadow: 0 0 60px oklch(0.65 0.28 350 / 0.2);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-corner-decor {
+  position: relative;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-corner-decor::before,
+:is(.vaporwave, .theme-vaporwave) .vaporwave-corner-decor::after {
+  content: "";
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border-color: oklch(0.65 0.28 350);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-corner-decor::before {
+  top: 0;
+  left: 0;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-corner-decor::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-glow {
+  box-shadow:
+    0 0 30px var(--glow-color),
+    0 4px 15px oklch(0 0 0 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.3);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-text-glow {
+  text-shadow:
+    0 0 20px currentColor,
+    0 0 40px currentColor;
+}
+
+/* Button styles */
+:is(.vaporwave, .theme-vaporwave) .btn-primary {
+  background: transparent;
+  border: 2px solid var(--vaporwave-pink);
+  color: var(--vaporwave-pink);
+  box-shadow: 0 0 30px oklch(0.65 0.28 350 / 0.3);
+}
+
+:is(.vaporwave, .theme-vaporwave) .btn-primary:hover {
+  background: var(--gradient-card);
+  box-shadow: 0 0 60px oklch(0.65 0.28 350 / 0.5);
+}
+
+:is(.vaporwave, .theme-vaporwave) .btn-secondary {
+  border: 2px solid var(--vaporwave-cyan);
+  color: var(--vaporwave-cyan);
+  box-shadow: 0 0 20px oklch(0.85 0.18 180 / 0.3);
+}
+
+:is(.vaporwave, .theme-vaporwave) .btn-secondary:hover {
+  background: oklch(0.85 0.18 180 / 0.2);
+}
+
+/* Input styles */
+:is(.vaporwave, .theme-vaporwave) .input-field {
+  background: oklch(0.1 0.02 280 / 0.8);
+  border: 2px solid var(--border);
+  color: var(--foreground);
+}
+
+:is(.vaporwave, .theme-vaporwave) .input-field::placeholder {
+  color: oklch(0.4 0.01 280);
+}
+
+:is(.vaporwave, .theme-vaporwave) .input-field:focus {
+  border-color: var(--vaporwave-pink);
+  box-shadow: 0 0 20px var(--glow-color);
+}
+
+/* Japanese text aesthetic support */
+:is(.vaporwave, .theme-vaporwave) .japanese-text {
+  font-family:
+    "Noto Sans JP", "Hiragino Kaku Gothic Pro", "Yu Gothic", sans-serif;
+  letter-spacing: 0.1em;
+}
+
+/* Floating geometric shapes */
+:is(.vaporwave, .theme-vaporwave) .vaporwave-triangle {
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-triangle-pink {
+  background: linear-gradient(135deg, oklch(0.65 0.28 350), transparent);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-triangle-cyan {
+  background: linear-gradient(135deg, oklch(0.85 0.18 180), transparent);
+}
+
+:is(.vaporwave, .theme-vaporwave) .vaporwave-triangle-purple {
+  background: linear-gradient(135deg, oklch(0.55 0.24 290), transparent);
+}

@@ -1,0 +1,345 @@
+/**
+ * Tron Legacy Theme
+ * 
+ * Digital frontier aesthetic inspired by the iconic Tron Legacy film.
+ * Features angular geometry, neon cyan/teal glow effects, and perspective grid.
+ * 
+ * Key characteristics:
+ * - Deep dark blue background with subtle chroma
+ * - Neon cyan primary with teal secondary accent
+ * - Angular clip-paths for UI elements
+ * - Animated perspective grid floor
+ * - Identity disc glow effects
+ */
+
+/* Theme class - applied to html element */
+:is(.tron, .theme-tron) {
+  /* Core semantic colors */
+  --background: oklch(0.03 0.01 240);
+  --foreground: oklch(0.98 0.005 240);
+  --card: oklch(0.05 0.01 240 / 0.9);
+  --card-foreground: oklch(0.98 0.005 240);
+  --popover: oklch(0.04 0.01 240);
+  --popover-foreground: oklch(0.98 0.005 240);
+  --primary: oklch(0.72 0.24 248);
+  --primary-foreground: oklch(0.03 0.01 240);
+  --secondary: oklch(0.78 0.2 195);
+  --secondary-foreground: oklch(0.03 0.01 240);
+  --muted: oklch(0.08 0.01 240 / 0.6);
+  --muted-foreground: oklch(0.55 0.015 240);
+  --accent: oklch(0.78 0.2 195);
+  --accent-foreground: oklch(0.03 0.01 240);
+  --destructive: oklch(0.65 0.28 25);
+  --border: oklch(0.72 0.24 248 / 0.3);
+  --input: oklch(0.04 0.01 240 / 0.9);
+  --ring: oklch(0.72 0.24 248);
+
+  --radius: 0rem;
+
+  --sidebar: oklch(0.04 0.01 240);
+  --sidebar-foreground: oklch(0.98 0.005 240);
+  --sidebar-primary: oklch(0.72 0.24 248);
+  --sidebar-primary-foreground: oklch(0.03 0.01 240);
+  --sidebar-accent: oklch(0.72 0.24 248 / 0.15);
+  --sidebar-accent-foreground: oklch(0.98 0.005 240);
+  --sidebar-border: oklch(0.72 0.24 248 / 0.3);
+  --sidebar-ring: oklch(0.72 0.24 248);
+
+  /* Theme-specific colors */
+  --neon-cyan: oklch(0.72 0.24 248);
+  --neon-teal: oklch(0.78 0.2 195);
+  --grid-color: oklch(0.72 0.24 248 / 0.25);
+  --glow-color: oklch(0.72 0.24 248 / 0.5);
+  --glow-color-teal: oklch(0.78 0.2 195 / 0.5);
+
+  /* Background layers */
+  --bg-gradient-horizon: linear-gradient(
+    180deg,
+    oklch(0.72 0.24 248 / 0.2) 0%,
+    transparent 100%
+  );
+
+  --bg-gradient-ambient: radial-gradient(
+    ellipse at center,
+    oklch(0.72 0.24 248 / 0.05),
+    transparent 60%
+  );
+
+  --gradient-glow: linear-gradient(
+    135deg,
+    oklch(0.72 0.24 248),
+    oklch(0.78 0.2 195)
+  );
+
+  --gradient-disc: linear-gradient(
+    180deg,
+    oklch(0.72 0.24 248 / 0.5) 0%,
+    oklch(0.78 0.2 195 / 0.5) 100%
+  );
+
+  /* Animation timings */
+  --animation-grid-speed: 20s;
+  --animation-spin-speed: 20s;
+  --animation-glow-pulse: 2s;
+}
+
+/* Custom keyframes for Tron theme */
+@keyframes tron-grid-scroll {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 40px;
+  }
+}
+
+@keyframes tron-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tron-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    box-shadow: 0 0 20px oklch(0.72 0.24 248);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 40px oklch(0.72 0.24 248),
+      0 0 60px oklch(0.72 0.24 248 / 0.5);
+  }
+}
+
+/* Utility classes for Tron theme */
+:is(.tron, .theme-tron) .tron-bg {
+  background: var(--background);
+}
+
+:is(.tron, .theme-tron) .tron-grid-floor {
+  background:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: tron-grid-scroll var(--animation-grid-speed) linear infinite;
+}
+
+:is(.tron, .theme-tron) .tron-grid-perspective {
+  perspective: 500px;
+}
+
+:is(.tron, .theme-tron) .tron-grid-rotated {
+  background:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform: rotateX(75deg);
+  transform-origin: center top;
+  animation: tron-grid-scroll var(--animation-grid-speed) linear infinite;
+}
+
+:is(.tron, .theme-tron) .tron-glow-text {
+  color: var(--neon-cyan);
+  text-shadow:
+    0 0 20px oklch(0.72 0.24 248),
+    0 0 40px oklch(0.72 0.24 248 / 0.6),
+    0 0 80px oklch(0.72 0.24 248 / 0.3);
+}
+
+:is(.tron, .theme-tron) .tron-glow-text-teal {
+  color: var(--neon-teal);
+  text-shadow:
+    0 0 20px oklch(0.78 0.2 195),
+    0 0 40px oklch(0.78 0.2 195 / 0.6);
+}
+
+:is(.tron, .theme-tron) .tron-card {
+  background: oklch(0.05 0.01 240);
+  border: 1px solid oklch(0.72 0.24 248 / 0.3);
+  clip-path: polygon(
+    20px 0,
+    100% 0,
+    100% calc(100% - 20px),
+    calc(100% - 20px) 100%,
+    0 100%,
+    0 20px
+  );
+  transition: border-color 0.3s ease;
+}
+
+:is(.tron, .theme-tron) .tron-card:hover {
+  border-color: var(--neon-cyan);
+}
+
+:is(.tron, .theme-tron) .tron-card-alt {
+  background: oklch(0.04 0.01 240);
+  border: 1px solid oklch(0.72 0.24 248 / 0.3);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 30px) 0,
+    100% 30px,
+    100% 100%,
+    30px 100%,
+    0 calc(100% - 30px)
+  );
+}
+
+:is(.tron, .theme-tron) .tron-button {
+  background: transparent;
+  border: 2px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+  box-shadow: 0 0 20px oklch(0.72 0.24 248 / 0.3);
+  transition: all 0.3s ease;
+}
+
+:is(.tron, .theme-tron) .tron-button:hover {
+  background: var(--neon-cyan);
+  color: var(--background);
+}
+
+:is(.tron, .theme-tron) .tron-button-teal {
+  background: transparent;
+  border: 1px solid oklch(0.78 0.2 195 / 0.5);
+  color: var(--neon-teal);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+  transition: all 0.3s ease;
+}
+
+:is(.tron, .theme-tron) .tron-button-teal:hover {
+  border-color: var(--neon-teal);
+  background: oklch(0.78 0.2 195 / 0.1);
+}
+
+:is(.tron, .theme-tron) .tron-disc {
+  border: 2px solid oklch(0.72 0.24 248 / 0.5);
+  border-radius: 50%;
+  animation: tron-spin var(--animation-spin-speed) linear infinite;
+}
+
+:is(.tron, .theme-tron) .tron-disc-inner {
+  border: 1px solid oklch(0.78 0.2 195 / 0.5);
+  border-radius: 50%;
+}
+
+:is(.tron, .theme-tron) .tron-disc-center {
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 15px oklch(0.72 0.24 248);
+  animation: tron-pulse-glow var(--animation-glow-pulse) ease-in-out infinite;
+}
+
+:is(.tron, .theme-tron) .tron-corner-accent-tl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-left: 2px solid var(--neon-cyan);
+  border-top: 2px solid var(--neon-cyan);
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+:is(.tron, .theme-tron) .tron-corner-accent-br {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-right: 2px solid var(--neon-cyan);
+  border-bottom: 2px solid var(--neon-cyan);
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+:is(.tron, .theme-tron) .tron-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0 0 0 / 0.2) 0px,
+    oklch(0 0 0 / 0.2) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+/* Button styles */
+:is(.tron, .theme-tron) .btn-primary {
+  background: var(--neon-cyan);
+  color: var(--background);
+  box-shadow: 0 0 20px oklch(0.72 0.24 248 / 0.3);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+}
+
+:is(.tron, .theme-tron) .btn-primary:hover {
+  box-shadow: 0 0 30px oklch(0.72 0.24 248 / 0.5);
+}
+
+:is(.tron, .theme-tron) .btn-secondary {
+  border: 2px solid var(--neon-teal);
+  color: var(--neon-teal);
+  box-shadow: 0 0 20px oklch(0.78 0.2 195 / 0.3);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+}
+
+:is(.tron, .theme-tron) .btn-secondary:hover {
+  background: oklch(0.78 0.2 195 / 0.2);
+}
+
+/* Input styles */
+:is(.tron, .theme-tron) .input-field {
+  background: oklch(0.04 0.01 240);
+  border: 1px solid oklch(0.72 0.24 248 / 0.4);
+  color: var(--foreground);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+}
+
+:is(.tron, .theme-tron) .input-field::placeholder {
+  color: oklch(0.35 0.015 240);
+}
+
+:is(.tron, .theme-tron) .input-field:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px oklch(0.72 0.24 248 / 0.3);
+  outline: none;
+}

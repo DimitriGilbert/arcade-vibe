@@ -6,9 +6,19 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2026-01-28.clover",
-});
+// Lazy-initialize Stripe to avoid build-time errors when STRIPE_SECRET_KEY is not set
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Stripe is not configured",
+    });
+  }
+  return new Stripe(key, {
+    apiVersion: "2026-01-28.clover",
+  });
+}
 
 export const stripeRouter = router({
   createCheckoutSession: protectedProcedure
@@ -55,7 +65,7 @@ export const stripeRouter = router({
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
       const userEmail = ctx.session.user.email;
 
-      const session = await stripe.checkout.sessions.create({
+      const session = await getStripe().checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
           {
