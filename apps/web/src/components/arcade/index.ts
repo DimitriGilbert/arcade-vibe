@@ -3,3 +3,25 @@ export { ArcadeButton, arcadeButtonVariants } from "./arcade-button";
 export { ArcadeInput } from "./arcade-input";
 export { ArcadeBadge, arcadeBadgeVariants } from "./arcade-badge";
 export { ArcadeStats } from "./arcade-stats";
+export {
+  ArcadeTabs,
+  ArcadeTabsList,
+  ArcadeTabsTrigger,
+  ArcadeTabsContent,
+  arcadeTabsVariants,
+  arcadeTabsListVariants,
+  arcadeTabsTriggerVariants,
+} from "./arcade-tabs";
+export {
+  ArcadeDialog,
+  ArcadeDialogTrigger,
+  ArcadeDialogBackdrop,
+  ArcadeDialogContent,
+  ArcadeDialogHeader,
+  ArcadeDialogFooter,
+  ArcadeDialogTitle,
+  ArcadeDialogDescription,
+  ArcadeDialogClose,
+  arcadeDialogVariants,
+} from "./arcade-dialog";
+export { ArcadeTextarea } from "./arcade-textarea";
