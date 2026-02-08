@@ -18,7 +18,7 @@ function TrendIndicator({ trend }: { trend: "up" | "down" | "neutral" }) {
   if (trend === "up") {
     return (
       <svg
-        className="size-4 text-green-500"
+        className="size-4 text-[var(--accent)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -37,7 +37,7 @@ function TrendIndicator({ trend }: { trend: "up" | "down" | "neutral" }) {
   if (trend === "down") {
     return (
       <svg
-        className="size-4 text-red-500"
+        className="size-4 text-[var(--destructive)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

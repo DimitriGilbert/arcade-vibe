@@ -43,40 +43,51 @@ export default function AdminDashboardPage() {
 
   const isLoading = reportsLoading;
 
-  const statistics = useMemo(() => [
-    {
-      title: "Total Users",
-      value: stats.totalUsers,
-      icon: Users,
-      color: "from-blue-500 to-cyan-500",
-      change: "+12%",
-      positive: true,
-    },
-    {
-      title: "Active Users",
-      value: stats.activeUsers,
-      icon: Activity,
-      color: "from-green-500 to-emerald-500",
-      change: "+8%",
-      positive: true,
-    },
-    {
-      title: "Total Prompts",
-      value: stats.totalPrompts,
-      icon: FileText,
-      color: "from-purple-500 to-pink-500",
-      change: "+24%",
-      positive: true,
-    },
-    {
-      title: "Pending Reports",
-      value: stats.pendingReports,
-      icon: AlertTriangle,
-      color: "from-orange-500 to-red-500",
-      change: "-5%",
-      positive: true,
-    },
-  ], [stats]);
+  const statistics = useMemo(() => {
+    const items = [
+      {
+        title: "Total Users",
+        value: stats.totalUsers,
+        icon: Users,
+        tone: "secondary",
+        change: "+12%",
+        positive: true,
+      },
+      {
+        title: "Active Users",
+        value: stats.activeUsers,
+        icon: Activity,
+        tone: "accent",
+        change: "+8%",
+        positive: true,
+      },
+      {
+        title: "Total Prompts",
+        value: stats.totalPrompts,
+        icon: FileText,
+        tone: "primary",
+        change: "+24%",
+        positive: true,
+      },
+      {
+        title: "Pending Reports",
+        value: stats.pendingReports,
+        icon: AlertTriangle,
+        tone: "destructive",
+        change: "-5%",
+        positive: true,
+      },
+    ] as const;
+
+    return items;
+  }, [stats]);
+
+  const toneClasses = {
+    primary: "bg-[var(--primary)]/15 text-[var(--primary)]",
+    secondary: "bg-[var(--secondary)]/15 text-[var(--secondary)]",
+    accent: "bg-[var(--accent)]/15 text-[var(--accent)]",
+    destructive: "bg-[var(--destructive)]/15 text-[var(--destructive)]",
+  } as const;
 
   const quickActions = [
     { name: "Manage Plans", href: "/admin/plans", description: "Configure subscription plans and pricing" },
@@ -91,7 +102,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Dashboard Overview
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -104,22 +115,22 @@ export default function AdminDashboardPage() {
         {statistics.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title} className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-gray-700">
+            <Card key={stat.title} className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                     <p className="text-3xl font-bold">{stat.value.toLocaleString()}</p>
                   </div>
-                  <div className={`p-3 bg-gradient-to-br ${stat.color} rounded-xl`}>
-                    <Icon className="h-6 w-6 text-white" />
+                  <div className={`p-3 rounded-xl ${toneClasses[stat.tone]}`}>
+                    <Icon className="h-6 w-6" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   {stat.change && (
                     <Badge
-                      variant={stat.positive ? "default" : "destructive"}
-                      className={`text-xs ${stat.positive ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}`}
+                      variant={stat.positive ? "secondary" : "destructive"}
+                      className="text-xs"
                     >
                       <TrendingUp className="h-3 w-3 mr-1" />
                       {stat.change}
@@ -134,7 +145,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-gray-700">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardHeader>
           <CardTitle className="text-xl">Quick Actions</CardTitle>
         </CardHeader>
@@ -144,9 +155,9 @@ export default function AdminDashboardPage() {
               <a
                 key={action.href}
                 href={action.href}
-                className="group p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-all"
+                className="group p-4 rounded-lg border border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--muted)]/40 transition-all"
               >
-                <h3 className="font-semibold text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                <h3 className="font-semibold text-sm group-hover:text-[var(--primary)] transition-colors">
                   {action.name}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
@@ -159,10 +170,10 @@ export default function AdminDashboardPage() {
       {/* Two Column Layout for Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Moderation */}
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-gray-700">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              <AlertTriangle className="h-5 w-5 text-[var(--accent)]" />
               Pending Moderation
             </CardTitle>
           </CardHeader>
@@ -177,7 +188,7 @@ export default function AdminDashboardPage() {
                 {pendingReports.slice(0, 5).map((report) => (
                   <div
                     key={report.id}
-                    className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700"
+                    className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -200,7 +211,7 @@ export default function AdminDashboardPage() {
                 {pendingReports.length > 5 && (
                   <a
                     href="/admin/moderation"
-                    className="block text-center text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 mt-2"
+                    className="block text-center text-sm text-[var(--primary)] hover:brightness-110 mt-2"
                   >
                     View all {pendingReports.length} reports →
                   </a>
@@ -211,10 +222,10 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Recent Admin Activity */}
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200 dark:border-gray-700">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
-              <Shield className="h-5 w-5 text-purple-500" />
+              <Shield className="h-5 w-5 text-[var(--primary)]" />
               Recent Activity
             </CardTitle>
           </CardHeader>
@@ -229,7 +240,7 @@ export default function AdminDashboardPage() {
                 {adminActions.slice(0, 5).map((action) => (
                   <div
                     key={action.id}
-                    className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700"
+                    className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">

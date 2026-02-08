@@ -66,7 +66,7 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-yellow-500" />
+          <Trophy className="h-4 w-4 text-[var(--accent)]" />
           Leaderboard
         </CardTitle>
       </CardHeader>
@@ -86,8 +86,8 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                   key={entry.id}
                   className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
                     isTop3
-                      ? "bg-yellow-50 dark:bg-yellow-900/10"
-                      : "bg-muted/20"
+                      ? "bg-[var(--accent)]/10"
+                      : "bg-[var(--muted)]/20"
                   }`}
                 >
                   {/* Rank */}
@@ -96,10 +96,10 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
                       <Medal
                         className={`h-5 w-5 ${
                           rank === 1
-                            ? "text-yellow-500"
+                            ? "text-[var(--accent)]"
                             : rank === 2
-                            ? "text-gray-400"
-                            : "text-amber-700"
+                            ? "text-[var(--primary)]"
+                            : "text-[var(--secondary)]"
                         }`}
                       />
                     ) : (

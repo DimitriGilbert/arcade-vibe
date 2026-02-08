@@ -85,15 +85,15 @@ function PlanCard({
 
   return (
     <Card
-      className={`relative bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-all ${
+      className={`relative bg-[var(--card)]/60 backdrop-blur-sm transition-all border-[var(--border)] ${
         isPopular
-          ? "border-2 border-purple-300 dark:border-purple-600 scale-105"
+          ? "border-2 border-[var(--primary)]/60 scale-105"
           : ""
-      } ${isCurrent ? "ring-2 ring-purple-500" : ""}`}
+      } ${isCurrent ? "ring-2 ring-[var(--primary)]/60" : ""}`}
     >
       {isPopular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+          <Badge className="bg-[var(--primary)] text-[var(--primary-foreground)]">
             Most Popular
           </Badge>
         </div>
@@ -101,12 +101,12 @@ function PlanCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {plan.name === "Free" && (
-            <Sparkles className="h-5 w-5 text-gray-500" />
+            <Sparkles className="h-5 w-5 text-[var(--muted-foreground)]" />
           )}
           {plan.name === "Starter" && (
-            <Zap className="h-5 w-5 text-purple-500" />
+            <Zap className="h-5 w-5 text-[var(--primary)]" />
           )}
-          {plan.name === "Pro" && <Crown className="h-5 w-5 text-yellow-500" />}
+          {plan.name === "Pro" && <Crown className="h-5 w-5 text-[var(--accent)]" />}
           {plan.name}
         </CardTitle>
       </CardHeader>
@@ -118,7 +118,7 @@ function PlanCard({
               <span className="text-muted-foreground">/month</span>
             )}
           </div>
-          <p className="text-lg text-purple-600 dark:text-purple-400">
+          <p className="text-lg text-[var(--primary)]">
             {plan.credits.toLocaleString()} credits
           </p>
         </div>
@@ -126,7 +126,7 @@ function PlanCard({
         <ul className="space-y-2 mb-6">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-2">
-              <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <Check className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5" />
               <span className="text-sm">{feature}</span>
             </li>
           ))}
@@ -140,7 +140,7 @@ function PlanCard({
           <Button
             className={`w-full ${
               isPopular
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
                 : ""
             }`}
             onClick={() => onSelect(plan)}
@@ -166,7 +166,7 @@ function CreditPackage({
 
   return (
     <Card
-      className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-lg transition-all cursor-pointer"
+      className="bg-[var(--card)]/60 backdrop-blur-sm hover:shadow-lg transition-all cursor-pointer border-[var(--border)]"
       onClick={() => onSelect(pkg)}
     >
       <CardContent className="p-6">
@@ -178,11 +178,11 @@ function CreditPackage({
             <span className="text-muted-foreground">credits</span>
           </div>
           {hasBonus && (
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <Badge className="bg-[var(--accent)]/15 text-[var(--accent)]">
               +{pkg.bonus.toLocaleString()} bonus
             </Badge>
           )}
-          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+          <div className="text-2xl font-bold text-[var(--primary)]">
             ${pkg.price}
           </div>
           <Button className="w-full">Purchase</Button>
@@ -203,7 +203,7 @@ export default function SubscriptionSettingsPage() {
   });
 
   // Fetch user extended data
-  const { data: userExtended, isLoading: userLoading } = useQuery({
+  const { isLoading: userLoading } = useQuery({
     queryKey: ["user", "extended"],
     queryFn: () => trpcClient.credits.getUserExtended.query(),
     enabled: !!session,
@@ -255,7 +255,7 @@ export default function SubscriptionSettingsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--primary)]" />
           <p className="text-muted-foreground">Loading subscription...</p>
         </div>
       </div>
@@ -267,8 +267,8 @@ export default function SubscriptionSettingsPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
-            <CreditCard className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+            <CreditCard className="h-6 w-6 text-[var(--primary)]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Subscription & Credits</h1>
@@ -280,7 +280,7 @@ export default function SubscriptionSettingsPage() {
       </div>
 
       {/* Current Status */}
-      <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800">
+      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -288,7 +288,7 @@ export default function SubscriptionSettingsPage() {
               <p className="text-muted-foreground">Your credits never expire</p>
             </div>
             <div className="text-right">
-              <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+              <p className="text-4xl font-bold text-[var(--primary)]">
                 {credits.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">Credits Available</p>
@@ -333,13 +333,13 @@ export default function SubscriptionSettingsPage() {
       {!transactionsLoading && transactions.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Recent Transactions</h2>
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
             <CardContent className="p-6">
               <div className="space-y-4">
                 {transactions.map((transaction) => (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                    className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
                   >
                     <div>
                       <p className="font-medium">{transaction.description}</p>
@@ -347,13 +347,7 @@ export default function SubscriptionSettingsPage() {
                         {new Date(transaction.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <Badge
-                      className={
-                        transaction.amount > 0
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }
-                    >
+                    <Badge variant={transaction.amount > 0 ? "secondary" : "destructive"}>
                       {transaction.amount > 0 ? "+" : ""}
                       {transaction.amount} credits
                     </Badge>

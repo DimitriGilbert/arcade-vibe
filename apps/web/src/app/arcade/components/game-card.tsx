@@ -40,7 +40,7 @@ export function GameCard({ game, onClick }: GameCardProps) {
         ) : (
           <div className="text-center space-y-2">
             <div className="w-16 h-16 mx-auto bg-[var(--primary)] rounded-2xl flex items-center justify-center shadow-lg">
-              <Play className="h-8 w-8 text-white ml-1" />
+              <Play className="h-8 w-8 text-[var(--primary-foreground)] ml-1" />
             </div>
             <p className="text-xs text-muted-foreground font-medium">AI Generated Game</p>
           </div>

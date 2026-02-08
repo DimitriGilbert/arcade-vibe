@@ -137,14 +137,14 @@ export default function AdminModerationPage() {
   };
 
   if (isLoading) {
-    return <LoadingState size="lg" message="Loading moderation queue..." variant="purple" centered />;
+    return <LoadingState size="lg" message="Loading moderation queue..." variant="accent" centered />;
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Moderation Queue
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -153,7 +153,7 @@ export default function AdminModerationPage() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
@@ -201,7 +201,7 @@ export default function AdminModerationPage() {
       </Card>
 
       {/* Reports List */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           {filteredReports.length === 0 ? (
             <EmptyState
@@ -214,7 +214,7 @@ export default function AdminModerationPage() {
               {filteredReports.map((report) => (
                 <div
                   key={report.id}
-                  className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all bg-gray-50 dark:bg-gray-900/50"
+                  className="p-4 rounded-lg border border-[var(--border)] hover:border-[var(--primary)]/40 transition-all bg-[var(--muted)]/40"
                 >
                   <div className="flex items-start justify-between gap-4">
                     {/* Report Info */}
@@ -267,7 +267,7 @@ export default function AdminModerationPage() {
                       {report.status === "pending" && (
                         <>
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             onClick={() =>
                               setResolutionDialog({
@@ -276,7 +276,6 @@ export default function AdminModerationPage() {
                                 action: null,
                               })
                             }
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Resolve
@@ -291,7 +290,7 @@ export default function AdminModerationPage() {
           )}
 
           {/* Pagination Controls */}
-          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
             <Button
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -360,7 +359,7 @@ export default function AdminModerationPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium">Description</Label>
-                <p className="text-sm bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                <p className="text-sm bg-[var(--muted)]/40 p-3 rounded-lg">
                   {selectedReport.description ?? ""}
                 </p>
               </div>
@@ -402,8 +401,8 @@ export default function AdminModerationPage() {
                     }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "approved"
-                        ? "bg-green-100 border-green-500 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : "hover:bg-green-50 dark:hover:bg-green-900/20"
+                        ? "bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]"
+                        : "hover:bg-[var(--muted)]/60"
                     }`}
                   >
                     <XCircle className="h-4 w-4 mx-auto mb-1" />
@@ -422,8 +421,8 @@ export default function AdminModerationPage() {
                     }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "rejected"
-                        ? "bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                        : "hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        ? "bg-[var(--secondary)]/20 border-[var(--secondary)] text-[var(--secondary)]"
+                        : "hover:bg-[var(--muted)]/60"
                     }`}
                   >
                     <CheckCircle className="h-4 w-4 mx-auto mb-1" />
@@ -442,8 +441,8 @@ export default function AdminModerationPage() {
                     }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "requested_changes"
-                        ? "bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        : "hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                        ? "bg-[var(--primary)]/20 border-[var(--primary)] text-[var(--primary)]"
+                        : "hover:bg-[var(--muted)]/60"
                     }`}
                   >
                     <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
@@ -462,8 +461,8 @@ export default function AdminModerationPage() {
                     }
                     className={`p-3 rounded-lg border text-sm transition-all ${
                       resolutionDialog.action === "escalated"
-                        ? "bg-red-100 border-red-500 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        : "hover:bg-red-50 dark:hover:bg-red-900/20"
+                        ? "bg-[var(--destructive)]/20 border-[var(--destructive)] text-[var(--destructive)]"
+                        : "hover:bg-[var(--muted)]/60"
                     }`}
                   >
                     <AlertTriangle className="h-4 w-4 mx-auto mb-1" />

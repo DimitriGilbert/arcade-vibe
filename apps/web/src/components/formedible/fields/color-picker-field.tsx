@@ -245,7 +245,7 @@ export const ColorPickerField: React.FC<ColorPickerFieldSpecificProps> = ({
                     title={color}
                   >
                     {normalizedValue.toLowerCase() === color.toLowerCase() && (
-                      <Check className="h-4 w-4 text-white drop-shadow-lg" />
+                      <Check className="h-4 w-4 text-[var(--background)] drop-shadow-lg" />
                     )}
                   </button>
                 ))}

@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 interface LoadingStateProps {
   size?: "sm" | "md" | "lg";
   message?: string;
-  variant?: "primary" | "purple" | "muted";
+  variant?: "primary" | "muted" | "accent";
   centered?: boolean;
 }
 
@@ -14,9 +14,9 @@ const sizeClasses = {
 } as const;
 
 const variantClasses = {
-  primary: "text-primary",
-  purple: "text-purple-500",
-  muted: "text-muted-foreground",
+  primary: "text-[var(--primary)]",
+  muted: "text-[var(--muted-foreground)]",
+  accent: "text-[var(--accent)]",
 } as const;
 
 export default function LoadingState({

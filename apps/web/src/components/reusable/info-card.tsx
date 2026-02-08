@@ -18,8 +18,10 @@ export interface InfoCardProps {
 const variantStyles = {
   default: "",
   glass: "backdrop-blur-md bg-card/80 border-border/50",
-  warning: "border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/10 ring-amber-500/10",
-  success: "border-green-500/50 bg-green-50/10 dark:bg-green-950/10 ring-green-500/10",
+  warning:
+    "border-[var(--accent)]/50 bg-[var(--accent)]/10 ring-[var(--accent)]/20",
+  success:
+    "border-[var(--secondary)]/50 bg-[var(--secondary)]/10 ring-[var(--secondary)]/20",
 };
 
 export function InfoCard({

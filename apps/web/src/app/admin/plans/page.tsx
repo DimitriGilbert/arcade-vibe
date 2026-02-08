@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Edit2, Trash2, Search, ArrowUpDown, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Plus, Edit2, Trash2, Search, ArrowUpDown, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -174,7 +174,7 @@ export default function AdminPlansPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" variant="purple" message="Loading plans..." centered />
+        <LoadingState size="lg" variant="accent" message="Loading plans..." centered />
       </div>
     );
   }
@@ -184,7 +184,7 @@ export default function AdminPlansPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">
             Subscription Plans
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -198,7 +198,7 @@ export default function AdminPlansPage() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -215,12 +215,12 @@ export default function AdminPlansPage() {
       </Card>
 
       {/* Plans Table */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "name" as SortField, label: "Plan Name" },
                     { field: "price" as SortField, label: "Price" },
@@ -257,7 +257,7 @@ export default function AdminPlansPage() {
                   filteredPlans.map((plan) => (
                     <tr
                       key={plan.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
                     >
                       <td className="px-4 py-3">
                         <div className="font-medium">{plan.name}</div>
@@ -281,7 +281,7 @@ export default function AdminPlansPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <Badge variant="secondary">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Active
                         </Badge>

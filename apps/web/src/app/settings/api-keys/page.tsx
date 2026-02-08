@@ -30,16 +30,16 @@ const apiKeySchema = z.object({
 });
 
 // Provider display names and descriptions
-const PROVIDER_INFO: Record<string, { name: string; description: string; color: string }> = {
-  openai: { name: "OpenAI", description: "GPT models (GPT-4, GPT-4o, etc.)", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  anthropic: { name: "Anthropic", description: "Claude models (Claude 3.5 Sonnet, Opus)", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-  google: { name: "Google", description: "Gemini models", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-  openrouter: { name: "OpenRouter", description: "Access to 400+ AI models", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
-  deepseek: { name: "DeepSeek", description: "DeepSeek-V2 models", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400" },
-  glm: { name: "GLM", description: "Zhipu AI GLM models", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400" },
-  "glm-coding-plan": { name: "GLM Coding Plan", description: "GLM-4.7 for coding", color: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400" },
-  moonshot: { name: "Moonshot", description: "Moonshot AI models", color: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400" },
-  custom: { name: "Custom", description: "Custom endpoint", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
+const PROVIDER_INFO: Record<string, { name: string; description: string }> = {
+  openai: { name: "OpenAI", description: "GPT models (GPT-4, GPT-4o, etc.)" },
+  anthropic: { name: "Anthropic", description: "Claude models (Claude 3.5 Sonnet, Opus)" },
+  google: { name: "Google", description: "Gemini models" },
+  openrouter: { name: "OpenRouter", description: "Access to 400+ AI models" },
+  deepseek: { name: "DeepSeek", description: "DeepSeek-V2 models" },
+  glm: { name: "GLM", description: "Zhipu AI GLM models" },
+  "glm-coding-plan": { name: "GLM Coding Plan", description: "GLM-4.7 for coding" },
+  moonshot: { name: "Moonshot", description: "Moonshot AI models" },
+  custom: { name: "Custom", description: "Custom endpoint" },
 };
 
 // Mask API key - show only first 8 characters and asterisks for the rest
@@ -152,7 +152,7 @@ export default function ApiKeysSettingsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--primary)]" />
           <p className="text-muted-foreground">Loading API keys...</p>
         </div>
       </div>
@@ -166,8 +166,8 @@ export default function ApiKeysSettingsPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
-            <Key className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+            <Key className="h-6 w-6 text-[var(--primary)]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">API Keys</h1>
@@ -179,12 +179,12 @@ export default function ApiKeysSettingsPage() {
       </div>
 
       {/* Security Notice */}
-      <Card className="bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+      <Card className="bg-[var(--muted)]/40 border-[var(--border)]">
         <CardContent className="p-6">
-          <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+          <h3 className="font-semibold text-[var(--accent)] mb-2">
             Security Notice
           </h3>
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+          <p className="text-sm text-[var(--muted-foreground)]">
             Your API keys are encrypted and never displayed in full. We only use them to make requests
             on your behalf to the AI providers. You can delete keys at any time.
           </p>
@@ -193,7 +193,7 @@ export default function ApiKeysSettingsPage() {
 
       {/* Add API Key Form */}
       {showAddForm ? (
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-2 border-[var(--border)]">
           <CardHeader>
             <CardTitle>Add New API Key</CardTitle>
           </CardHeader>
@@ -210,7 +210,7 @@ export default function ApiKeysSettingsPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
                 disabled={addKeyMutation.isPending}
               >
                 {addKeyMutation.isPending ? (
@@ -231,7 +231,7 @@ export default function ApiKeysSettingsPage() {
       ) : (
         <Button
           onClick={() => setShowAddForm(true)}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add API Key
@@ -240,7 +240,7 @@ export default function ApiKeysSettingsPage() {
 
       {/* API Keys List */}
       {keys.length === 0 ? (
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardContent className="p-20 text-center">
             <Key className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-xl font-semibold mb-2">No API Keys Yet</h3>
@@ -254,13 +254,13 @@ export default function ApiKeysSettingsPage() {
           {keys.map((apiKey) => {
             const providerInfo = PROVIDER_INFO[apiKey.provider] || PROVIDER_INFO.custom;
             return (
-              <Card key={apiKey.id} className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <Card key={apiKey.id} className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apiKey.name}</h3>
-                        <Badge className={providerInfo.color}>
+                        <Badge variant="secondary">
                           {providerInfo.name}
                         </Badge>
                         {apiKey.isActive ? (
@@ -270,7 +270,7 @@ export default function ApiKeysSettingsPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <code className="font-mono text-sm bg-gray-100 dark:bg-gray-900 px-3 py-1 rounded">
+                        <code className="font-mono text-sm bg-[var(--muted)] px-3 py-1 rounded">
                           {maskApiKey(apiKey.id.slice(0, 16))}
                         </code>
                         <Button
@@ -279,7 +279,7 @@ export default function ApiKeysSettingsPage() {
                           onClick={() => handleCopyKey(maskApiKey(apiKey.id.slice(0, 16)), apiKey.id)}
                         >
                           {copiedKeyId === apiKey.id ? (
-                            <Check className="h-4 w-4 text-green-600" />
+                            <Check className="h-4 w-4 text-[var(--accent)]" />
                           ) : (
                             <Copy className="h-4 w-4" />
                           )}
@@ -313,7 +313,7 @@ export default function ApiKeysSettingsPage() {
       )}
 
       {/* Provider Information */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardHeader>
           <CardTitle>Supported Providers</CardTitle>
         </CardHeader>
@@ -322,7 +322,7 @@ export default function ApiKeysSettingsPage() {
             {Object.entries(PROVIDER_INFO).map(([provider, info]) => (
               <div
                 key={provider}
-                className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700"
+                className="p-4 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)]"
               >
                 <h4 className="font-semibold mb-1">{info.name}</h4>
                 <p className="text-sm text-muted-foreground">{info.description}</p>

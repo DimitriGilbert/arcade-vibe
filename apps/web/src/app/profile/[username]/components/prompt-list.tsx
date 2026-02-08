@@ -30,11 +30,11 @@ export function PromptList({ prompts, isLoading }: PromptListProps) {
       {prompts.map((prompt) => (
         <div
           key={prompt.id}
-          className="flex items-start gap-3 p-3 rounded-lg bg-white/50 dark:bg-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-colors"
+          className="flex items-start gap-3 p-3 rounded-lg bg-[var(--muted)]/40 hover:bg-[var(--muted)]/60 transition-colors"
         >
           <div className="flex-shrink-0">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
-              <GitBranch className="h-4 w-4 text-white" />
+            <div className="p-2 rounded-lg bg-[var(--primary)]">
+              <GitBranch className="h-4 w-4 text-[var(--primary-foreground)]" />
             </div>
           </div>
           <div className="flex-1 min-w-0">

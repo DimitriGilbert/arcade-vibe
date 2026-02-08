@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { Loader2, LayoutDashboard, Settings, Users, FileText, Shield, Archive, History, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -44,9 +43,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--primary)]" />
           <p className="text-muted-foreground">Loading admin dashboard...</p>
         </div>
       </div>
@@ -54,24 +53,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--background)]/80 backdrop-blur-sm border-r border-[var(--border)] transition-all duration-300",
           !isSidebarOpen && "-translate-x-full lg:translate-x-0 lg:w-20"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo/Brand */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b border-[var(--border)]">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                <Shield className="h-5 w-5 text-white" />
+              <div className="p-2 bg-[var(--primary)] rounded-lg">
+                <Shield className="h-5 w-5 text-[var(--primary-foreground)]" />
               </div>
               {isSidebarOpen && (
                 <div>
-                  <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  <h1 className="text-lg font-bold text-[var(--foreground)]">
                     Admin
                   </h1>
                   <p className="text-xs text-muted-foreground">
@@ -95,8 +94,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                   isActive
-                    ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-[var(--muted)] text-[var(--foreground)] border border-[var(--primary)]/40"
+                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
                 )}
               >
                   <Icon className="h-4 w-4 flex-shrink-0" />
@@ -107,9 +106,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* User Info */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-t border-[var(--border)]">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--primary-foreground)] text-sm font-medium">
                 {user?.name?.[0] || "A"}
               </div>
               {isSidebarOpen && (
@@ -123,10 +122,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               onClick={() => {
                 window.location.href = "/";
               }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--muted)] rounded-lg transition-colors"
               title="Exit Admin"
             >
-                <LogOut className="h-4 w-4 text-gray-500" />
+                <LogOut className="h-4 w-4 text-[var(--muted-foreground)]" />
               </button>
             </div>
           </div>
@@ -141,20 +140,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         )}
       >
         {/* Mobile Header */}
-        <div className="lg:hidden sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4">
+        <div className="lg:hidden sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-sm border-b border-[var(--border)] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                <Shield className="h-5 w-5 text-white" />
+              <div className="p-2 bg-[var(--primary)] rounded-lg">
+                <Shield className="h-5 w-5 text-[var(--primary-foreground)]" />
               </div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold text-[var(--foreground)]">
                 Admin
               </h1>
             </div>
             <button
               type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              className="p-2 hover:bg-[var(--muted)] rounded-lg"
             >
               {isSidebarOpen ? <LogOut className="h-5 w-5" /> : <LayoutDashboard className="h-5 w-5" />}
             </button>

@@ -16,11 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const arcadeThemes = [
-  { name: "Synthwave", value: "synthwave", color: "bg-pink-500" },
-  { name: "Tron", value: "tron", color: "bg-cyan-400" },
-  { name: "Pixel", value: "pixel", color: "bg-blue-500" },
-  { name: "Cabinet", value: "cabinet", color: "bg-green-500" },
-  { name: "Vaporwave", value: "vaporwave", color: "bg-purple-500" },
+  { name: "Synthwave", value: "synthwave" },
+  { name: "Tron", value: "tron" },
+  { name: "Pixel", value: "pixel" },
+  { name: "Cabinet", value: "cabinet" },
+  { name: "Vaporwave", value: "vaporwave" },
 ] as const;
 
 export function ModeToggle() {
@@ -45,7 +45,7 @@ export function ModeToggle() {
               className="flex items-center"
             >
               <span
-                className={`mr-2 h-3 w-3 rounded-full ${arcadeTheme.color}`}
+                className="mr-2 h-3 w-3 rounded-full bg-[var(--primary)]"
                 aria-hidden="true"
               />
               {arcadeTheme.name}

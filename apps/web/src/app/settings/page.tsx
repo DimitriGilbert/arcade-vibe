@@ -29,10 +29,10 @@ interface SettingsSectionProps {
 function SettingsSection({ title, description, icon, href, badge }: SettingsSectionProps) {
   return (
     <Link href={href as Route}>
-      <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200 dark:hover:border-purple-800">
+      <Card className="group hover:shadow-lg transition-all cursor-pointer border-2 border-[var(--border)] hover:border-[var(--primary)]/40">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg group-hover:scale-110 transition-transform">
+            <div className="p-3 bg-[var(--muted)]/60 rounded-lg group-hover:scale-110 transition-transform">
               {icon}
             </div>
             <div className="flex-1">
@@ -46,7 +46,7 @@ function SettingsSection({ title, description, icon, href, badge }: SettingsSect
               </div>
               <p className="text-muted-foreground text-sm">{description}</p>
             </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
           </div>
         </CardContent>
       </Card>
@@ -71,7 +71,7 @@ export default function SettingsPage() {
   });
 
   // Fetch API keys count
-  const { data: apiKeys, isLoading: apiKeysLoading } = useQuery({
+  const { data: apiKeys } = useQuery({
     queryKey: ["apiKeys", "list"],
     queryFn: () => trpcClient.apiKeys.listKeys.query(),
   });
@@ -80,12 +80,12 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-          <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-8 w-64 bg-[var(--muted)]/60 rounded mb-4" />
+          <div className="h-4 w-96 bg-[var(--muted)]/60 rounded" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+            <div key={i} className="h-32 bg-[var(--muted)]/60 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -107,10 +107,10 @@ export default function SettingsPage() {
       </div>
 
       {/* User Overview */}
-      <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2">
+      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+            <div className="w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--primary-foreground)] text-2xl font-bold">
               {user?.name?.[0] || "U"}
             </div>
             <div className="flex-1">
@@ -123,42 +123,42 @@ export default function SettingsPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg">
-                <Coins className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+                <Coins className="h-6 w-6 text-[var(--accent)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{credits}</p>
+                <p className="text-3xl font-bold text-[var(--accent)]">{credits}</p>
                 <p className="text-sm text-muted-foreground">Credits Available</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-[var(--primary)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{reputation}</p>
+                <p className="text-3xl font-bold text-[var(--primary)]">{reputation}</p>
                 <p className="text-sm text-muted-foreground">Reputation</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg">
-                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+                <Shield className="h-6 w-6 text-[var(--secondary)]" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{apiKeysCount}</p>
+                <p className="text-3xl font-bold text-[var(--secondary)]">{apiKeysCount}</p>
                 <p className="text-sm text-muted-foreground">API Keys</p>
               </div>
             </div>
@@ -173,14 +173,14 @@ export default function SettingsPage() {
           <SettingsSection
             title="Profile"
             description="Update your username and email"
-            icon={<User className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+            icon={<User className="h-6 w-6 text-[var(--primary)]" />}
             href="/settings/profile"
           />
 
           <SettingsSection
             title="API Keys"
             description="Manage your BYOK (Bring Your Own Key) API keys"
-            icon={<Key className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+            icon={<Key className="h-6 w-6 text-[var(--primary)]" />}
             href="/settings/api-keys"
             badge={apiKeysCount > 0 ? `${apiKeysCount} keys` : undefined}
           />
@@ -188,7 +188,7 @@ export default function SettingsPage() {
           <SettingsSection
             title="Subscription"
             description="View your plan and purchase credits"
-            icon={<CreditCard className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+            icon={<CreditCard className="h-6 w-6 text-[var(--primary)]" />}
             href="/settings/subscription"
             badge={`${credits} credits`}
           />
@@ -196,7 +196,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800">
+      <Card className="bg-[var(--card)]/60 border-2 border-[var(--border)]">
         <CardHeader>
           <CardTitle>Need More Credits?</CardTitle>
         </CardHeader>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
             Purchase additional credits to continue generating games and participating in the arcade.
           </p>
           <Button
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-105"
             onClick={() => {
               window.location.href = "/settings/subscription";
             }}

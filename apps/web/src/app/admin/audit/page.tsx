@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Search,
-  ArrowUpDown,
-  History,
-  Filter,
-  Calendar,
-  User,
-} from "lucide-react";
+import { Search, ArrowUpDown, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -145,7 +138,7 @@ export default function AdminAuditPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading audit log..." variant="purple" centered />
+        <LoadingState size="lg" message="Loading audit log..." variant="accent" centered />
       </div>
     );
   }
@@ -154,7 +147,7 @@ export default function AdminAuditPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Audit Log
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -163,7 +156,7 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
@@ -214,12 +207,12 @@ export default function AdminAuditPage() {
       </Card>
 
       {/* Audit Log Table */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "createdAt" as SortField, label: "Date" },
                     { field: "adminName" as SortField, label: "Admin" },
@@ -255,7 +248,7 @@ export default function AdminAuditPage() {
                   filteredActions.map((action) => (
                     <tr
                       key={action.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-sm">
@@ -265,7 +258,7 @@ export default function AdminAuditPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-purple-500" />
+                          <User className="h-4 w-4 text-[var(--primary)]" />
                           <span className="font-medium">
                             {action.adminName}
                           </span>
@@ -294,7 +287,7 @@ export default function AdminAuditPage() {
           </div>
 
           {/* Pagination Controls */}
-          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
             <Button
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}

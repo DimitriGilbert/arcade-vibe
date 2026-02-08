@@ -56,7 +56,7 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
           {showTooltip && (
             <div
               className={cn(
-                "absolute z-50 px-2 py-1 text-xs text-white bg-black rounded shadow-lg whitespace-nowrap",
+                "absolute z-50 px-2 py-1 text-xs text-[var(--popover-foreground)] bg-[var(--popover)] border border-[var(--border)] rounded shadow-lg whitespace-nowrap",
                 "pointer-events-none",
                 {
                   'bottom-full left-1/2 -translate-x-1/2 mb-1': position === 'top',
@@ -72,10 +72,10 @@ export const FieldHelp: React.FC<FieldHelpProps> = ({
                 className={cn(
                   "absolute w-0 h-0 border-2 border-transparent",
                   {
-                    'top-full left-1/2 -translate-x-1/2 border-t-black border-b-0': position === 'top',
-                    'bottom-full left-1/2 -translate-x-1/2 border-b-black border-t-0': position === 'bottom',
-                    'top-1/2 left-full -translate-y-1/2 border-l-black border-r-0': position === 'left',
-                    'top-1/2 right-full -translate-y-1/2 border-r-black border-l-0': position === 'right',
+                    'top-full left-1/2 -translate-x-1/2 border-t-[var(--popover)] border-b-0': position === 'top',
+                    'bottom-full left-1/2 -translate-x-1/2 border-b-[var(--popover)] border-t-0': position === 'bottom',
+                    'top-1/2 left-full -translate-y-1/2 border-l-[var(--popover)] border-r-0': position === 'left',
+                    'top-1/2 right-full -translate-y-1/2 border-r-[var(--popover)] border-l-0': position === 'right',
                   }
                 )}
               />

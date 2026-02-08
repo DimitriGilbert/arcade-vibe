@@ -18,40 +18,28 @@ export interface GameThumbnailCardProps {
     status?: string;
     tier?: string;
   };
-  badges?: Array<{ text: string; variant?: string; icon?: ReactNode }>;
+  badges?: Array<{ text: string; variant?: BadgeVariant; icon?: ReactNode }>;
   footerAction?: ReactNode;
   onClick?: () => void;
 }
 
-const tierBadgeColors: Record<string, { bg: string; text: string; border: string }> = {
-  cheater: {
-    bg: "bg-red-500/10",
-    text: "text-red-500 dark:text-red-400",
-    border: "border-red-500/20",
-  },
-  impossible: {
-    bg: "bg-purple-500/10",
-    text: "text-purple-500 dark:text-purple-400",
-    border: "border-purple-500/20",
-  },
-  hard: {
-    bg: "bg-orange-500/10",
-    text: "text-orange-500 dark:text-orange-400",
-    border: "border-orange-500/20",
-  },
-  normal: {
-    bg: "bg-blue-500/10",
-    text: "text-blue-500 dark:text-blue-400",
-    border: "border-blue-500/20",
-  },
-  easy: {
-    bg: "bg-green-500/10",
-    text: "text-green-500 dark:text-green-400",
-    border: "border-green-500/20",
-  },
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "ghost"
+  | "link";
+
+const tierBadgeColors: Record<string, string> = {
+  cheater: "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]/30",
+  impossible: "bg-[var(--primary)]/15 text-[var(--primary)] border-[var(--primary)]/30",
+  hard: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30",
+  normal: "bg-[var(--secondary)]/15 text-[var(--secondary)] border-[var(--secondary)]/30",
+  easy: "bg-[var(--muted)]/40 text-[var(--foreground)] border-[var(--border)]",
 };
 
-const statusBadgeColors: Record<string, string> = {
+const statusBadgeVariants: Record<string, BadgeVariant> = {
   pending: "secondary",
   generating: "secondary",
   processing: "secondary",
@@ -81,7 +69,9 @@ function GameThumbnailCard({
   };
 
   const tierBadgeStyle = displayMeta.tier ? tierBadgeColors[displayMeta.tier] : null;
-  const statusBadgeVariant = statusBadgeColors[displayMeta.status] ?? "outline";
+  const statusBadgeVariant = displayMeta.status
+    ? statusBadgeVariants[displayMeta.status] ?? "outline"
+    : "outline";
 
   return (
     <Card
@@ -109,24 +99,29 @@ function GameThumbnailCard({
             <Badge
               variant="outline"
               className={cn(
-                "border-0",
-                tierBadgeStyle.bg,
-                tierBadgeStyle.text,
-                tierBadgeStyle.border
+                "border",
+                tierBadgeStyle
               )}
             >
               {displayMeta.tier}
             </Badge>
           )}
           {displayMeta.status && (
-            <Badge variant={statusBadgeVariant as any}>{displayMeta.status}</Badge>
+            <Badge variant={statusBadgeVariant}>{displayMeta.status}</Badge>
           )}
-          {badges.map((badge) => (
-            <Badge key={badge.text} variant={badge.variant as any}>
-              {badge.icon && <span className="mr-1">{badge.icon}</span>}
-              {badge.text}
-            </Badge>
-          ))}
+          {badges.map((badge) => {
+            const resolvedVariant =
+              badge.variant && badge.variant.length > 0
+                ? badge.variant
+                : "default";
+
+            return (
+              <Badge key={badge.text} variant={resolvedVariant}>
+                {badge.icon && <span className="mr-1">{badge.icon}</span>}
+                {badge.text}
+              </Badge>
+            );
+          })}
         </div>
       </div>
       <CardContent className="p-4">

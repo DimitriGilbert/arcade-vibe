@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { toast } from "sonner";
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -36,9 +35,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
         <div className="text-center space-y-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600 mx-auto" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--muted)] border-t-[var(--primary)] mx-auto" />
           <p className="text-muted-foreground">Loading settings...</p>
         </div>
       </div>
@@ -46,22 +45,22 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4">
+      <div className="lg:hidden sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-sm border-b border-[var(--border)] p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <LayoutDashboard className="h-5 w-5 text-white" />
+            <div className="p-2 bg-[var(--primary)] rounded-lg">
+              <LayoutDashboard className="h-5 w-5 text-[var(--primary-foreground)]" />
             </div>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-lg font-bold text-[var(--foreground)]">
               Settings
             </h1>
           </div>
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="p-2 hover:bg-[var(--muted)] rounded-lg"
           >
             {isMobileMenuOpen ? (
               <X className="h-5 w-5" />
@@ -85,8 +84,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     isActive
-                      ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-[var(--muted)] text-[var(--foreground)] border border-[var(--primary)]/40"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
                   )}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -101,16 +100,16 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
       <div className="lg:flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-r border-gray-200 dark:border-gray-700 min-h-screen">
+        <aside className="hidden lg:block w-64 bg-[var(--background)]/80 backdrop-blur-sm border-r border-[var(--border)] min-h-screen">
           <div className="flex flex-col h-full">
             {/* Logo/Brand */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-[var(--border)]">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                  <LayoutDashboard className="h-5 w-5 text-white" />
+                <div className="p-2 bg-[var(--primary)] rounded-lg">
+                  <LayoutDashboard className="h-5 w-5 text-[var(--primary-foreground)]" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  <h1 className="text-lg font-bold text-[var(--foreground)]">
                     Settings
                   </h1>
                   <p className="text-xs text-muted-foreground">
@@ -130,11 +129,11 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   <Link
                     key={item.href}
                     href={item.href as Route}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                      isActive
-                        ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    isActive
+                        ? "bg-[var(--muted)] text-[var(--foreground)] border border-[var(--primary)]/40"
+                        : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -145,9 +144,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
             </nav>
 
             {/* User Info */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-t border-[var(--border)]">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-medium">
+                <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--primary-foreground)] text-sm font-medium">
                   {user?.name?.[0] || "U"}
                 </div>
                 <div className="flex-1 min-w-0">

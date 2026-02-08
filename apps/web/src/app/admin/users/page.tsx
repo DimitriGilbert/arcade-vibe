@@ -6,7 +6,6 @@ import {
   Loader2,
   Search,
   ArrowUpDown,
-  User as UserIcon,
   Shield,
   AlertTriangle,
 } from "lucide-react";
@@ -22,7 +21,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { LoadingState } from "@/components/reusable";
 import { EmptyState } from "@/components/reusable";
@@ -199,7 +197,7 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading users..." variant="purple" centered />
+        <LoadingState size="lg" message="Loading users..." variant="accent" centered />
       </div>
     );
   }
@@ -208,7 +206,7 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">
           User Management
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -217,7 +215,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Search */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -234,12 +232,12 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Users Table */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "name" as SortField, label: "Name" },
                     { field: "email" as SortField, label: "Email" },
@@ -274,7 +272,7 @@ export default function AdminUsersPage() {
                   filteredUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -292,15 +290,13 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3">
                         <Badge
                           variant={
-                            user.role === "admin" ? "default" : "outline"
+                            user.role === "admin"
+                              ? "default"
+                              : user.role === "moderator"
+                                ? "secondary"
+                                : "outline"
                           }
-                          className={cn(
-                            "capitalize",
-                            user.role === "admin" &&
-                              "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-                            user.role === "moderator" &&
-                              "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                          )}
+                          className="capitalize"
                         >
                           {user.role}
                         </Badge>
@@ -315,10 +311,7 @@ export default function AdminUsersPage() {
                             Suspended
                           </Badge>
                         ) : (
-                          <Badge
-                            variant="default"
-                            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          >
+                          <Badge variant="secondary">
                             Active
                           </Badge>
                         )}
@@ -342,7 +335,7 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Pagination Controls */}
-          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
             <Button
               variant="outline"
               onClick={() => setPage((p) => Math.max(1, p - 1))}

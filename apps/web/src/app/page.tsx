@@ -384,10 +384,10 @@ function MonthlyChallengeSection() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
                         player.rank === 1
-                          ? "bg-yellow-500/20 text-yellow-500"
+                          ? "bg-[var(--accent)]/15 text-[var(--accent)]"
                           : player.rank === 2
-                            ? "bg-gray-400/20 text-gray-400"
-                            : "bg-amber-700/20 text-amber-600"
+                            ? "bg-[var(--primary)]/15 text-[var(--primary)]"
+                            : "bg-[var(--secondary)]/15 text-[var(--secondary)]"
                       }`}
                     >
                       {player.rank}

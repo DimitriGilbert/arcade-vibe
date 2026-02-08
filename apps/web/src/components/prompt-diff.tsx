@@ -14,12 +14,12 @@ export function PromptDiff({ leftContent, rightContent, leftVersion, rightVersio
   }, [leftContent, rightContent]);
 
   const renderDiff = (d: Change[]) => {
-    return d.map((part, index) => {
+    return d.map((part) => {
       const style = part.added
-        ? "bg-green-200 text-green-900"
+        ? "bg-[var(--accent)]/20 text-[var(--accent-foreground)]"
         : part.removed
-        ? "bg-red-200 text-red-900 line-through"
-        : "text-gray-900";
+        ? "bg-[var(--destructive)]/20 text-[var(--destructive)] line-through"
+        : "text-[var(--foreground)]";
 
       const changeType = part.added ? "added" : part.removed ? "removed" : "unchanged";
       const keyPrefix = `${changeType}-${part.value.length}-${part.value.slice(0, 10).replace(/\s/g, "_")}`;
@@ -33,8 +33,8 @@ export function PromptDiff({ leftContent, rightContent, leftVersion, rightVersio
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-      <div className="border-r pr-4">
+    <div className="grid grid-cols-2 gap-4 p-4 bg-[var(--muted)]/40 rounded-lg">
+      <div className="border-r border-[var(--border)] pr-4">
         <h3 className="font-bold mb-2">Version {leftVersion}</h3>
         <div className="whitespace-pre-wrap text-sm font-mono">
           {renderDiff(diff.filter((d) => !d.added))}

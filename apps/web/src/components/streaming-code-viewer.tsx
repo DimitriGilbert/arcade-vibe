@@ -134,27 +134,22 @@ export function StreamingCodeViewer({
   const lineCount = code.split("\n").length;
   const displayCode = lineCount > maxLines ? code.split("\n").slice(0, maxLines).join("\n") : code;
 
-  const themeBgColor = theme === "github-dark" ? "bg-[#0d1117]" : "bg-[#ffffff]";
-  const themeBorderColor = theme === "github-dark" ? "border-[#30363d]" : "border-[#d0d7de]";
-  const themeTextColor = theme === "github-dark" ? "text-[#c9d1d9]" : "text-[#24292f]";
+  const progressClass = progress >= 100 ? "w-full" : progress === 0 ? "w-0" : "w-1/2";
 
   return (
     <div
-      className={`relative rounded-lg border ${themeBorderColor} ${themeBgColor} overflow-hidden font-mono text-sm transition-colors duration-300`}
+      data-shiki-theme={theme}
+      className="streaming-code-viewer relative rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] overflow-hidden font-mono text-sm transition-colors duration-300"
     >
       {/* Header */}
-      <div
-        className={`flex items-center justify-between px-4 py-2 border-b ${themeBorderColor} ${theme === "github-dark" ? "bg-[#161b22]" : "bg-[#f6f8fa]"}`}
-      >
+      <div className="streaming-code-viewer__header flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]">
         <div className="flex items-center gap-2">
           {fileName && (
-            <span className={`text-xs font-medium ${themeTextColor} opacity-80`}>
+            <span className="text-xs font-medium text-[var(--foreground)]/80">
               {fileName}
             </span>
           )}
-          <span
-            className={`text-xs font-mono ${themeTextColor} opacity-60`}
-          >
+          <span className="text-xs font-mono text-[var(--foreground)]/60">
             {language}
           </span>
         </div>
@@ -163,13 +158,10 @@ export function StreamingCodeViewer({
           {/* Progress indicator */}
           {isStreaming && progress < 100 && (
             <div className="flex items-center gap-2">
-              <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+              <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
+                <div className={`h-full bg-[var(--primary)] transition-all duration-300 ${progressClass}`} />
               </div>
-              <span className="text-xs text-blue-400">Generating...</span>
+              <span className="text-xs text-[var(--muted-foreground)]">Generating...</span>
             </div>
           )}
 
@@ -177,14 +169,14 @@ export function StreamingCodeViewer({
           <button
             type="button"
             onClick={toggleTheme}
-            className={`p-1.5 rounded-md ${theme === "github-dark" ? "hover:bg-[#30363d]" : "hover:bg-[#d8dee4]"} transition-colors`}
+            className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
             aria-label="Toggle theme"
             title="Toggle theme"
           >
             {theme === "github-dark" ? (
-              <Sun className="w-4 h-4 text-gray-400" />
+              <Sun className="w-4 h-4 text-[var(--muted-foreground)]" />
             ) : (
-              <Moon className="w-4 h-4 text-gray-600" />
+              <Moon className="w-4 h-4 text-[var(--muted-foreground)]" />
             )}
           </button>
 
@@ -192,14 +184,14 @@ export function StreamingCodeViewer({
           <button
             type="button"
             onClick={handleCopy}
-            className={`p-1.5 rounded-md ${theme === "github-dark" ? "hover:bg-[#30363d]" : "hover:bg-[#d8dee4]"} transition-colors`}
+            className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
             aria-label={copied ? "Copied!" : "Copy code"}
             title={copied ? "Copied!" : "Copy code"}
           >
             {copied ? (
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className="w-4 h-4 text-[var(--accent)]" />
             ) : (
-              <Copy className="w-4 h-4 text-gray-400" />
+              <Copy className="w-4 h-4 text-[var(--muted-foreground)]" />
             )}
           </button>
 
@@ -208,24 +200,18 @@ export function StreamingCodeViewer({
             <button
               type="button"
               onClick={handleDownload}
-              className={`p-1.5 rounded-md ${theme === "github-dark" ? "hover:bg-[#30363d]" : "hover:bg-[#d8dee4]"} transition-colors`}
+              className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
               aria-label="Download code"
               title="Download code"
             >
-              <Download className="w-4 h-4 text-gray-400" />
+              <Download className="w-4 h-4 text-[var(--muted-foreground)]" />
             </button>
           )}
         </div>
       </div>
 
       {/* Code content */}
-      <div
-        className={`overflow-x-auto overflow-y-auto max-h-[600px]`}
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: theme === "github-dark" ? "#30363d #0d1117" : "#d0d7de #ffffff",
-        }}
-      >
+      <div className="streaming-code-viewer__scroll overflow-x-auto overflow-y-auto max-h-[600px]">
         <div className="inline-block min-w-full">
           {isShikiReady && highlightedCode ? (
             <div
@@ -234,7 +220,7 @@ export function StreamingCodeViewer({
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
           ) : (
-            <div className={`p-4 ${themeTextColor} opacity-60`}>
+            <div className="p-4 text-[var(--foreground)]/60">
               {code.split("\n").map((line, index) => (
                 <div key={`${index}-${line.slice(0, 10)}`} className="whitespace-pre">
                   {line || "\u00A0"}
@@ -247,10 +233,8 @@ export function StreamingCodeViewer({
 
       {/* Truncated indicator */}
       {lineCount > maxLines && (
-        <div
-          className={`px-4 py-2 border-t ${themeBorderColor} ${theme === "github-dark" ? "bg-[#161b22]" : "bg-[#f6f8fa]"}`}
-        >
-          <p className={`text-xs ${themeTextColor} opacity-60`}>
+        <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--muted)]">
+          <p className="text-xs text-[var(--foreground)]/60">
             Displaying {maxLines} of {lineCount} lines
           </p>
         </div>
@@ -258,9 +242,9 @@ export function StreamingCodeViewer({
 
       {/* Loading overlay for initial Shiki load */}
       {!isShikiReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-white">
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--foreground)]/30 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-[var(--foreground)]">
+            <div className="w-4 h-4 border-2 border-[var(--foreground)] border-t-transparent rounded-full animate-spin" />
             <span className="text-sm">Loading syntax highlighter...</span>
           </div>
         </div>

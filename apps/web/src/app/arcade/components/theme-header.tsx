@@ -35,8 +35,8 @@ export function ThemeHeader({
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4 mb-6">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-        <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        <div className="h-8 bg-[var(--muted)]/60 rounded w-1/4" />
+        <div className="h-24 bg-[var(--muted)]/60 rounded-xl" />
       </div>
     );
   }

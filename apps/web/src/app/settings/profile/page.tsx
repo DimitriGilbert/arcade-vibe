@@ -5,7 +5,7 @@ import { useFormedible } from "@/hooks/use-formedible";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
-import { trpc, trpcClient } from "@/utils/trpc";
+import { trpcClient } from "@/utils/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, User, Shield, Calendar, CheckCircle, AlertCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
@@ -74,8 +74,8 @@ export default function ProfileSettingsPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg">
-            <User className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <div className="p-3 bg-[var(--muted)]/60 rounded-lg">
+            <User className="h-6 w-6 text-[var(--primary)]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Profile Settings</h1>
@@ -87,7 +87,7 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Profile Form */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardHeader>
           <CardTitle>Public Information</CardTitle>
         </CardHeader>
@@ -104,12 +104,12 @@ export default function ProfileSettingsPage() {
       </Card>
 
       {/* Email Change Notice */}
-      <Card className="bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+      <Card className="bg-[var(--muted)]/40 border-[var(--border)]">
         <CardContent className="p-6">
-          <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+          <h3 className="font-semibold text-[var(--accent)] mb-2">
             Email Address
           </h3>
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+          <p className="text-sm text-[var(--muted-foreground)]">
             To change your email address, please contact support. Email changes require
             verification to ensure account security.
           </p>
@@ -117,7 +117,7 @@ export default function ProfileSettingsPage() {
       </Card>
 
       {/* Account Info */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
@@ -135,17 +135,17 @@ export default function ProfileSettingsPage() {
             {/* Email Verification Status */}
             <div className="flex items-start gap-3">
               {user?.emailVerified ? (
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                <CheckCircle className="h-5 w-5 text-[var(--accent)] mt-0.5" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
               )}
               <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Email Verified</p>
                 <p className="text-sm mt-1">
                   {user?.emailVerified ? (
-                    <span className="text-green-600 dark:text-green-400 font-medium">Verified</span>
+                    <span className="text-[var(--accent)] font-medium">Verified</span>
                   ) : (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">Not Verified</span>
+                    <span className="text-[var(--muted-foreground)] font-medium">Not Verified</span>
                   )}
                 </p>
               </div>
@@ -177,7 +177,7 @@ export default function ProfileSettingsPage() {
               <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Account Status</p>
                 <p className="text-sm mt-1">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[var(--accent)]/15 text-[var(--accent)]">
                     Active
                   </span>
                 </p>
@@ -188,20 +188,20 @@ export default function ProfileSettingsPage() {
       </Card>
 
       {/* Profile Statistics */}
-      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardHeader>
           <CardTitle>Profile Statistics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+            <div className="bg-[var(--muted)]/40 rounded-lg p-4">
               <p className="text-sm font-medium text-muted-foreground mb-1">Profile Completion</p>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">100%</p>
+              <p className="text-2xl font-bold text-[var(--primary)]">100%</p>
               <p className="text-xs text-muted-foreground mt-1">All required fields completed</p>
             </div>
-            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4">
+            <div className="bg-[var(--muted)]/40 rounded-lg p-4">
               <p className="text-sm font-medium text-muted-foreground mb-1">Account Age</p>
-              <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+              <p className="text-2xl font-bold text-[var(--accent)]">
                 {user?.createdAt
                   ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
                   : 0}

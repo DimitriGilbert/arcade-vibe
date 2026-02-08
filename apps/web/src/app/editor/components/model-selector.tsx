@@ -50,13 +50,15 @@ export interface ModelSelectorProps {
   showTierBadge?: boolean;
 }
 
-// Tier badge colors
-const tierBadgeColors: Record<string, { bg: string; text: string }> = {
-  cheater: { bg: "bg-purple-100", text: "text-purple-800" },
-  easy: { bg: "bg-blue-100", text: "text-blue-800" },
-  normal: { bg: "bg-green-100", text: "text-green-800" },
-  hard: { bg: "bg-orange-100", text: "text-orange-800" },
-  impossible: { bg: "bg-red-100", text: "text-red-800" },
+const tierBadgeVariants: Record<
+  ModelTier,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
+  cheater: "destructive",
+  easy: "secondary",
+  normal: "default",
+  hard: "outline",
+  impossible: "secondary",
 };
 
 // Credit costs by tier
@@ -96,7 +98,7 @@ export function ModelSelector({
         <SelectContent>
           {models.map((model) => {
             const isSelected = model.modelName === selectedModel;
-            const tierColor = tierBadgeColors[model.tier];
+            const tierVariant = tierBadgeVariants[model.tier];
 
             return (
               <SelectItem key={model.id} value={model.modelName}>
@@ -104,7 +106,7 @@ export function ModelSelector({
                   {isSelected && <Check className="h-4 w-4 text-primary" />}
                   <span className="flex-1">{model.modelName}</span>
                   {showTierBadge && (
-                    <Badge className={`text-xs ${tierColor.bg} ${tierColor.text}`}>
+                    <Badge className="text-xs" variant={tierVariant}>
                       {model.tier}
                     </Badge>
                   )}

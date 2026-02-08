@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { LoadingState, EmptyState } from "@/components/reusable";
 import {
   Dialog,
@@ -17,8 +16,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -240,7 +237,7 @@ export default function AdminModelsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" variant="purple" message="Loading models..." centered />
+        <LoadingState size="lg" variant="accent" message="Loading models..." centered />
       </div>
     );
   }
@@ -250,7 +247,7 @@ export default function AdminModelsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">
             AI Models
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -264,7 +261,7 @@ export default function AdminModelsPage() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -281,12 +278,12 @@ export default function AdminModelsPage() {
       </Card>
 
       {/* Models Table */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "provider" as SortField, label: "Provider" },
                     { field: "modelName" as SortField, label: "Model Name" },
@@ -327,7 +324,7 @@ export default function AdminModelsPage() {
                   filteredModels.map((model) => (
                     <tr
                       key={model.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
                     >
                       <td className="px-4 py-3">
                         <Badge variant="outline" className="capitalize">
@@ -336,24 +333,13 @@ export default function AdminModelsPage() {
                       </td>
                       <td className="px-4 py-3 font-medium">{model.modelName}</td>
                       <td className="px-4 py-3">
-                        {(() => {
-                          const tierColors: Record<string, string> = {
-                            cheater: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                            hard: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                            normal: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                            easy: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                            impossible: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-                          };
-                          return (
-                            <Badge
-                              variant={model.tier === "cheater" ? "destructive" : "default"}
-                              className={cn("capitalize", tierColors[model.tier])}
-                            >
-                              <Zap className="h-3 w-3 mr-1" />
-                              {model.tier}
-                            </Badge>
-                          );
-                        })()}
+                        <Badge
+                          variant={model.tier === "cheater" ? "destructive" : "secondary"}
+                          className="capitalize"
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          {model.tier}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">${model.costPer1kTokens}</td>
                       <td className="px-4 py-3">{model.maxTokens.toLocaleString()}</td>
@@ -361,12 +347,7 @@ export default function AdminModelsPage() {
                         {model.supportsImages ? "✓" : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          variant={model.isActive ? "default" : "secondary"}
-                          className={cn(
-                            model.isActive && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          )}
-                        >
+                        <Badge variant={model.isActive ? "secondary" : "outline"}>
                           {model.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </td>
@@ -378,7 +359,7 @@ export default function AdminModelsPage() {
                             onClick={() => toggleModelMutation.mutate({ id: model.id, isActive: !model.isActive })}
                             disabled={toggleModelMutation.isPending}
                           >
-                            <Power className={`h-4 w-4 ${model.isActive ? "text-orange-500" : "text-green-500"}`} />
+                            <Power className={`h-4 w-4 ${model.isActive ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`} />
                           </Button>
                           <Button
                             variant="ghost"

@@ -41,7 +41,7 @@ export default function UserAvatar({
   const hasImage = user?.image && showFallback;
 
   const variantClasses = {
-    gradient: "bg-gradient-to-br from-purple-500 to-pink-500 text-white",
+    gradient: "bg-[var(--primary)] text-[var(--primary-foreground)]",
     solid: "bg-primary text-primary-foreground",
     border: "bg-primary text-primary-foreground",
   };

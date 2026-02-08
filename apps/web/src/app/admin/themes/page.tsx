@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, Edit2, Trash2, Search, ArrowUpDown, Archive, Calendar, Eye, CheckCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, ArrowUpDown, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -233,7 +232,7 @@ export default function AdminThemesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading themes..." variant="purple" centered />
+        <LoadingState size="lg" message="Loading themes..." variant="accent" centered />
       </div>
     );
   }
@@ -243,7 +242,7 @@ export default function AdminThemesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">
             Themes
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -269,7 +268,7 @@ export default function AdminThemesPage() {
       </div>
 
       {/* Search */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -286,12 +285,12 @@ export default function AdminThemesPage() {
       </Card>
 
       {/* Themes Table */}
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <Card className="bg-[var(--card)]/60 backdrop-blur-sm border-[var(--border)]">
         <CardContent className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "title" as SortField, label: "Title" },
                     { field: "status" as SortField, label: "Status" },
@@ -325,7 +324,7 @@ export default function AdminThemesPage() {
                   filteredThemes.map((theme) => (
                     <tr
                       key={theme.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
                     >
                       <td className="px-4 py-3">
                         <div className="font-medium">{theme.title}</div>
@@ -335,14 +334,8 @@ export default function AdminThemesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge
-                          variant={theme.status === "active" ? "default" : "secondary"}
-                          className={cn(
-                            "capitalize",
-                            theme.status === "active" && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                            theme.status === "upcoming" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                            theme.status === "frozen" && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-                            theme.status === "archived" && "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                          )}
+                          variant={theme.status === "active" ? "secondary" : "outline"}
+                          className="capitalize"
                         >
                           {theme.status}
                         </Badge>
