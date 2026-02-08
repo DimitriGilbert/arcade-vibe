@@ -1,23 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
-
-const arcadeTabsVariants = cva("arcade-tabs", {
-  variants: {
-    variant: {
-      default: "",
-      glow: "arcade-tabs--glow",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-  },
-});
 
 const arcadeTabsListVariants = cva(
   "arcade-tabs-list inline-flex items-center justify-center gap-1 p-1 rounded-[var(--radius)] bg-[var(--muted)]/40 border border-[var(--border)]",
@@ -26,6 +12,7 @@ const arcadeTabsListVariants = cva(
       variant: {
         default: "",
         glow: "border-[var(--primary)]/50",
+        line: "bg-transparent border-b-0 border-x-0 border-t-0 p-0 rounded-none gap-1",
       },
     },
     defaultVariants: {
@@ -35,12 +22,13 @@ const arcadeTabsListVariants = cva(
 );
 
 const arcadeTabsTriggerVariants = cva(
-  "arcade-tabs-trigger inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-[calc(var(--radius)-4px)] transition-all duration-200 [&_svg]:size-4 [&_svg]:pointer-events-none",
+  "arcade-tabs-trigger inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 [&_svg]:size-4 [&_svg]:pointer-events-none relative",
   {
     variants: {
       variant: {
-        default: "",
-        glow: "",
+        default: "rounded-[calc(var(--radius)-4px)]",
+        glow: "rounded-[calc(var(--radius)-4px)]",
+        line: "rounded-none border-b-2 border-transparent px-3 py-2",
       },
     },
     defaultVariants: {
@@ -49,119 +37,69 @@ const arcadeTabsTriggerVariants = cva(
   },
 );
 
-interface ArcadeTabsProps extends VariantProps<typeof arcadeTabsVariants> {
-  value?: string;
-  defaultValue?: string;
-  onValueChange?: (value: string) => void;
-  children: ReactNode;
-  className?: string;
-}
-
-export function ArcadeTabs({
-  value,
-  defaultValue,
-  onValueChange,
-  variant,
-  children,
+function ArcadeTabs({
   className,
-}: ArcadeTabsProps) {
+  orientation = "horizontal",
+  ...props
+}: TabsPrimitive.Root.Props) {
   return (
     <TabsPrimitive.Root
       data-slot="arcade-tabs"
-      data-variant={variant ?? "default"}
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={onValueChange}
-      className={cn(arcadeTabsVariants({ variant }), className)}
-    >
-      {children}
-    </TabsPrimitive.Root>
+      data-orientation={orientation}
+      className={cn("gap-2 group/arcade-tabs flex data-horizontal:flex-col", className)}
+      {...props}
+    />
   );
 }
 
-interface ArcadeTabsListProps extends VariantProps<
-  typeof arcadeTabsListVariants
-> {
-  children: ReactNode;
-  className?: string;
-}
-
-export function ArcadeTabsList({
-  variant,
-  children,
+function ArcadeTabsList({
   className,
-}: ArcadeTabsListProps) {
+  variant = "default",
+  ...props
+}: TabsPrimitive.List.Props & VariantProps<typeof arcadeTabsListVariants>) {
   return (
     <TabsPrimitive.List
       data-slot="arcade-tabs-list"
-      data-variant={variant ?? "default"}
+      data-variant={variant}
       className={cn(arcadeTabsListVariants({ variant }), className)}
-    >
-      {children}
-    </TabsPrimitive.List>
+      {...props}
+    />
   );
 }
 
-interface ArcadeTabsTriggerProps extends VariantProps<
-  typeof arcadeTabsTriggerVariants
-> {
-  value: string;
-  children: ReactNode;
-  className?: string;
-  disabled?: boolean;
-}
-
-export function ArcadeTabsTrigger({
-  value,
-  variant,
-  children,
+function ArcadeTabsTrigger({
   className,
-  disabled,
-}: ArcadeTabsTriggerProps) {
+  ...props
+}: TabsPrimitive.Tab.Props & VariantProps<typeof arcadeTabsTriggerVariants>) {
   return (
     <TabsPrimitive.Tab
       data-slot="arcade-tabs-trigger"
-      data-variant={variant ?? "default"}
-      value={value}
-      disabled={disabled}
       className={cn(
-        arcadeTabsTriggerVariants({ variant }),
+        arcadeTabsTriggerVariants({ variant: props.variant as any }),
         "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-        "data-[selected]:bg-[var(--primary)] data-[selected]:text-[var(--primary-foreground)]",
-        "data-[selected]:shadow-sm",
+        "data-active:bg-[var(--primary)] data-active:text-[var(--primary-foreground)]",
+        "data-active:shadow-sm",
         "disabled:opacity-50 disabled:pointer-events-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+        "after:bg-[var(--primary)] after:absolute after:opacity-0 after:transition-opacity",
+        "group-data-horizontal/arcade-tabs:after:inset-x-0 group-data-horizontal/arcade-tabs:after:bottom-0 group-data-horizontal/arcade-tabs:after:h-0.5",
+        "group-data-vertical/arcade-tabs:after:inset-y-0 group-data-vertical/arcade-tabs:after:-right-1 group-data-vertical/arcade-tabs:after:w-0.5",
+        "group-data-[variant=line]/arcade-tabs-list:data-active:after:opacity-100",
         className,
       )}
-    >
-      {children}
-    </TabsPrimitive.Tab>
+      {...props}
+    />
   );
 }
 
-interface ArcadeTabsContentProps {
-  value: string;
-  children: ReactNode;
-  className?: string;
-}
-
-export function ArcadeTabsContent({
-  value,
-  children,
-  className,
-}: ArcadeTabsContentProps) {
+function ArcadeTabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="arcade-tabs-content"
-      value={value}
-      className={cn("outline-none mt-4", className)}
-    >
-      {children}
-    </TabsPrimitive.Panel>
+      className={cn("flex-1 outline-none mt-4", className)}
+      {...props}
+    />
   );
 }
 
-export {
-  arcadeTabsVariants,
-  arcadeTabsListVariants,
-  arcadeTabsTriggerVariants,
-};
+export { ArcadeTabs, ArcadeTabsList, ArcadeTabsTrigger, ArcadeTabsContent, arcadeTabsListVariants, arcadeTabsTriggerVariants };

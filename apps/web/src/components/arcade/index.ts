@@ -8,7 +8,6 @@ export {
   ArcadeTabsList,
   ArcadeTabsTrigger,
   ArcadeTabsContent,
-  arcadeTabsVariants,
   arcadeTabsListVariants,
   arcadeTabsTriggerVariants,
 } from "./arcade-tabs";

@@ -181,11 +181,11 @@ function HeroSection() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="home-scroll-indicator home-float text-[var(--primary)]">
+        {/* <div className="home-scroll-indicator home-float text-[var(--primary)]">
           <div className="home-scroll-shell">
             <div className="home-scroll-dot" />
           </div>
-        </div>
+        </div> */}
       </div>
     </Section>
   );
@@ -289,7 +289,7 @@ function ModelTiersSection() {
                       Score Multiplier
                     </span>
                   </div>
-                <div className="mt-2 h-2 rounded-full bg-[var(--muted)]">
+                  <div className="mt-2 h-2 rounded-full bg-[var(--muted)]">
                     <div
                       className={`h-full rounded-full bg-[var(--accent)] ${
                         tier.multiplier === "1x"
@@ -301,7 +301,7 @@ function ModelTiersSection() {
                               : "w-full"
                       }`}
                     />
-                </div>
+                  </div>
                 </div>
               </div>
             </ArcadeCard>
