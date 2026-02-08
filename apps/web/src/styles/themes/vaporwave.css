@@ -104,6 +104,11 @@
   --animation-float-speed-3: 12s;
   --animation-grid-scroll: 15s;
   --animation-glow-pulse: 2s;
+
+  /* Fonts */
+  --font-display: var(--font-orbitron);
+  --font-body: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 /* Custom keyframes for Vaporwave theme */
@@ -142,7 +147,7 @@
     background-position: 0 0;
   }
   100% {
-    background-position: 0 80px;
+    background-position: 0 -120px;
   }
 }
 
@@ -259,6 +264,108 @@
     0 0 30px var(--glow-color),
     0 4px 15px oklch(0 0 0 / 0.3),
     inset 0 1px 0 oklch(1 0 0 / 0.3);
+}
+
+/* Homepage rendering */
+:is(.vaporwave, .theme-vaporwave) .home-sky {
+  background: var(--background);
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-sun {
+  inset: 0;
+  background: var(--bg-gradient-sun);
+  opacity: 0.45;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-grid {
+  left: 0;
+  right: 0;
+  top: 35%;
+  height: 80%;
+  background:
+    linear-gradient(transparent 0%, oklch(0.65 0.28 350) 100%),
+    linear-gradient(90deg, oklch(0.65 0.28 350 / 0.6) 1px, transparent 1px),
+    linear-gradient(0deg, oklch(0.65 0.28 350 / 0.6) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    80px 80px,
+    80px 80px;
+  transform: perspective(700px) rotateX(65deg) translateY(-20%);
+  transform-origin: center top;
+  animation: vaporwave-grid-scroll var(--animation-grid-scroll) linear infinite;
+  opacity: 0.45;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-horizon {
+  left: 0;
+  right: 0;
+  top: 35%;
+  height: 2px;
+  background: var(--gradient-horizon);
+  opacity: 0.8;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-decor-1 {
+  inset: auto;
+  width: 120px;
+  height: 120px;
+  top: 12%;
+  left: 8%;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  background: linear-gradient(135deg, #ff006e, transparent);
+  opacity: 0.2;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-decor-2 {
+  inset: auto;
+  width: 90px;
+  height: 90px;
+  top: 18%;
+  right: 12%;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  background: linear-gradient(135deg, #00f5d4, transparent);
+  opacity: 0.2;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-title {
+  text-transform: uppercase;
+}
+
+:is(.vaporwave, .theme-vaporwave) .home-title-main,
+:is(.vaporwave, .theme-vaporwave) .home-title-sub {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 30px oklch(0.65 0.28 350 / 0.4));
+}
+
+:is(.vaporwave, .theme-vaporwave) [data-slot="arcade-card"] {
+  background: oklch(0.12 0.06 280 / 0.85);
+  border: 1px solid oklch(0.65 0.28 350 / 0.35);
+  box-shadow: 0 0 40px oklch(0.65 0.28 350 / 0.15);
+}
+
+:is(.vaporwave, .theme-vaporwave) [data-slot="arcade-card"][data-variant="glow"] {
+  box-shadow:
+    0 0 50px oklch(0.65 0.28 350 / 0.2),
+    0 20px 40px oklch(0 0 0 / 0.35);
+}
+
+:is(.vaporwave, .theme-vaporwave) [data-slot="arcade-button"] {
+  border: 1px solid oklch(0.65 0.28 350 / 0.5);
+}
+
+:is(.vaporwave, .theme-vaporwave) [data-slot="arcade-button"][data-variant="outline"] {
+  border-color: oklch(0.85 0.18 180);
+  color: oklch(0.85 0.18 180);
+}
+
+:is(.vaporwave, .theme-vaporwave) [data-slot="arcade-badge"] {
+  border-radius: 0;
+  border: 1px solid oklch(0.65 0.28 350 / 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
 }
 
 :is(.vaporwave, .theme-vaporwave) .vaporwave-text-glow {

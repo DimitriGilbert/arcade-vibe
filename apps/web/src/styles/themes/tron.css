@@ -77,6 +77,11 @@
     oklch(0.78 0.2 195 / 0.5) 100%
   );
 
+  /* Fonts */
+  --font-display: var(--font-orbitron);
+  --font-body: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+
   /* Animation timings */
   --animation-grid-speed: 20s;
   --animation-spin-speed: 20s;
@@ -89,7 +94,7 @@
     background-position: 0 0;
   }
   100% {
-    background-position: 0 40px;
+    background-position: 0 -120px;
   }
 }
 
@@ -208,6 +213,125 @@
 :is(.tron, .theme-tron) .tron-button:hover {
   background: var(--neon-cyan);
   color: var(--background);
+}
+
+/* Homepage rendering */
+:is(.tron, .theme-tron) .home-sky {
+  background: oklch(0.03 0.01 240);
+}
+
+:is(.tron, .theme-tron) .home-grid {
+  left: 0;
+  right: 0;
+  top: 35%;
+  height: 80%;
+  background:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(800px) rotateX(76deg) translateY(-20%);
+  transform-origin: center top;
+  animation: tron-grid-scroll var(--animation-grid-speed) linear infinite;
+  opacity: 0.85;
+}
+
+:is(.tron, .theme-tron) .home-horizon {
+  left: 0;
+  right: 0;
+  top: 35%;
+  height: 20px;
+  background: linear-gradient(
+    180deg,
+    oklch(0.72 0.24 248 / 0.2),
+    transparent
+  );
+}
+
+:is(.tron, .theme-tron) .home-decor-1 {
+  inset: auto;
+  width: 220px;
+  height: 220px;
+  left: 50%;
+  top: 10%;
+  transform: translateX(-50%);
+  border: 2px solid oklch(0.72 0.24 248 / 0.7);
+  border-radius: 999px;
+  box-shadow: 0 0 24px oklch(0.72 0.24 248 / 0.35);
+}
+
+:is(.tron, .theme-tron) .home-decor-2 {
+  inset: auto;
+  width: 160px;
+  height: 160px;
+  left: 50%;
+  top: 14%;
+  transform: translateX(-50%);
+  border: 1px solid oklch(0.78 0.2 195 / 0.6);
+  border-radius: 999px;
+}
+
+:is(.tron, .theme-tron) .home-title {
+  text-transform: uppercase;
+}
+
+:is(.tron, .theme-tron) .home-title-main {
+  color: oklch(0.72 0.24 248);
+  text-shadow:
+    0 0 24px oklch(0.72 0.24 248 / 0.8),
+    0 0 48px oklch(0.72 0.24 248 / 0.45);
+}
+
+:is(.tron, .theme-tron) .home-title-sub {
+  color: oklch(0.78 0.2 195);
+  text-shadow:
+    0 0 20px oklch(0.78 0.2 195 / 0.7),
+    0 0 40px oklch(0.78 0.2 195 / 0.4);
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-card"] {
+  background: oklch(0.05 0.01 240);
+  border: 1px solid oklch(0.72 0.24 248 / 0.35);
+  clip-path: polygon(
+    18px 0,
+    100% 0,
+    100% calc(100% - 18px),
+    calc(100% - 18px) 100%,
+    0 100%,
+    0 18px
+  );
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-card"][data-variant="glow"] {
+  box-shadow: 0 0 24px oklch(0.72 0.24 248 / 0.2);
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-button"] {
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+  border: 1px solid oklch(0.72 0.24 248 / 0.5);
+  background: transparent;
+  color: oklch(0.72 0.24 248);
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-button"][data-variant="primary"],
+:is(.tron, .theme-tron) [data-slot="arcade-button"][data-variant="glow"] {
+  border: 2px solid oklch(0.72 0.24 248);
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-button"][data-variant="secondary"] {
+  border-color: oklch(0.78 0.2 195 / 0.6);
+  color: oklch(0.78 0.2 195);
+}
+
+:is(.tron, .theme-tron) [data-slot="arcade-badge"] {
+  border-radius: 0;
+  font-family: var(--font-mono);
 }
 
 :is(.tron, .theme-tron) .tron-button-teal {

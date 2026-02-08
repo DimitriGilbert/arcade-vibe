@@ -49,17 +49,17 @@ export function ThemeHeader({
           value={themeStatus}
           onValueChange={(value) => onThemeStatusChange(value as "current" | "archived")}
         >
-          <TabsList className="bg-white dark:bg-gray-800">
+          <TabsList className="bg-muted/40 border border-border">
             <TabsTrigger
               value="current"
-              className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white"
+              className="gap-2 data-[state=active]:bg-[var(--primary)] data-[state=active]:text-[var(--primary-foreground)]"
             >
               <Sparkles className="h-4 w-4" />
               Current
             </TabsTrigger>
             <TabsTrigger
               value="archived"
-              className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white"
+              className="gap-2 data-[state=active]:bg-[var(--primary)] data-[state=active]:text-[var(--primary-foreground)]"
             >
               <Archive className="h-4 w-4" />
               Archived
@@ -70,14 +70,14 @@ export function ThemeHeader({
 
       {/* Current Theme Card */}
       {themeStatus === "current" && (
-        <div className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-900/20 rounded-2xl p-6 border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+        <div className="bg-[var(--card)] rounded-2xl p-6 border border-[var(--border)] shadow-lg">
           {currentTheme ? (
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl font-bold">{currentTheme.title}</h2>
-                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                    <Badge className="bg-[var(--primary)] text-[var(--primary-foreground)]">
                       Active
                     </Badge>
                   </div>
@@ -117,7 +117,7 @@ export function ThemeHeader({
 
       {/* Archived Themes List */}
       {themeStatus === "archived" && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+        <div className="bg-[var(--card)] rounded-2xl p-6 border border-[var(--border)] shadow-lg">
           {archivedThemes.length > 0 ? (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold mb-4">Archived Themes</h3>
@@ -127,10 +127,10 @@ export function ThemeHeader({
                     key={theme.id}
                     type="button"
                     onClick={() => onThemeSelect(theme.id)}
-                    className={`text-left p-4 rounded-xl border-2 transition-all ${
+                    className={`text-left p-4 rounded-xl border transition-all ${
                       selectedThemeId === theme.id
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-                        : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        ? "border-[var(--primary)] bg-[var(--muted)]"
+                        : "border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/40"
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">

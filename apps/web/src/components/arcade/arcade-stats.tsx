@@ -80,7 +80,8 @@ export function ArcadeStats({ stats, className }: ArcadeStatsProps) {
       {stats.map((stat, index) => (
         <div
           key={`${stat.label}-${index}`}
-          className="flex flex-col gap-2 p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] transition-all duration-200 hover:border-[var(--primary)]/50"
+          data-slot="arcade-stat"
+          className="arcade-stat flex flex-col gap-2 p-4 rounded-[var(--radius)] bg-[var(--card)] border border-[var(--border)] transition-all duration-200 hover:border-[var(--primary)]/50"
         >
           <div className="flex items-center justify-between">
             {stat.icon && (

@@ -23,7 +23,6 @@ import {
   ArcadeButton,
   ArcadeBadge,
   ArcadeStats,
-  ArcadeGrid,
 } from "@/components/arcade";
 
 // Mock data for the homepage
@@ -100,45 +99,6 @@ const TOP_PLAYERS = [
   { rank: 3, name: "PixelAlchemist", score: 2498 },
 ] as const;
 
-// Animation keyframes as inline styles
-const styles = `
-  @keyframes title-glow {
-    0%, 100% {
-      text-shadow: 
-        0 0 20px var(--glow-color, oklch(0.68 0.28 345 / 0.5)),
-        0 0 40px var(--glow-color, oklch(0.68 0.28 345 / 0.3));
-    }
-    50% {
-      text-shadow: 
-        0 0 30px var(--glow-color, oklch(0.68 0.28 345 / 0.7)),
-        0 0 60px var(--glow-color, oklch(0.68 0.28 345 / 0.5)),
-        0 0 80px var(--glow-color, oklch(0.68 0.28 345 / 0.3));
-    }
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-  }
-
-  @keyframes pulse-border {
-    0%, 100% { border-color: var(--primary); }
-    50% { border-color: var(--accent); }
-  }
-
-  .animate-title-glow {
-    animation: title-glow 3s ease-in-out infinite;
-  }
-
-  .animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-
-  .animate-pulse-border {
-    animation: pulse-border 2s ease-in-out infinite;
-  }
-`;
-
 // Section wrapper component
 function Section({
   children,
@@ -179,27 +139,21 @@ function SectionTitle({
 // Hero Section
 function HeroSection() {
   return (
-    <Section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      {/* Animated grid background */}
-      <ArcadeGrid animated perspective className="opacity-30" />
-
+    <Section className="home-hero">
+      <div className="home-hero-grid">
+        <div className="home-hero-grid-lines" />
+        <div className="home-hero-horizon" />
+      </div>
       {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+      <div className="home-content text-center px-4 max-w-5xl mx-auto">
         {/* Main title */}
-        <h1
-          className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight mb-6 animate-title-glow"
-          style={{
-            background: "var(--gradient-accent-full, var(--gradient-accent))",
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
-            color: "transparent",
-          }}
-        >
-          ARCADE VIBE
+        <h1 className="home-title text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black mb-6">
+          <span className="home-title-main">ARCADE</span>
+          <span className="home-title-sub">VIBE</span>
         </h1>
 
         {/* Tagline */}
-        <p className="text-xl md:text-2xl lg:text-3xl text-[var(--foreground)] mb-4 font-semibold">
+        <p className="home-subtitle text-xl md:text-2xl lg:text-3xl text-[var(--foreground)] mb-4 font-semibold">
           One prompt. One shot. One month to prove you're the best prompt
           engineer.
         </p>
@@ -227,9 +181,9 @@ function HeroSection() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
-          <div className="w-6 h-10 border-2 border-[var(--primary)] rounded-full flex justify-center pt-2">
-            <div className="w-1.5 h-3 bg-[var(--primary)] rounded-full animate-pulse" />
+        <div className="home-scroll-indicator home-float text-[var(--primary)]">
+          <div className="home-scroll-shell">
+            <div className="home-scroll-dot" />
           </div>
         </div>
       </div>
@@ -254,7 +208,7 @@ function HowItWorksSection() {
               <ArcadeCard
                 key={step.title}
                 variant="glow"
-                className="text-center hover:scale-105 transition-transform duration-300"
+                className="text-center hover:scale-[1.02] transition-transform duration-300"
               >
                 <div className="p-6">
                   {/* Step number */}
@@ -335,21 +289,19 @@ function ModelTiersSection() {
                       Score Multiplier
                     </span>
                   </div>
-                  <div className="mt-2 h-2 rounded-full bg-[var(--muted)]">
+                <div className="mt-2 h-2 rounded-full bg-[var(--muted)]">
                     <div
-                      className="h-full rounded-full bg-[var(--accent)]"
-                      style={{
-                        width:
-                          tier.multiplier === "1x"
-                            ? "25%"
-                            : tier.multiplier === "1.5x"
-                              ? "50%"
-                              : tier.multiplier === "2x"
-                                ? "75%"
-                                : "100%",
-                      }}
+                      className={`h-full rounded-full bg-[var(--accent)] ${
+                        tier.multiplier === "1x"
+                          ? "w-1/4"
+                          : tier.multiplier === "1.5x"
+                            ? "w-1/2"
+                            : tier.multiplier === "2x"
+                              ? "w-3/4"
+                              : "w-full"
+                      }`}
                     />
-                  </div>
+                </div>
                 </div>
               </div>
             </ArcadeCard>
@@ -372,7 +324,7 @@ function MonthlyChallengeSection() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Current theme card */}
-          <ArcadeCard variant="glow" className="animate-pulse-border border-2">
+          <ArcadeCard variant="glow">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Sparkles className="size-6 text-[var(--accent)]" />
@@ -491,13 +443,7 @@ function CTASection() {
   return (
     <Section className="relative overflow-hidden">
       {/* Background glow */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          background:
-            "radial-gradient(circle at center, var(--primary), transparent 70%)",
-        }}
-      />
+      <div className="absolute inset-0 opacity-30 home-cta-glow" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6">
@@ -538,17 +484,27 @@ function CTASection() {
 export default function Home() {
   return (
     <>
-      {/* Inject animations */}
-      <style dangerouslySetInnerHTML={{ __html: styles }} />
-
       {/* Main content */}
-      <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        <HeroSection />
-        <HowItWorksSection />
-        <ModelTiersSection />
-        <MonthlyChallengeSection />
-        <StatsSection />
-        <CTASection />
+      <main className="home-shell bg-[var(--background)] text-[var(--foreground)]">
+        <div className="home-backdrop">
+          <div className="home-sky" />
+          <div className="home-sun" />
+          <div className="home-grid" />
+          <div className="home-horizon" />
+          <div className="home-decor-1" />
+          <div className="home-decor-2" />
+          <div className="home-decor-3" />
+          <div className="home-scanlines" />
+          <div className="home-vignette" />
+        </div>
+        <div className="home-content">
+          <HeroSection />
+          <HowItWorksSection />
+          <ModelTiersSection />
+          <MonthlyChallengeSection />
+          <StatsSection />
+          <CTASection />
+        </div>
       </main>
     </>
   );

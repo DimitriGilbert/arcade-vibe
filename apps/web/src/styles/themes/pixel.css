@@ -72,6 +72,11 @@
   /* Animation timings */
   --animation-bounce-speed: 0.5s;
   --animation-pulse-speed: 1s;
+
+  /* Fonts */
+  --font-display: var(--font-jetbrains-mono);
+  --font-body: var(--font-jetbrains-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 /* Custom keyframes for Pixel theme */
@@ -214,6 +219,99 @@
   background-color: var(--pixel-white);
   border-radius: 9999px;
   opacity: 0.8;
+}
+
+/* Homepage rendering */
+:is(.pixel, .theme-pixel) .home-sky {
+  background: var(--pixel-blue);
+}
+
+:is(.pixel, .theme-pixel) .home-decor-1 {
+  inset: auto;
+  width: 140px;
+  height: 48px;
+  left: 6%;
+  top: 12%;
+  background: var(--pixel-white);
+  border: 4px solid var(--pixel-black);
+  border-radius: 999px;
+  box-shadow: var(--hard-shadow-sm);
+}
+
+:is(.pixel, .theme-pixel) .home-decor-2 {
+  inset: auto;
+  width: 220px;
+  height: 64px;
+  right: 8%;
+  top: 20%;
+  background: var(--pixel-white);
+  border: 4px solid var(--pixel-black);
+  border-radius: 999px;
+  box-shadow: var(--hard-shadow-sm);
+}
+
+:is(.pixel, .theme-pixel) .home-title {
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+:is(.pixel, .theme-pixel) .home-title-main,
+:is(.pixel, .theme-pixel) .home-title-sub {
+  color: var(--pixel-yellow);
+  text-shadow: var(--text-shadow-hard-lg);
+}
+
+:is(.pixel, .theme-pixel) .home-subtitle {
+  color: var(--pixel-white);
+  text-shadow: var(--text-shadow-hard);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-card"] {
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-lg);
+  background: var(--pixel-white);
+  color: var(--pixel-black);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-card"][data-variant="glow"] {
+  background: var(--pixel-green);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-button"] {
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-sm);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-button"][data-variant="primary"],
+:is(.pixel, .theme-pixel) [data-slot="arcade-button"][data-variant="glow"] {
+  background: var(--pixel-blue-dark);
+  color: var(--pixel-white);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-button"][data-variant="secondary"] {
+  background: var(--pixel-red);
+  color: var(--pixel-white);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-button"][data-variant="outline"] {
+  background: var(--pixel-yellow);
+  color: var(--pixel-black);
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-badge"] {
+  background: var(--pixel-yellow);
+  color: var(--pixel-black);
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow-sm);
+  text-transform: uppercase;
+  border-radius: 0;
+}
+
+:is(.pixel, .theme-pixel) [data-slot="arcade-stat"] {
+  border: 4px solid var(--pixel-black);
+  box-shadow: var(--hard-shadow);
 }
 
 /* Button styles */

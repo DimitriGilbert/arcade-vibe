@@ -11,7 +11,7 @@
 @import "./styles/themes/vaporwave.css";
 
 @theme inline {
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: var(--font-body, "Space Grotesk", sans-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -61,5 +61,119 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Homepage layout scaffolding */
+.home-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.home-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.home-backdrop > * {
+  position: absolute;
+}
+
+
+.home-sky,
+.home-scanlines,
+.home-vignette {
+  inset: 0;
+}
+
+.home-content {
+  position: relative;
+  z-index: 1;
+}
+
+.home-hero {
+  position: relative;
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-title {
+  font-family: var(--font-display, var(--font-sans));
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+}
+
+.home-title-main,
+.home-title-sub {
+  display: block;
+}
+
+.home-subtitle {
+  font-family: var(--font-body, var(--font-sans));
+}
+
+.home-scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.home-scroll-indicator .home-scroll-shell {
+  width: 1.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.4rem;
+}
+
+.home-scroll-indicator .home-scroll-dot {
+  width: 0.35rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.home-cta-glow {
+  background: radial-gradient(circle at center, var(--primary), transparent 70%);
+}
+
+@keyframes home-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.home-float {
+  animation: home-float 4s ease-in-out infinite;
+}
+
+@keyframes home-grid-up {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 -120px;
+  }
+}
+
+@keyframes home-grid-down {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 120px;
   }
 }
