@@ -24,3 +24,4 @@ export {
   arcadeDialogVariants,
 } from "./arcade-dialog";
 export { ArcadeTextarea } from "./arcade-textarea";
+export { ArcadeNavigation, NAV_ITEMS } from "./arcade-navigation";

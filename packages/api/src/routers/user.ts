@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "@arcade-vibe/api";
+import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { z } from "zod";
@@ -9,9 +9,36 @@ import { TRPCError } from "@trpc/server";
  * User Router
  *
  * Provides user-specific operations:
+ * - getByName: Get user by name (public, no email exposed)
  * - updateProfile: Update user's name
  */
 export const userRouter = router({
+  getByName: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+      }),
+    )
+    .query(async ({ input }) => {
+      const result = await db.query.user.findFirst({
+        where: eq(user.name, input.name),
+        columns: {
+          id: true,
+          name: true,
+          image: true,
+          createdAt: true,
+        },
+      });
+
+      if (!result) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      return result;
+    }),
   updateProfile: protectedProcedure
     .input(
       z.object({
@@ -37,7 +64,7 @@ export const userRouter = router({
         .returning({
           id: user.id,
           name: user.name,
-          email: user.email,
+          image: user.image,
         });
 
       if (!result[0]) {

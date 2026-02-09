@@ -10,7 +10,7 @@ import { GamesListCard } from "./components/games-list-card";
 import { RatingsHistoryCard } from "./components/ratings-history-card";
 import { PromptRunsCard } from "./components/prompt-runs-card";
 import { useProfileData } from "@/hooks/use-profile-data";
-import { type User } from "@/types/entities";
+import { type UserProfile } from "@/types/entities";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 
@@ -90,7 +90,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 User Not Found
               </h3>
               <p className="text-[var(--muted-foreground)] mb-4">
-                The profile {userEmail} could not be found.
+                The profile could not be found.
               </p>
               <p className="text-sm text-[var(--muted-foreground)]">
                 Please check the username and try again, or contact support if
@@ -108,7 +108,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       <div className="container mx-auto py-8 px-4">
         <ProfileHeader
           user={user}
-          userEmail={userEmail}
           credits={stats ? { balance: stats.credits } : null}
           isOwnProfile={computedIsOwnProfile}
         />

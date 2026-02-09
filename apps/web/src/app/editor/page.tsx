@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
@@ -32,10 +32,10 @@ import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
 import Editor from "@monaco-editor/react";
 
 interface EditorPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     promptId?: string;
     forkId?: string;
-  };
+  }>;
 }
 
 // Mock models data for development
@@ -83,6 +83,7 @@ const MOCK_MODELS: ModelConfig[] = [
 ];
 
 export default function EditorPage({ searchParams }: EditorPageProps) {
+  const resolvedSearchParams = use(searchParams || Promise.resolve({ promptId: undefined, forkId: undefined }));
   const [promptContent, setPromptContent] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
@@ -114,13 +115,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Fetch existing prompt if editing or forking
   const { data: existingPrompt, isLoading: promptLoading } = useQuery({
-    queryKey: ["prompt", searchParams?.promptId || searchParams?.forkId],
+    queryKey: ["prompt", resolvedSearchParams?.promptId || resolvedSearchParams?.forkId],
     queryFn: async () => {
-      const id = searchParams?.promptId || searchParams?.forkId;
+      const id = resolvedSearchParams?.promptId || resolvedSearchParams?.forkId;
       if (!id) return null;
       return await trpcClient.prompts.getById.query({ id });
     },
-    enabled: !!(searchParams?.promptId || searchParams?.forkId),
+    enabled: !!(resolvedSearchParams?.promptId || resolvedSearchParams?.forkId),
   });
 
   // Fetch user credits
@@ -373,9 +374,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   };
 
   const handleFork = useCallback(() => {
-    if (!searchParams?.forkId) return;
-    forkPromptMutation.mutate({ forkId: searchParams.forkId });
-  }, [searchParams?.forkId, forkPromptMutation]);
+    if (!resolvedSearchParams?.forkId) return;
+    forkPromptMutation.mutate({ forkId: resolvedSearchParams.forkId });
+  }, [resolvedSearchParams?.forkId, forkPromptMutation]);
 
   if (promptLoading) {
     return (
@@ -386,7 +387,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   }
 
   const isEditing = !!existingPrompt;
-  const isForking = !!searchParams?.forkId;
+  const isForking = !!resolvedSearchParams?.forkId;
 
   return (
     <div className="min-h-screen bg-[var(--background)]">

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import type { User, UserExtended, Game, GameWithRanking, Prompt, Rating } from "@/types";
+import type { User, UserExtended, Game, GameWithRanking, Prompt, Rating, UserProfile } from "@/types";
 
 interface Stats {
   gamesCreated: number;
@@ -21,30 +21,18 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
   }, [username]);
 
   const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ["user", userEmail],
-    queryFn: async (): Promise<User | null> => {
-      if (!userEmail) return null;
+    queryKey: ["user", username],
+    queryFn: async (): Promise<UserProfile | null> => {
+      if (!username) return null;
 
       try {
-        const response = await fetch(
-          "/api/auth/user?email=" + encodeURIComponent(userEmail),
-          {
-            credentials: "include",
-          },
-        );
-
-        if (!response.ok) {
-          return null;
-        }
-
-        const data = await response.json();
-        return data as User | null;
+        return await trpcClient.user.getByName.query({ name: username });
       } catch (error) {
         console.error("Error fetching user:", error);
         return null;
       }
     },
-    enabled: !!userEmail,
+    enabled: !!username,
   });
 
   const { data: credits } = useQuery({

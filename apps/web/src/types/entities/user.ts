@@ -10,7 +10,12 @@ export type UserExtended = RouterOutput["credits"]["getUserExtended"];
 
 export type UserWithExtended = User & Partial<UserExtended>;
 
-export type UserProfile = Pick<User, "id" | "name" | "email" | "image" | "createdAt">;
+export type UserProfile = {
+  id: string;
+  name: string;
+  image: string | null;
+  createdAt: string;
+};
 
 export type UserAdminView = UserExtended & {
   name: string;
