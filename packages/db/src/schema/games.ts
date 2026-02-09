@@ -27,6 +27,7 @@ export const games = pgTable(
     modelProvider: text("model_provider").notNull(),
     modelName: text("model_name").notNull(),
     modelTier: modelTierEnum("model_tier").notNull(),
+    tokenUsage: integer("token_usage"),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
     generatedAt: timestamp("generated_at"),

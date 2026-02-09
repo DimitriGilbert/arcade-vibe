@@ -11,4 +11,5 @@ export * from "./ratings";
 export * from "./scores";
 export * from "./platform";
 export * from "./moderation";
+export * from "./security";
 export * from "./relations";

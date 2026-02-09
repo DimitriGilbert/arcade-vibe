@@ -34,7 +34,7 @@ const getCreditCostByTier = (tier: string): number => {
 
 const getDecryptedUserKey = async (
   apiKeyId: string,
-  userId: string
+  userId: string,
 ): Promise<string> => {
   const keyRecord = await db.query.apiKeys.findFirst({
     where: and(eq(apiKeys.id, apiKeyId), eq(apiKeys.userId, userId)),
@@ -97,7 +97,7 @@ export const generateRouter = router({
         promptId: z.string().uuid(),
         modelKey: z.string().min(1),
         apiKeyId: z.string().uuid().optional(),
-      })
+      }),
     )
     .mutation(async function* ({ input, ctx }) {
       if (!ctx.user) {
@@ -148,7 +148,7 @@ export const generateRouter = router({
           ctx.user.id,
           creditCost,
           "Game generation",
-          input.modelKey
+          input.modelKey,
         );
       }
 
@@ -236,12 +236,16 @@ export const generateRouter = router({
         });
       }
 
-      // Update game status to completed
+      // Get token usage from the result per PRD lines 756-759
+      const totalTokens = (await result.usage).totalTokens;
+
+      // Update game status to completed with token usage
       await db
         .update(games)
         .set({
           gameData: fullCode,
           imageUrl: assetUrl,
+          tokenUsage: totalTokens,
           generatedAt: new Date(),
           status: "completed",
         })
@@ -252,6 +256,7 @@ export const generateRouter = router({
         type: "complete",
         gameId,
         assetUrl,
+        tokenUsage: totalTokens,
         isComplete: true,
       };
     }),

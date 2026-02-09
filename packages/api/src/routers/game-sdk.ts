@@ -1,6 +1,7 @@
 import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
 import { gameScores } from "@arcade-vibe/db/schema/games";
+import { suspiciousActivityLogs } from "@arcade-vibe/db/schema/security";
 import { redis } from "../lib/redis";
 import { verifyGameSessionToken } from "../lib/game-session";
 import { TRPCError } from "@trpc/server";
@@ -9,7 +10,9 @@ import z from "zod";
 /**
  * Extract Bearer token from Authorization header
  */
-function extractBearerToken(authHeader: string | null | undefined): string | null {
+function extractBearerToken(
+  authHeader: string | null | undefined,
+): string | null {
   if (!authHeader) {
     return null;
   }
@@ -69,10 +72,20 @@ export const gameSdkRouter = router({
 
       // Check if reported playtime exceeds what's physically possible
       if (input.playtime > maxAllowedPlaytime) {
-        console.warn(
-          `Suspicious activity detected: session ${session.sessionId} reported playtime ${input.playtime}s but wall-clock elapsed is ${wallClockElapsed.toFixed(2)}s`,
-        );
-        // Continue processing but this could be flagged for review
+        // Log suspicious activity to database per PRD lines 396-402
+        await db.insert(suspiciousActivityLogs).values({
+          userId: session.userId,
+          gameId: input.gameId,
+          activityType: "playtime_mismatch",
+          details: {
+            reported: input.playtime,
+            maxAllowed: maxAllowedPlaytime,
+            wallClockElapsed,
+          },
+          ipAddress: ctx.req.headers.get("x-forwarded-for"),
+          userAgent: ctx.req.headers.get("user-agent"),
+        });
+        // Continue processing but this is flagged for review
       }
 
       // Store updated session data in Redis

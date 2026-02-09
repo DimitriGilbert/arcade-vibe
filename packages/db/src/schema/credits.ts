@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   text,
+  varchar,
   integer,
   boolean,
   timestamp,
@@ -32,11 +33,18 @@ export const subscriptionPlans = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
+    displayName: varchar("display_name", { length: 100 }).notNull(),
     price: integer("price").notNull(),
     credits: integer("credits").notNull(),
     features: text("features").array(),
     stripePriceId: text("stripe_price_id").unique(),
     isActive: boolean("is_active").notNull().default(true),
+    extraCreditMarkupPercent: integer("extra_credit_markup_percent")
+      .default(30)
+      .notNull(),
+    minExtraCreditsPurchase: integer("min_extra_credits_purchase")
+      .default(25)
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -59,6 +67,7 @@ export const userSubscriptions = pgTable(
       .references(() => subscriptionPlans.id, { onDelete: "restrict" }),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
     status: text("status").notNull(),
+    currentPeriodStart: timestamp("current_period_start").notNull(),
     currentPeriodEnd: timestamp("current_period_end").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

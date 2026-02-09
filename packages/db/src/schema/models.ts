@@ -8,7 +8,7 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { providerEnum } from "./enums";
+import { providerEnum, modelTierEnum } from "./enums";
 import { user } from "./auth";
 
 // per PRD lines 1192-1202
@@ -39,7 +39,7 @@ export const modelConfig = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     provider: providerEnum("provider").notNull(),
     modelName: text("model_name").notNull(),
-    tier: text("tier").notNull(),
+    tier: modelTierEnum("tier").notNull(),
     costPer1kTokens: text("cost_per_1k_tokens").notNull(),
     maxTokens: integer("max_tokens").notNull(),
     supportsImages: boolean("supports_images").notNull().default(false),
