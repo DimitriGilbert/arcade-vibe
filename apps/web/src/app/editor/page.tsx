@@ -38,55 +38,13 @@ interface EditorPageProps {
   }>;
 }
 
-// Mock models data for development
-const MOCK_MODELS: ModelConfig[] = [
-  {
-    id: "1",
-    provider: "openai",
-    modelName: "gpt-4o",
-    tier: "cheater",
-    maxTokens: 128000,
-    supportsImages: true,
-  },
-  {
-    id: "2",
-    provider: "openai",
-    modelName: "gpt-4o-mini",
-    tier: "easy",
-    maxTokens: 128000,
-    supportsImages: true,
-  },
-  {
-    id: "3",
-    provider: "anthropic",
-    modelName: "claude-3.5-sonnet",
-    tier: "normal",
-    maxTokens: 200000,
-    supportsImages: false,
-  },
-  {
-    id: "4",
-    provider: "openrouter",
-    modelName: "deepseek-chat",
-    tier: "hard",
-    maxTokens: 128000,
-    supportsImages: false,
-  },
-  {
-    id: "5",
-    provider: "glm",
-    modelName: "glm-4-flash",
-    tier: "impossible",
-    maxTokens: 128000,
-    supportsImages: false,
-  },
-];
-
 export default function EditorPage({ searchParams }: EditorPageProps) {
-  const resolvedSearchParams = use(searchParams || Promise.resolve({ promptId: undefined, forkId: undefined }));
+  const resolvedSearchParams = use(
+    searchParams || Promise.resolve({ promptId: undefined, forkId: undefined }),
+  );
   const [promptContent, setPromptContent] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
+  const [selectedModel, setSelectedModel] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [showComparison, setShowComparison] = useState(false);
@@ -99,23 +57,21 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     queryFn: () => trpcClient.themes.list.query(),
   });
 
-  // Fetch models (using mock data for now)
-  const { data: models } = useQuery({
+  // Fetch models
+  const { data: models, isLoading: modelsLoading } = useQuery({
     queryKey: ["models"],
     queryFn: async (): Promise<ModelConfig[]> => {
-      try {
-        const result = await trpcClient.models.listActive.query();
-        return result.map(toModelConfig);
-      } catch (error) {
-        console.warn("Models endpoint not available, using mock data");
-        return MOCK_MODELS;
-      }
+      const result = await trpcClient.models.listActive.query();
+      return result.map(toModelConfig);
     },
   });
 
   // Fetch existing prompt if editing or forking
   const { data: existingPrompt, isLoading: promptLoading } = useQuery({
-    queryKey: ["prompt", resolvedSearchParams?.promptId || resolvedSearchParams?.forkId],
+    queryKey: [
+      "prompt",
+      resolvedSearchParams?.promptId || resolvedSearchParams?.forkId,
+    ],
     queryFn: async () => {
       const id = resolvedSearchParams?.promptId || resolvedSearchParams?.forkId;
       if (!id) return null;
@@ -380,7 +336,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   if (promptLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
       </div>
     );
@@ -390,7 +346,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const isForking = !!resolvedSearchParams?.forkId;
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-6">
@@ -550,15 +506,21 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             {/* Model Selection */}
             <ArcadeCard>
               <div className="p-6">
-                <ModelSelector
-                  models={models || MOCK_MODELS}
-                  selectedModel={selectedModel}
-                  onSelectModel={(modelName) => {
-                    if (modelName) {
-                      setSelectedModel(modelName);
-                    }
-                  }}
-                />
+                {modelsLoading ? (
+                  <div className="flex items-center justify-center h-20">
+                    <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+                  </div>
+                ) : (
+                  <ModelSelector
+                    models={models || []}
+                    selectedModel={selectedModel}
+                    onSelectModel={(modelName) => {
+                      if (modelName) {
+                        setSelectedModel(modelName);
+                      }
+                    }}
+                  />
+                )}
               </div>
             </ArcadeCard>
 

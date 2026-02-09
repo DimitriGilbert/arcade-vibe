@@ -31,7 +31,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--muted)] border-t-[var(--primary)] mx-auto" />
           <p className="text-muted-foreground">Loading settings...</p>
@@ -50,9 +50,9 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-background">
       {/* Header with Tab Navigation */}
-      <div className="border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-sm sticky top-0 z-40">
+      <div className="border-b border-[var(--border)] bg-background/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Title */}

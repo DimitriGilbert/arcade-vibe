@@ -134,7 +134,7 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   if (gameLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingState size="lg" message="Loading game..." centered />
       </div>
     );
@@ -142,7 +142,7 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
 
   if (!game) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <EmptyState
           title="Game not found"
           message="The game you're looking for doesn't exist."
@@ -154,7 +154,7 @@ export default function GamePlayPage({ params }: GamePlayPageProps) {
   const canRate = playtime >= 60 && !myRating && isGameLoaded;
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
         <GameHeader
           promptContent={game.prompt?.content || ""}

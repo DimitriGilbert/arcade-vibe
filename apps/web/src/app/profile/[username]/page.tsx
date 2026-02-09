@@ -71,7 +71,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (userLoading || (!user && !userLoading)) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
           <LoadingPlaceholder />
         </div>
@@ -81,7 +81,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
           <ArcadeCard className="">
             <div className="p-20 text-center">
@@ -104,7 +104,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         <ProfileHeader
           user={user}

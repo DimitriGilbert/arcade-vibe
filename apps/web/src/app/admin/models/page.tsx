@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Power, Search, ArrowUpDown, Zap, Settings } from "lucide-react";
+import { Plus, Power, Search, ArrowUpDown, Zap, Settings, RefreshCw } from "lucide-react";
 import {
   ArcadeCard,
   ArcadeButton,
@@ -103,6 +103,20 @@ export default function AdminModelsPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to add model");
+    },
+  });
+
+  // Seed models from OpenRouter mutation
+  const seedModelsMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.admin.models.seedModels.mutate();
+    },
+    onSuccess: (data) => {
+      toast.success(`Successfully seeded ${data.insertedCount} models from OpenRouter!`);
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to seed models");
     },
   });
 
@@ -334,10 +348,22 @@ export default function AdminModelsPage() {
             Manage AI model configurations and pricing
           </p>
         </div>
-        <ArcadeButton variant="primary" onClick={() => setAddingModel(true)}>
-          <Plus className="h-4 w-4" />
-          Add Model
-        </ArcadeButton>
+        <div className="flex items-center gap-2">
+          <ArcadeButton
+            variant="outline"
+            onClick={() => seedModelsMutation.mutate()}
+            disabled={seedModelsMutation.isPending}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${seedModelsMutation.isPending ? "animate-spin" : ""}`}
+            />
+            {seedModelsMutation.isPending ? "Seeding..." : "Seed from OpenRouter"}
+          </ArcadeButton>
+          <ArcadeButton variant="primary" onClick={() => setAddingModel(true)}>
+            <Plus className="h-4 w-4" />
+            Add Model
+          </ArcadeButton>
+        </div>
       </div>
 
       {/* Search and Filters */}
