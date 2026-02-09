@@ -28,7 +28,7 @@ export const apiKeysRouter = router({
         ]),
         apiKey: z.string().min(1),
         name: z.string().min(1).default("Default Key"),
-        customEndpoint: z.string().url().optional(),
+        customEndpoint: z.string().url().optional().or(z.literal("")),
       }),
     )
     .mutation(async ({ ctx, input }) => {

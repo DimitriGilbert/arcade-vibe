@@ -19,7 +19,8 @@
     "db:start": "turbo -F @arcade-vibe/db db:start",
     "db:watch": "turbo -F @arcade-vibe/db db:watch",
     "db:stop": "turbo -F @arcade-vibe/db db:stop",
-    "db:down": "turbo -F @arcade-vibe/db db:down"
+    "db:down": "turbo -F @arcade-vibe/db db:down",
+    "promote-admin": "turbo -F @arcade-vibe/db promote-admin"
   },
   "dependencies": {
     "@arcade-vibe/env": "workspace:*",

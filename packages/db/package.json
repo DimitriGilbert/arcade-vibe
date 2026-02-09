@@ -18,6 +18,7 @@
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
     "db:down": "docker compose down",
+    "promote-admin": "tsx scripts/promote-to-admin.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "@arcade-vibe/config": "workspace:*",
     "@types/pg": "catalog:",
     "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   }
 }
