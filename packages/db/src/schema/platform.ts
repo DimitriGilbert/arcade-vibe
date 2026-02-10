@@ -39,7 +39,7 @@ export const adminActions = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     actionType: text("action_type").notNull(),
     targetType: text("target_type").notNull(),
-    targetId: uuid("target_id"),
+    targetId: text("target_id"),
     reason: text("reason"),
     metadata: text("metadata"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

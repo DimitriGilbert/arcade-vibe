@@ -16,6 +16,8 @@ import {
   Archive,
   History,
   LogOut,
+  Layers,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -30,6 +32,8 @@ const navigationItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
   { name: "Plans", href: "/admin/plans", icon: FileText },
   { name: "Models", href: "/admin/models", icon: Settings },
+  { name: "Tier Costs", href: "/admin/tier-costs", icon: DollarSign },
+  { name: "Library Patterns", href: "/admin/library-patterns", icon: Layers },
   { name: "Moderation", href: "/admin/moderation", icon: Shield },
   { name: "Themes", href: "/admin/themes", icon: Archive },
   { name: "Users", href: "/admin/users", icon: Users },

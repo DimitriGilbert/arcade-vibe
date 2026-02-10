@@ -40,7 +40,9 @@ export default function AdminLibraryPatternsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [editingPattern, setEditingPattern] = useState<LibraryPattern | null>(null);
+  const [editingPattern, setEditingPattern] = useState<LibraryPattern | null>(
+    null,
+  );
   const [addingPattern, setAddingPattern] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -66,7 +68,14 @@ export default function AdminLibraryPatternsPage() {
       name: string;
       description: string;
       urlPattern: string;
-      category: "game_engine" | "physics" | "audio" | "graphics" | "utility" | "analytics" | "other";
+      category:
+        | "game_engine"
+        | "physics"
+        | "audio"
+        | "graphics"
+        | "utility"
+        | "analytics"
+        | "other";
       isGlobal: boolean;
     }) => {
       return await trpcClient.admin.libraryPatterns.create.mutate(input);
@@ -87,7 +96,14 @@ export default function AdminLibraryPatternsPage() {
       name?: string;
       description?: string;
       urlPattern?: string;
-      category?: "game_engine" | "physics" | "audio" | "graphics" | "utility" | "analytics" | "other";
+      category?:
+        | "game_engine"
+        | "physics"
+        | "audio"
+        | "graphics"
+        | "utility"
+        | "analytics"
+        | "other";
       isGlobal?: boolean;
       status?: "active" | "disabled";
     }) => {
@@ -166,7 +182,15 @@ export default function AdminLibraryPatternsPage() {
       name: z.string().min(1),
       description: z.string().min(1),
       urlPattern: z.string().min(1),
-      category: z.enum(["game_engine", "physics", "audio", "graphics", "utility", "analytics", "other"]),
+      category: z.enum([
+        "game_engine",
+        "physics",
+        "audio",
+        "graphics",
+        "utility",
+        "analytics",
+        "other",
+      ]),
       isGlobal: z.boolean(),
       status: z.enum(["active", "disabled"]),
     });
@@ -283,7 +307,12 @@ export default function AdminLibraryPatternsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <LoadingState size="lg" message="Loading library patterns..." variant="accent" centered />
+        <LoadingState
+          size="lg"
+          message="Loading library patterns..."
+          variant="accent"
+          centered
+        />
       </div>
     );
   }
@@ -292,7 +321,9 @@ export default function AdminLibraryPatternsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Library Patterns</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Library Patterns
+          </h1>
           <p className="text-muted-foreground">
             Manage allowed library patterns for game generation
           </p>
@@ -351,11 +382,11 @@ export default function AdminLibraryPatternsPage() {
             </thead>
             <tbody>
               {filteredPatterns.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <EmptyState variant="table" colSpan={7} message="No library patterns found" />
-                  </td>
-                </tr>
+                <EmptyState
+                  variant="table"
+                  colSpan={7}
+                  message="No library patterns found"
+                />
               ) : (
                 filteredPatterns.map((pattern) => (
                   <tr key={pattern.id} className="border-b">
@@ -375,9 +406,15 @@ export default function AdminLibraryPatternsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {pattern.status === "active" ? (
-                        <ArcadeBadge text="Active" icon={<CheckCircle2 className="h-3 w-3" />} />
+                        <ArcadeBadge
+                          text="Active"
+                          icon={<CheckCircle2 className="h-3 w-3" />}
+                        />
                       ) : (
-                        <ArcadeBadge text="Disabled" icon={<XCircle className="h-3 w-3" />} />
+                        <ArcadeBadge
+                          text="Disabled"
+                          icon={<XCircle className="h-3 w-3" />}
+                        />
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -387,16 +424,26 @@ export default function AdminLibraryPatternsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {pattern.isGlobal ? (
-                        <ArcadeBadge text="Global" icon={<Globe className="h-3 w-3" />} />
+                        <ArcadeBadge
+                          text="Global"
+                          icon={<Globe className="h-3 w-3" />}
+                        />
                       ) : (
-                        <ArcadeBadge text="Theme-specific" icon={<Lock className="h-3 w-3" />} />
+                        <ArcadeBadge
+                          text="Theme-specific"
+                          icon={<Lock className="h-3 w-3" />}
+                        />
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {pattern.isGlobal ? (
-                        <span className="text-xs text-muted-foreground">All themes</span>
+                        <span className="text-xs text-muted-foreground">
+                          All themes
+                        </span>
                       ) : (
-                        <span className="text-xs">{(pattern as any).themePatterns?.length ?? 0} themes</span>
+                        <span className="text-xs">
+                          {(pattern as any).themePatterns?.length ?? 0} themes
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -411,7 +458,9 @@ export default function AdminLibraryPatternsPage() {
                         <ArcadeButton
                           variant="outline"
                           size="sm"
-                          onClick={() => setDeleteDialog({ open: true, pattern })}
+                          onClick={() =>
+                            setDeleteDialog({ open: true, pattern })
+                          }
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </ArcadeButton>
@@ -425,7 +474,10 @@ export default function AdminLibraryPatternsPage() {
         </div>
       </ArcadeCard>
 
-      <Dialog open={!!editingPattern} onOpenChange={(open) => !open && setEditingPattern(null)}>
+      <Dialog
+        open={!!editingPattern}
+        onOpenChange={(open) => !open && setEditingPattern(null)}
+      >
         <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Library Pattern</DialogTitle>
@@ -451,14 +503,16 @@ export default function AdminLibraryPatternsPage() {
 
       <Dialog
         open={deleteDialog.open}
-        onOpenChange={(open) => !open && setDeleteDialog({ open: false, pattern: null })}
+        onOpenChange={(open) =>
+          !open && setDeleteDialog({ open: false, pattern: null })
+        }
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Library Pattern</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteDialog.pattern?.name}"? This
-              action cannot be undone.
+              Are you sure you want to delete "{deleteDialog.pattern?.name}"?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -470,7 +524,10 @@ export default function AdminLibraryPatternsPage() {
             </ArcadeButton>
             <ArcadeButton
               variant="primary"
-              onClick={() => deleteDialog.pattern && deleteMutation.mutate(deleteDialog.pattern.id)}
+              onClick={() =>
+                deleteDialog.pattern &&
+                deleteMutation.mutate(deleteDialog.pattern.id)
+              }
             >
               Delete
             </ArcadeButton>
@@ -486,7 +543,14 @@ type LibraryPattern = {
   name: string;
   description: string;
   urlPattern: string;
-  category: "game_engine" | "physics" | "audio" | "graphics" | "utility" | "analytics" | "other";
+  category:
+    | "game_engine"
+    | "physics"
+    | "audio"
+    | "graphics"
+    | "utility"
+    | "analytics"
+    | "other";
   isGlobal: boolean;
   status: "active" | "disabled";
   createdAt: string;

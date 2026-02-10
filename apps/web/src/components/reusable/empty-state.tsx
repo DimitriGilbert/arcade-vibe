@@ -24,7 +24,11 @@ export function EmptyState({
   );
 
   if (variant === "table") {
-    return <td colSpan={colSpan}>{content}</td>;
+    return (
+      <tr>
+        <td colSpan={colSpan}>{content}</td>
+      </tr>
+    );
   }
 
   return <div className="flex items-center justify-center">{content}</div>;
