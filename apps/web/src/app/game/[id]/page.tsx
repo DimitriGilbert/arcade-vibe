@@ -23,7 +23,7 @@ import { ViewPromptDialog } from "./components/view-prompt-dialog";
 import { ReportDialog } from "./components/report-dialog";
 import LoadingState from "@/components/reusable/loading-state";
 import { EmptyState } from "@/components/reusable";
-import type { Rating } from "@/types";
+import type { Rating } from "@/lib/trpc-types";
 
 interface GamePlayPageProps {
   params: {

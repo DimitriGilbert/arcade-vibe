@@ -619,13 +619,11 @@ export default function AdminModelsPage() {
               </thead>
               <tbody>
                 {filteredModels.length === 0 ? (
-                  <tr>
-                    <EmptyState
-                      variant="table"
-                      colSpan={9}
-                      message="No models found"
-                    />
-                  </tr>
+                  <EmptyState
+                    variant="table"
+                    colSpan={9}
+                    message="No models found"
+                  />
                 ) : (
                   filteredModels.map((model) => (
                     <tr

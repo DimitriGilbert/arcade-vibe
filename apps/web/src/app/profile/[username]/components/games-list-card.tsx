@@ -1,6 +1,6 @@
 import { ArcadeBadge } from "@/components/arcade";
 import { Gamepad2 } from "lucide-react";
-import type { GameWithRanking } from "@/types/entities";
+import type { GameWithRanking } from "@/lib/trpc-types";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 

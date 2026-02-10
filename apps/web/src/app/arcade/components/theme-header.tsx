@@ -6,7 +6,7 @@ import {
   ArcadeTabsTrigger,
 } from "@/components/arcade";
 import { Calendar, Archive, Sparkles } from "lucide-react";
-import type { ThemeList } from "@/types/entities";
+import type { ThemeList } from "@/lib/trpc-types";
 
 interface ThemeHeaderProps {
   currentTheme: ThemeList | null;

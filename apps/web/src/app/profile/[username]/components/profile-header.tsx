@@ -1,5 +1,5 @@
 import { ArcadeBadge } from "@/components/arcade";
-import type { UserProfile } from "@/types/entities";
+import type { UserProfile } from "@/lib/trpc-types";
 
 interface ProfileHeaderProps {
   user: UserProfile;

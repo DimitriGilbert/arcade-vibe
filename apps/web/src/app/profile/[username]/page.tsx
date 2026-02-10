@@ -10,7 +10,7 @@ import { GamesListCard } from "./components/games-list-card";
 import { RatingsHistoryCard } from "./components/ratings-history-card";
 import { PromptRunsCard } from "./components/prompt-runs-card";
 import { useProfileData } from "@/hooks/use-profile-data";
-import { type UserProfile } from "@/types/entities";
+import type { UserProfile } from "@/lib/trpc-types";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 

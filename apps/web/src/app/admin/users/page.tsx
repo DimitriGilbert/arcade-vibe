@@ -30,7 +30,7 @@ import UserAvatar from "@/components/reusable/user-avatar";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
-import type { UserAdminView as User } from "@/types/entities";
+import type { UserAdminView as User } from "@/lib/trpc-types";
 
 type SortField = "name" | "email" | "role" | "credits";
 type SortOrder = "asc" | "desc";

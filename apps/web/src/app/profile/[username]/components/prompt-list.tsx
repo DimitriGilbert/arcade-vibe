@@ -1,7 +1,7 @@
 import { GitBranch, Calendar } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import { LoadingState, EmptyState } from "@/components/reusable";
-import type { Prompt } from "@/types/entities";
+import type { Prompt } from "@/lib/trpc-types";
 
 interface PromptListProps {
   prompts: Prompt[];

@@ -3,7 +3,7 @@ import { InfoCard } from "@/components/reusable";
 import LoadingState from "@/components/reusable/loading-state";
 import StarRatingDisplay from "@/components/reusable/star-rating-display";
 import { Clock, Trophy } from "lucide-react";
-import type { Rating } from "@/types";
+import type { Rating } from "@/lib/trpc-types";
 
 interface RatingStatusCardProps {
   myRating: Rating | null;

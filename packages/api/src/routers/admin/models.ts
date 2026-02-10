@@ -50,41 +50,117 @@ function getProviderFromId(modelId: string): string {
   return "openrouter";
 }
 
-// Map model characteristics to tier slugs
-function calculateTierSlug(model: OpenRouterModel): string {
-  const contextLength = model.context_length;
-  const supportsImages = model.architecture.input_modalities.includes("image");
-  const promptPrice = parseFloat(model.pricing.prompt || "0");
-  const completionPrice = parseFloat(model.pricing.completion || "0");
-  const totalPrice = promptPrice + completionPrice;
-  const pricePer1kTokens = totalPrice * 1000;
+interface TierCost {
+  id: string;
+  slug: string;
+  scoreMultiplier: number;
+  isActive: boolean;
+}
 
-  // Cheater: Very large context with images (easiest)
-  if (contextLength >= 400000 && supportsImages) {
-    return "cheater";
+// Price cap for "cheater" tier: $18.1 per 1M tokens = $0.0181 per 1k tokens
+// Anything above this is an outlier and goes directly to "cheater"
+const CHEATER_PRICE_CAP_PER_1K = 0.0181;
+
+/**
+ * Calculate tier assignments for all models using percentile-based distribution.
+ * This ensures models are evenly spread across tiers rather than compressed by logarithmic scale.
+ *
+ * Rules:
+ * - Models > $18.1/1M tokens → "cheater" (outliers like o1-pro at $750/1M)
+ * - Remaining models distributed by price percentiles across other tiers
+ * - Most expensive (within cap) → low multiplier tier (easy)
+ * - Cheapest → high multiplier tier (hard)
+ * - Free models (price = 0) → "hard" tier
+ */
+function calculateTierAssignments(
+  models: OpenRouterModel[],
+  tiers: TierCost[],
+): Map<string, string> {
+  const result = new Map<string, string>();
+
+  // Get active tiers sorted by scoreMultiplier ASCENDING
+  // Low multiplier (0.8 = cheater) first, high multiplier (2.5 = impossible) last
+  const activeTiers = tiers
+    .filter((t) => t.isActive)
+    .sort((a, b) => a.scoreMultiplier - b.scoreMultiplier);
+
+  const numTiers = activeTiers.length;
+
+  if (numTiers === 0) {
+    models.forEach((m) => result.set(m.id, "normal"));
+    return result;
   }
-  // Very Easy: Large context with images
-  if (contextLength >= 300000 && supportsImages) {
-    return "very_easy";
+
+  // Get the "cheater" tier (lowest multiplier = easiest)
+  const cheaterTierSlug = activeTiers[0]?.slug ?? "cheater";
+  const hardTierSlug = activeTiers.find((t) => t.slug === "hard")?.slug;
+
+  // Calculate price per 1k tokens for each model
+  const modelPrices = models.map((m) => {
+    const promptPrice = parseFloat(m.pricing.prompt || "0");
+    const completionPrice = parseFloat(m.pricing.completion || "0");
+    return (promptPrice + completionPrice) * 1000;
+  });
+
+  // Separate models into categories
+  const modelsWithPrices: Array<{
+    model: OpenRouterModel;
+    price: number;
+    index: number;
+  }> = [];
+  const freeModels: OpenRouterModel[] = [];
+  const outlierModels: OpenRouterModel[] = [];
+
+  models.forEach((model, index) => {
+    const price = modelPrices[index];
+    if (price === undefined || price === 0) {
+      freeModels.push(model);
+    } else if (price > CHEATER_PRICE_CAP_PER_1K) {
+      outlierModels.push(model);
+    } else {
+      modelsWithPrices.push({ model, price, index });
+    }
+  });
+
+  // Handle free models → "hard" tier
+  freeModels.forEach((m) => {
+    result.set(
+      m.id,
+      hardTierSlug ?? activeTiers[Math.floor(numTiers / 2)]?.slug ?? "normal",
+    );
+  });
+
+  // Handle outliers → "cheater" tier
+  outlierModels.forEach((m) => {
+    result.set(m.id, cheaterTierSlug);
+  });
+
+  // If no models with prices within cap, we're done
+  if (modelsWithPrices.length === 0) {
+    return result;
   }
-  // Easy: Good context with images
-  if (contextLength >= 200000 && supportsImages) {
-    return "easy";
-  }
-  // Normal: Standard large context or higher cost
-  if (contextLength >= 128000 || pricePer1kTokens > 0.001) {
-    return "normal";
-  }
-  // Hard: Medium context or moderate cost
-  if (contextLength >= 64000 || pricePer1kTokens > 0.0001) {
-    return "hard";
-  }
-  // Very Hard: Smaller context or low cost
-  if (contextLength >= 32000 || pricePer1kTokens > 0.00001) {
-    return "very_hard";
-  }
-  // Impossible: Smallest context or very low cost (hardest)
-  return "impossible";
+
+  // Sort models by price DESCENDING (most expensive first)
+  modelsWithPrices.sort((a, b) => b.price - a.price);
+
+  // Distribute models evenly across tiers using percentile ranks
+  // Each tier gets approximately the same number of models
+  const modelsPerTier = modelsWithPrices.length / numTiers;
+
+  modelsWithPrices.forEach((item, sortedIndex) => {
+    // Calculate which tier this model should go to based on its rank
+    // sortedIndex 0 (most expensive) → tier 0 (low multiplier = easy)
+    // sortedIndex N (cheapest) → tier last (high multiplier = hard)
+    const tierIndex = Math.min(
+      numTiers - 1,
+      Math.floor(sortedIndex / modelsPerTier),
+    );
+
+    const tierSlug = activeTiers[tierIndex]?.slug ?? "normal";
+    result.set(item.model.id, tierSlug);
+  });
+
+  return result;
 }
 
 async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
@@ -103,14 +179,17 @@ async function seedModelsFromOpenRouter() {
 
   const recentModels = models.filter((model) => model.created >= sixMonthsAgo);
 
-  // Fetch all tier costs to map slugs to IDs
+  // Fetch all tier costs
   const allTierCosts = await db.query.tierCosts.findMany();
   const tierCostMap = new Map(allTierCosts.map((tc) => [tc.slug, tc.id]));
+
+  // Calculate tier assignments using percentile-based distribution
+  const tierAssignments = calculateTierAssignments(recentModels, allTierCosts);
 
   const modelsToInsert = recentModels
     .map((model) => {
       const provider = getProviderFromId(model.id);
-      const tierSlug = calculateTierSlug(model);
+      const tierSlug = tierAssignments.get(model.id) ?? "normal";
       const tierCostId = tierCostMap.get(tierSlug);
       const promptPrice = parseFloat(model.pricing.prompt || "0");
       const completionPrice = parseFloat(model.pricing.completion || "0");

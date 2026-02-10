@@ -87,6 +87,9 @@ importers:
       '@arcade-vibe/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@arcade-vibe/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@arcade-vibe/env':
         specifier: workspace:*
         version: link:../../packages/env

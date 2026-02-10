@@ -42,6 +42,7 @@ const user: User = data; // Type check at runtime if needed
 ```
 
 **TypeScript strict mode is enabled** with these enforced rules:
+
 - `noUncheckedIndexedAccess`
 - `noUnusedLocals`
 - `noUnusedParameters`
@@ -51,11 +52,11 @@ const user: User = data; // Type check at runtime if needed
 
 When working with libraries, **ALWAYS load the corresponding skill** first. Skills contain up-to-date best practices and patterns.
 
-| Library | Skill Command | When to Use |
-|---------|---------------|-------------|
-| **tRPC** | `skill trpc` | Creating/modifying tRPC routers, procedures, context |
-| **TanStack Form/Formedible** | `skill formedible` | Building forms with TanStack Form or Formedible components |
-| **Vercel AI SDK** | `skill vercel/ai@ai-sdk` | Building AI features with the Vercel AI SDK |
+| Library                      | Skill Command            | When to Use                                                |
+| ---------------------------- | ------------------------ | ---------------------------------------------------------- |
+| **tRPC**                     | `skill trpc`             | Creating/modifying tRPC routers, procedures, context       |
+| **TanStack Form/Formedible** | `skill formedible`       | Building forms with TanStack Form or Formedible components |
+| **Vercel AI SDK**            | `skill vercel/ai@ai-sdk` | Building AI features with the Vercel AI SDK                |
 
 **Before adding a new library**: Use `find-skills` to check if there's an available skill that provides expert guidance.
 
@@ -64,6 +65,7 @@ When working with libraries, **ALWAYS load the corresponding skill** first. Skil
 ### Imports
 
 Use type imports for types only:
+
 ```typescript
 import type { NextRequest } from "next/server";
 import { db } from "@arcade-vibe/db";
@@ -72,6 +74,7 @@ import { db } from "@arcade-vibe/db";
 ### Validation
 
 All inputs must be validated with Zod:
+
 ```typescript
 import z from "zod";
 
@@ -98,6 +101,7 @@ export const exampleRouter = router({
 ### React Components
 
 Functional components with TypeScript:
+
 ```typescript
 export default function Button({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return <button onClick={onClick}>{children}</button>;
@@ -121,6 +125,7 @@ export default function Button({ onClick, children }: { onClick: () => void; chi
 ### Database Queries
 
 Always use Drizzle ORM with type-safe queries:
+
 ```typescript
 import { db } from "@arcade-vibe/db";
 import { users } from "@arcade-vibe/db/schema";
@@ -131,9 +136,81 @@ const user = await db.query.users.findFirst({
 });
 ```
 
+## Type System
+
+### Single Source of Truth
+
+All frontend types derive from two authoritative sources:
+
+1. **Entity types** → tRPC RouterOutput (`@/lib/trpc-types`)
+   - Game, Prompt, Theme, User, Rating, etc.
+   - Derived via `inferRouterOutputs<AppRouter>`
+
+2. **Enum types** → Database schema (`@arcade-vibe/db`)
+   - GameStatus, PromptStatus, ThemeStatus, Visibility, UserRole, etc.
+   - Re-exported via `@/lib/trpc-types` for convenience
+
+### Import Pattern
+
+```typescript
+// ✅ CORRECT - Import from trpc-types (single source)
+import type { Game, GameStatus, Prompt, UserProfile } from "@/lib/trpc-types";
+
+// ✅ CORRECT - Type imports for types only
+import type { Game, Theme } from "@/lib/trpc-types";
+
+// ❌ WRONG - Never define manual types duplicating backend types
+type GameStatus = "pending" | "completed"; // Forbidden!
+
+// ❌ WRONG - Never import directly from API in components
+import type { AppRouter } from "@arcade-vibe/api"; // Use trpc-types instead
+```
+
+### Adding New Types
+
+1. **For entity types**: Add data to tRPC router first
+
+   ```typescript
+   // In packages/api/src/routers/newRouter.ts
+   export const newRouter = router({
+     getById: protectedProcedure
+       .input(z.object({ id: z.string() }))
+       .query(async ({ input }) => {
+         /* ... */
+       }),
+   });
+   ```
+
+2. Derive type in `trpc-types.ts`:
+
+   ```typescript
+   export type NewEntity = RouterOutput["newRouter"]["getById"];
+   ```
+
+3. **For enum types**: Define in database schema
+
+   ```typescript
+   // In packages/db/src/schema/enums-types.ts
+   export const newEnum = pgEnum("new_enum", ["value1", "value2"]);
+   export type NewEnum = (typeof newEnum.enumValues)[number];
+   ```
+
+4. Re-export in `trpc-types.ts`:
+   ```typescript
+   import type { NewEnum as NewEnumType } from "@arcade-vibe/db";
+   export type NewEnum = NewEnumType;
+   ```
+
+### Type File Location
+
+- **Frontend types**: `apps/web/src/lib/trpc-types.ts` - All component imports
+- **Database enums**: `packages/db/src/schema/enums-types.ts` - Enum definitions
+- **API router**: `packages/api/src/routers/index.ts` - AppRouter composition
+
 ## Progressive Disclosure
 
 For detailed guidelines:
+
 - TypeScript patterns: See `packages/config/tsconfig.base.json` for compiler options
 - API design: Check `packages/api/src/` for tRPC router patterns
 - Database: See `packages/db/` for Drizzle schema and migrations

@@ -16,6 +16,7 @@
     "@ai-sdk/react": "^3.0.3",
     "@arcade-vibe/api": "workspace:*",
     "@arcade-vibe/auth": "workspace:*",
+    "@arcade-vibe/db": "workspace:*",
     "@arcade-vibe/env": "workspace:*",
     "@base-ui/react": "^1.0.0",
     "@dnd-kit/core": "^6.3.1",

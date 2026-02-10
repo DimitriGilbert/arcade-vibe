@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import type { Rating } from "@/types/entities";
+import type { Rating } from "@/lib/trpc-types";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 

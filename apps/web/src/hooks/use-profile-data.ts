@@ -1,7 +1,15 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import type { User, UserExtended, Game, GameWithRanking, Prompt, Rating, UserProfile } from "@/types";
+import type {
+  User,
+  UserExtended,
+  Game,
+  GameWithRanking,
+  Prompt,
+  Rating,
+  UserProfile,
+} from "@/lib/trpc-types";
 
 interface Stats {
   gamesCreated: number;
@@ -114,11 +122,13 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
 
     const rankingMap = new Map<string, number>();
     const leaderboardArray = Array.isArray(leaderboard) ? leaderboard : [];
-    leaderboardArray.forEach((entry: { game?: { id: string } | null }, index: number) => {
-      if (entry.game) {
-        rankingMap.set(entry.game.id, index + 1);
-      }
-    });
+    leaderboardArray.forEach(
+      (entry: { game?: { id: string } | null }, index: number) => {
+        if (entry.game) {
+          rankingMap.set(entry.game.id, index + 1);
+        }
+      },
+    );
 
     return userGames.map((game) => ({
       ...game,
@@ -165,7 +175,9 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
     return {
       gamesCreated: userGames.length,
       totalRatings: ratings?.length || 0,
-      reputation: userExtended?.reputation ? Number(userExtended.reputation) : 0,
+      reputation: userExtended?.reputation
+        ? Number(userExtended.reputation)
+        : 0,
       credits: credits?.balance || 0,
       promptsCount: prompts?.length || 0,
     };

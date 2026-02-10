@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import type { Game } from "@/types/entities";
+import type { Game } from "@/lib/trpc-types";
 import { cn } from "@/lib/utils";
 
 export interface GameThumbnailCardProps {

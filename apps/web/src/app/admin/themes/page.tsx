@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
-import type { Theme, ThemeList } from "@/types/entities";
+import type { Theme, ThemeList } from "@/lib/trpc-types";
 import LoadingState from "@/components/reusable/loading-state";
 import { EmptyState } from "@/components/reusable/empty-state";
 
@@ -158,7 +158,9 @@ export default function AdminThemesPage() {
   // Remove library pattern from theme mutation
   const removeLibraryPatternMutation = useMutation({
     mutationFn: async (input: { themeId: string; patternId: string }) => {
-      return await trpcClient.admin.libraryPatterns.removeFromTheme.mutate(input);
+      return await trpcClient.admin.libraryPatterns.removeFromTheme.mutate(
+        input,
+      );
     },
     onSuccess: () => {
       refetch();
@@ -203,13 +205,20 @@ export default function AdminThemesPage() {
     }
   };
 
-  const addLibraryPatternsToTheme = async (themeId: string, patternIds: string[]) => {
+  const addLibraryPatternsToTheme = async (
+    themeId: string,
+    patternIds: string[],
+  ) => {
     const existingTheme = themes?.find((t) => t.id === themeId);
     if (!existingTheme) return;
 
     const existingPatternIds = (existingTheme as any).libraryPatternIds || [];
-    const patternsToAdd = patternIds.filter((id: string) => !existingPatternIds.includes(id));
-    const patternsToRemove = existingPatternIds.filter((id: string) => !patternIds.includes(id));
+    const patternsToAdd = patternIds.filter(
+      (id: string) => !existingPatternIds.includes(id),
+    );
+    const patternsToRemove = existingPatternIds.filter(
+      (id: string) => !patternIds.includes(id),
+    );
 
     for (const patternId of patternsToAdd) {
       await addLibraryPatternMutation.mutateAsync({ themeId, patternId });
@@ -279,7 +288,8 @@ export default function AdminThemesPage() {
                 name: "libraryPatternIds" as const,
                 type: "multiSelect" as const,
                 label: "Allowed Library Patterns",
-                description: "Select additional library patterns for this theme (global patterns are always available)",
+                description:
+                  "Select additional library patterns for this theme (global patterns are always available)",
                 multiSelectConfig: {
                   maxSelections: 50,
                   searchable: true,
@@ -339,14 +349,20 @@ export default function AdminThemesPage() {
             await updateThemeMutation.mutateAsync(updateInput);
 
             if (value.libraryPatternIds) {
-              await addLibraryPatternsToTheme(value.id, value.libraryPatternIds);
+              await addLibraryPatternsToTheme(
+                value.id,
+                value.libraryPatternIds,
+              );
             }
           } else {
             const createResult = await createThemeMutation.mutateAsync(value);
 
             if (value.libraryPatternIds && (createResult as any)?.themeId) {
               for (const patternId of value.libraryPatternIds) {
-                await addLibraryPatternMutation.mutateAsync({ themeId: (createResult as any).themeId, patternId });
+                await addLibraryPatternMutation.mutateAsync({
+                  themeId: (createResult as any).themeId,
+                  patternId,
+                });
               }
             }
           }
