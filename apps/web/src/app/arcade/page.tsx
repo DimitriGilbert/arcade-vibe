@@ -99,7 +99,9 @@ export default function ArcadePage() {
           easy: 1,
         };
         return gamesToSort.sort((a, b) => {
-          return tierOrder[b.modelTier] - tierOrder[a.modelTier];
+          const tierA = a.tierCost?.slug ?? "unknown";
+          const tierB = b.tierCost?.slug ?? "unknown";
+          return (tierOrder[tierB] ?? 0) - (tierOrder[tierA] ?? 0);
         });
       }
 

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, use } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -12,24 +11,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArcadeButton } from "@/components/arcade";
-import { ArcadeBadge } from "@/components/arcade";
-import { ArcadeCard } from "@/components/arcade";
-import { Loader2, Save, Play, GitBranch, Copy } from "lucide-react";
-import { trpc, trpcClient } from "@/utils/trpc";
+import { Loader2, Save, Play, Copy } from "lucide-react";
+import { trpcClient } from "@/utils/trpc";
 import {
   ModelSelector,
-  type ModelConfig,
-  type ModelTier,
+  type ModelMetadata,
   getCreditCostByTier,
   toModelConfig,
 } from "./components/model-selector";
 import {
-  VersionHistory,
   VersionComparison,
   type PromptVersion,
 } from "./components/version-history";
-import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
-import Editor from "@monaco-editor/react";
+import { EditorSidebar } from "./components/editor-sidebar";
+import { VersionSelector } from "./components/version-selector";
+import { EditorTabs } from "./components/editor-tabs";
 
 interface EditorPageProps {
   searchParams?: Promise<{
@@ -42,11 +38,22 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const resolvedSearchParams = use(
     searchParams || Promise.resolve({ promptId: undefined, forkId: undefined }),
   );
+
+  // Core state
   const [promptContent, setPromptContent] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
+
+  // New state for sidebar layout
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("editor");
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
+    null,
+  );
+
+  // Version comparison state
   const [showComparison, setShowComparison] = useState(false);
   const [compareLeft, setCompareLeft] = useState<PromptVersion | null>(null);
   const [compareRight, setCompareRight] = useState<PromptVersion | null>(null);
@@ -57,13 +64,22 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     queryFn: () => trpcClient.themes.list.query(),
   });
 
-  const { data: models, isLoading: modelsLoading } = useQuery({
-    queryKey: ["models"],
-    queryFn: async (): Promise<ModelConfig[]> => {
-      const result = await trpcClient.models.listActive.query();
-      return result.map(toModelConfig);
+  const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
+    queryKey: ["modelMetadata"],
+    queryFn: async (): Promise<ModelMetadata> => {
+      const result = await trpcClient.models.getModelMetadata.query();
+      return {
+        models: result.models.map(toModelConfig),
+        tierCosts: result.tierCosts,
+        tierCostsArray: result.tierCostsArray,
+        providers: result.providers,
+        tiers: result.tiers,
+      };
     },
   });
+
+  // Extract models from metadata for backward compatibility
+  const models = modelMetadata?.models;
 
   // Fetch existing prompt if editing or forking
   const { data: existingPrompt, isLoading: promptLoading } = useQuery({
@@ -79,42 +95,44 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     enabled: !!(resolvedSearchParams?.promptId || resolvedSearchParams?.forkId),
   });
 
+  // Fetch prompts by theme for sidebar
+  const { data: myPrompts, isLoading: promptsLoading } = useQuery({
+    queryKey: ["prompts-by-theme", selectedTheme],
+    queryFn: async () => {
+      if (!selectedTheme) return [];
+      return await trpcClient.prompts.listMineByTheme.query({
+        themeId: selectedTheme,
+      });
+    },
+    enabled: !!selectedTheme,
+  });
+
   // Fetch user credits
   const { data: credits } = useQuery({
     queryKey: ["credits"],
     queryFn: () => trpcClient.credits.getBalance.query(),
   });
 
-  const currentThemeId = existingPrompt?.themeId || selectedTheme;
-
-  const { data: libraryPatterns, isLoading: libraryPatternsLoading } = useQuery({
-    queryKey: ["libraryPatterns", currentThemeId],
-    queryFn: async () => {
-      if (!currentThemeId) return { globalPatterns: [], themePatterns: [] };
-      return await trpcClient.admin.libraryPatterns.getByTheme.query({
-        themeId: currentThemeId,
-      });
-    },
-    enabled: !!currentThemeId,
-  });
-
   // Fetch prompt versions for history
   const { data: versions } = useQuery({
-    queryKey: ["prompt-versions", existingPrompt?.id],
+    queryKey: ["prompt-versions", existingPrompt?.id ?? selectedPromptId],
     queryFn: async () => {
-      if (!existingPrompt?.id) return [];
+      const promptId = existingPrompt?.id ?? selectedPromptId;
+      if (!promptId) return [];
       return await trpcClient.prompts.listVersions.query({
-        promptId: existingPrompt.id,
+        promptId,
       });
     },
-    enabled: !!existingPrompt?.id,
+    enabled: !!(existingPrompt?.id ?? selectedPromptId),
   });
 
-  // Initialize prompt content when existing prompt loads
+  // Initialize prompt content when existing prompt loads (from URL params)
   useEffect(() => {
     if (existingPrompt && !promptContent) {
       setPromptContent(existingPrompt.content);
       setSelectedTheme(existingPrompt.themeId);
+      setSelectedPromptId(existingPrompt.id);
+      setSelectedVersionId(existingPrompt.id);
     }
   }, [existingPrompt, promptContent]);
 
@@ -192,7 +210,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       return;
     }
 
-    const creditCost = getCreditCostByTier(modelData.tier);
+    const creditCost = getCreditCostByTier(
+      modelData.tier,
+      modelMetadata?.tierCosts ?? {},
+    );
     if (credits && credits.balance < creditCost) {
       toast.error(
         `Insufficient credits. Need ${creditCost}, have ${credits.balance}`,
@@ -209,6 +230,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
     setIsGenerating(true);
     setGeneratedCode("");
+    setActiveTab("output"); // Auto-switch to output tab
 
     try {
       // Fetch theme with system prompt
@@ -217,13 +239,14 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       });
 
       // Create new prompt first if not exists
-      let promptId = existingPrompt?.id;
+      let promptId = existingPrompt?.id ?? selectedPromptId;
       if (!promptId) {
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
         });
         promptId = result.promptId;
+        setSelectedPromptId(promptId);
       }
 
       // Use SSE streaming endpoint
@@ -305,6 +328,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     models,
     credits,
     createPromptMutation,
+    selectedPromptId,
+    modelMetadata?.tierCosts,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -316,9 +341,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       toast.error("Please enter prompt content");
       return;
     }
-    if (existingPrompt) {
+    const promptId = existingPrompt?.id ?? selectedPromptId;
+    if (promptId) {
       updatePromptMutation.mutate({
-        id: existingPrompt.id,
+        id: promptId,
         content: promptContent,
       });
     } else {
@@ -331,6 +357,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     selectedTheme,
     promptContent,
     existingPrompt,
+    selectedPromptId,
     updatePromptMutation,
     createPromptMutation,
   ]);
@@ -346,6 +373,59 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     forkPromptMutation.mutate({ forkId: resolvedSearchParams.forkId });
   }, [resolvedSearchParams?.forkId, forkPromptMutation]);
 
+  // New handlers for sidebar layout
+  const handleSelectPrompt = useCallback(async (promptId: string) => {
+    try {
+      const prompt = await trpcClient.prompts.getById.query({ id: promptId });
+      if (prompt) {
+        setPromptContent(prompt.content);
+        setSelectedPromptId(prompt.id);
+        setSelectedVersionId(prompt.id);
+        setSelectedTheme(prompt.themeId);
+        setActiveTab("editor");
+      }
+    } catch (error) {
+      toast.error("Failed to load prompt");
+      console.error(error);
+    }
+  }, []);
+
+  const handleNewPrompt = useCallback(() => {
+    setPromptContent("");
+    setSelectedPromptId(null);
+    setSelectedVersionId(null);
+    setActiveTab("editor");
+    setGeneratedCode("");
+  }, []);
+
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+  }, []);
+
+  const handleSelectVersion = useCallback(
+    async (versionId: string) => {
+      try {
+        // Find the version in our versions data
+        const versionData = versions?.find(
+          (v: { id: string }) => v.id === versionId,
+        );
+        if (versionData) {
+          setPromptContent(versionData.content);
+          setSelectedVersionId(versionId);
+        }
+      } catch (error) {
+        toast.error("Failed to load version");
+        console.error(error);
+      }
+    },
+    [versions],
+  );
+
+  const handleNewVersion = useCallback(() => {
+    // Just switch to editor tab for creating new content
+    setActiveTab("editor");
+  }, []);
+
   if (promptLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -354,327 +434,164 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     );
   }
 
-  const isEditing = !!existingPrompt;
+  const isEditing = !!(existingPrompt ?? selectedPromptId);
   const isForking = !!resolvedSearchParams?.forkId;
+  const currentPrompt =
+    existingPrompt ??
+    (selectedPromptId ? { id: selectedPromptId, version: 1 } : null);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--foreground)]">
-                {isForking
-                  ? "Fork Prompt"
-                  : isEditing
-                    ? "Edit Prompt"
-                    : "Create Prompt"}
-              </h1>
-              <p className="text-[var(--muted-foreground)] mt-1">
-                {isForking
-                  ? "Create your own version of this prompt"
-                  : "Write a prompt to generate games"}
+    <div className="flex flex-col md:flex-row min-h-screen bg-background">
+      {/* Sidebar */}
+      <aside className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
+        <EditorSidebar
+          selectedTheme={selectedTheme}
+          onSelectTheme={setSelectedTheme}
+          themes={themes?.map((t: { id: string; title: string }) => ({
+            id: t.id,
+            title: t.title,
+          }))}
+          themesLoading={themesLoading}
+          prompts={myPrompts?.map(
+            (p: {
+              id: string;
+              content: string;
+              version: number;
+              updatedAt: string;
+            }) => ({
+              id: p.id,
+              content: p.content,
+              version: p.version,
+              updatedAt: p.updatedAt,
+            }),
+          )}
+          promptsLoading={promptsLoading}
+          selectedPromptId={selectedPromptId}
+          onSelectPrompt={handleSelectPrompt}
+          onNewPrompt={handleNewPrompt}
+        >
+          {modelsLoading ? (
+            <div className="flex items-center justify-center h-20">
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+            </div>
+          ) : modelMetadata ? (
+            <ModelSelector
+              modelMetadata={modelMetadata}
+              selectedModel={selectedModel}
+              onSelectModel={(modelName) => {
+                if (modelName) {
+                  setSelectedModel(modelName);
+                }
+              }}
+            />
+          ) : null}
+        </EditorSidebar>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Header with credits and fork button */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+          <div>
+            <h1 className="text-xl font-bold text-[var(--foreground)]">
+              {isForking
+                ? "Fork Prompt"
+                : isEditing
+                  ? "Edit Prompt"
+                  : "Create Prompt"}
+            </h1>
+            {credits && (
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {credits.balance} credits available
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isForking && (
-                <ArcadeButton
-                  variant="outline"
-                  onClick={handleFork}
-                  disabled={forkPromptMutation.isPending}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  {forkPromptMutation.isPending ? "Forking..." : "Fork"}
-                </ArcadeButton>
-              )}
-              {credits && (
-                <ArcadeBadge
-                  text={`${credits.balance} credits`}
-                  variant="default"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Editor Panel */}
-          <div className="lg:col-span-2 space-y-4">
-            <ArcadeCard>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {/* Theme Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor="theme">Theme</Label>
-                    {themesLoading ? (
-                      <div className="h-10 bg-[var(--muted)] rounded animate-pulse" />
-                    ) : (
-                      <select
-                        id="theme"
-                        value={selectedTheme}
-                        onChange={(e) => setSelectedTheme(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md bg-[var(--background)]"
-                      >
-                        <option value="">Select a theme</option>
-                        {themes?.map((theme: { id: string; title: string }) => (
-                          <option key={theme.id} value={theme.id}>
-                            {theme.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  {/* Prompt Editor */}
-                  <div className="space-y-2">
-                    <Label htmlFor="prompt">Prompt</Label>
-                    <div className="w-full h-[400px] border rounded-md overflow-hidden">
-                      <Editor
-                        height="400px"
-                        defaultLanguage="markdown"
-                        value={promptContent}
-                        onChange={(value) => setPromptContent(value || "")}
-                        theme="vs-dark"
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: "on",
-                          scrollBeyondLastLine: false,
-                          wordWrap: "on",
-                          automaticLayout: true,
-                          padding: { top: 10, bottom: 10 },
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-4">
-                    <ArcadeButton
-                      onClick={handleSave}
-                      disabled={
-                        !promptContent.trim() ||
-                        createPromptMutation.isPending ||
-                        updatePromptMutation.isPending
-                      }
-                      className="flex-1"
-                    >
-                      {createPromptMutation.isPending ||
-                      updatePromptMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          {isEditing ? "Update" : "Save"}
-                        </>
-                      )}
-                    </ArcadeButton>
-                    <ArcadeButton
-                      onClick={handleGenerate}
-                      disabled={isGenerating || !promptContent.trim()}
-                      className="flex-1"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Generate
-                        </>
-                      )}
-                    </ArcadeButton>
-                  </div>
-                </div>
-              </div>
-            </ArcadeCard>
-
-            {/* Generated Output */}
-            {(generatedCode || isGenerating) && (
-              <ArcadeCard>
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4 text-[var(--foreground)]">
-                    Generated Game
-                  </h3>
-                  <StreamingCodeViewer
-                    code={generatedCode}
-                    language="html"
-                    isStreaming={isGenerating}
-                    fileName="game.html"
-                  />
-                </div>
-              </ArcadeCard>
             )}
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Model Selection */}
-            <ArcadeCard>
-              <div className="p-6">
-                {modelsLoading ? (
-                  <div className="flex items-center justify-center h-20">
-                    <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
-                  </div>
-                ) : (
-                  <ModelSelector
-                    models={models || []}
-                    selectedModel={selectedModel}
-                    onSelectModel={(modelName) => {
-                      if (modelName) {
-                        setSelectedModel(modelName);
-                      }
-                    }}
-                  />
-                )}
-              </div>
-            </ArcadeCard>
-
-            {/* Available Libraries */}
-            {libraryPatternsLoading ? (
-              <ArcadeCard>
-                <div className="p-6">
-                  <div className="flex items-center justify-center h-20">
-                    <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
-                  </div>
-                </div>
-              </ArcadeCard>
-            ) : libraryPatterns && (libraryPatterns.globalPatterns.length > 0 || libraryPatterns.themePatterns.length > 0) ? (
-              <ArcadeCard>
-                <div className="p-6">
-                  <h3 className="font-semibold mb-3 text-[var(--foreground)]">
-                    Available Libraries for this Theme
-                  </h3>
-                  <div className="space-y-3">
-                    {libraryPatterns.globalPatterns.length > 0 && (
-                      <div>
-                        <p className="text-xs text-[var(--muted-foreground)] mb-2">
-                          Global Libraries
-                        </p>
-                        <div className="space-y-1">
-                          {libraryPatterns.globalPatterns.map((pattern) => (
-                            <div
-                              key={pattern.id}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <span className="text-[var(--foreground)]">
-                                {pattern.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {libraryPatterns.themePatterns.length > 0 && (
-                      <div>
-                        <p className="text-xs text-[var(--muted-foreground)] mb-2">
-                          Theme-Specific Libraries
-                        </p>
-                        <div className="space-y-1">
-                          {libraryPatterns.themePatterns.map((pattern) => (
-                            <div
-                              key={pattern.id}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <span className="text-[var(--foreground)]">
-                                {pattern.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </ArcadeCard>
-            ) : null}
-
-            {/* Version History */}
-            {isEditing && versions && versions.length > 0 && (
-              <ArcadeCard>
-                <div className="p-6">
-                  <VersionHistory
-                    versions={versions.map(
-                      (v: {
-                        id: string;
-                        version: number;
-                        content: string;
-                        createdAt: string;
-                        authorId: string;
-                      }) => ({
-                        id: v.id,
-                        version: v.version,
-                        content: v.content,
-                        createdAt: new Date(v.createdAt),
-                        author: {
-                          id: v.authorId,
-                          name: null,
-                        },
-                      }),
-                    )}
-                    currentVersion={existingPrompt.version}
-                    onCompareVersions={handleCompare}
-                  />
-                </div>
-              </ArcadeCard>
-            )}
-
-            {/* Prompt Info */}
-            {existingPrompt && (
-              <ArcadeCard>
-                <div className="p-6">
-                  <h3 className="font-semibold mb-3 text-[var(--foreground)]">
-                    Prompt Info
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted-foreground)]">
-                        Version
-                      </span>
-                      <ArcadeBadge
-                        text={`v${existingPrompt.version}`}
-                        variant="default"
-                      />
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted-foreground)]">
-                        Tokens
-                      </span>
-                      <span className="text-[var(--foreground)]">
-                        {existingPrompt.tokenCount}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted-foreground)]">
-                        Visibility
-                      </span>
-                      <ArcadeBadge
-                        text={existingPrompt.visibility}
-                        variant="default"
-                      />
-                    </div>
-                    <div className="border-t border-[var(--border)] my-2" />
-                    <div className="flex justify-between">
-                      <span className="text-[var(--muted-foreground)]">
-                        Created
-                      </span>
-                      <span className="text-xs text-[var(--foreground)]">
-                        {new Date(existingPrompt.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </ArcadeCard>
+          <div className="flex items-center gap-2">
+            {isForking && (
+              <ArcadeButton
+                variant="outline"
+                onClick={handleFork}
+                disabled={forkPromptMutation.isPending}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                {forkPromptMutation.isPending ? "Forking..." : "Fork"}
+              </ArcadeButton>
             )}
           </div>
         </div>
-      </div>
+
+        {/* Version Selector - only when editing existing prompt */}
+        {currentPrompt && versions && versions.length > 0 && (
+          <VersionSelector
+            versions={versions.map(
+              (v: { id: string; version: number; createdAt: string }) => ({
+                id: v.id,
+                version: v.version,
+                createdAt: v.createdAt,
+              }),
+            )}
+            currentVersion={currentPrompt.version}
+            selectedVersionId={selectedVersionId}
+            onSelectVersion={handleSelectVersion}
+            onNewVersion={handleNewVersion}
+          />
+        )}
+
+        {/* Tabs */}
+        <div className="flex-1 flex flex-col min-h-0 p-4">
+          <EditorTabs
+            promptContent={promptContent}
+            onPromptChange={setPromptContent}
+            generatedCode={generatedCode}
+            isGenerating={isGenerating}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+        </div>
+
+        {/* Action Bar */}
+        <div className="p-4 border-t border-[var(--border)] flex gap-2">
+          <ArcadeButton
+            onClick={handleSave}
+            disabled={
+              !promptContent.trim() ||
+              createPromptMutation.isPending ||
+              updatePromptMutation.isPending
+            }
+            className="flex-1"
+          >
+            {createPromptMutation.isPending ||
+            updatePromptMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {isEditing ? "Update" : "Save"}
+              </>
+            )}
+          </ArcadeButton>
+          <ArcadeButton
+            onClick={handleGenerate}
+            disabled={isGenerating || !promptContent.trim()}
+            className="flex-1"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Generate
+              </>
+            )}
+          </ArcadeButton>
+        </div>
+      </main>
 
       {/* Version Comparison Dialog */}
       {showComparison && compareLeft && compareRight && (

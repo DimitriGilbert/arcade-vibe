@@ -273,6 +273,47 @@ export const promptsRouter = router({
     return myPrompts;
   }),
 
+  listMineByTheme: protectedProcedure
+    .input(z.object({ themeId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const myPrompts = await promptsQuery.findMany({
+        where: and(
+          eq(prompts.authorId, ctx.user.id),
+          eq(prompts.themeId, input.themeId),
+        ),
+        orderBy: [desc(prompts.updatedAt)],
+        columns: {
+          id: true,
+          content: true,
+          version: true,
+          visibility: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return myPrompts.map((prompt) => ({
+        ...prompt,
+        content: prompt.content.slice(0, 100),
+      }));
+    }),
+
   listPublic: publicProcedure.query(async () => {
     const promptsQuery = db.query.prompts;
     if (!promptsQuery) {

@@ -1,6 +1,7 @@
 import { router, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { modelConfig } from "@arcade-vibe/db/schema/models";
+import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { z } from "zod";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -49,22 +50,13 @@ function getProviderFromId(modelId: string): string {
   return "openrouter";
 }
 
-function calculateTier(
-  model: OpenRouterModel,
-):
-  | "cheater"
-  | "very_easy"
-  | "easy"
-  | "normal"
-  | "hard"
-  | "very_hard"
-  | "impossible" {
+// Map model characteristics to tier slugs
+function calculateTierSlug(model: OpenRouterModel): string {
+  const contextLength = model.context_length;
+  const supportsImages = model.architecture.input_modalities.includes("image");
   const promptPrice = parseFloat(model.pricing.prompt || "0");
   const completionPrice = parseFloat(model.pricing.completion || "0");
   const totalPrice = promptPrice + completionPrice;
-  const contextLength = model.context_length;
-  const supportsImages = model.architecture.input_modalities.includes("image");
-
   const pricePer1kTokens = totalPrice * 1000;
 
   // Cheater: Very large context with images (easiest)
@@ -111,32 +103,46 @@ async function seedModelsFromOpenRouter() {
 
   const recentModels = models.filter((model) => model.created >= sixMonthsAgo);
 
-  const modelsToInsert = recentModels.map((model) => {
-    const provider = getProviderFromId(model.id);
-    const tier = calculateTier(model);
-    const promptPrice = parseFloat(model.pricing.prompt || "0");
-    const completionPrice = parseFloat(model.pricing.completion || "0");
-    const totalPrice = (promptPrice + completionPrice) * 1000;
+  // Fetch all tier costs to map slugs to IDs
+  const allTierCosts = await db.query.tierCosts.findMany();
+  const tierCostMap = new Map(allTierCosts.map((tc) => [tc.slug, tc.id]));
 
-    return {
-      provider: provider as
-        | "openai"
-        | "anthropic"
-        | "google"
-        | "openrouter"
-        | "deepseek"
-        | "glm"
-        | "glm-coding-plan"
-        | "moonshot"
-        | "custom",
-      modelName: model.id,
-      tier,
-      costPer1kTokens: totalPrice.toFixed(6),
-      maxTokens: model.context_length,
-      supportsImages: model.architecture.input_modalities.includes("image"),
-      isActive: true,
-    };
-  });
+  const modelsToInsert = recentModels
+    .map((model) => {
+      const provider = getProviderFromId(model.id);
+      const tierSlug = calculateTierSlug(model);
+      const tierCostId = tierCostMap.get(tierSlug);
+      const promptPrice = parseFloat(model.pricing.prompt || "0");
+      const completionPrice = parseFloat(model.pricing.completion || "0");
+      const totalPrice = (promptPrice + completionPrice) * 1000;
+
+      if (!tierCostId) {
+        console.warn(
+          `Tier cost not found for slug: ${tierSlug}, skipping model ${model.id}`,
+        );
+        return null;
+      }
+
+      return {
+        provider: provider as
+          | "openai"
+          | "anthropic"
+          | "google"
+          | "openrouter"
+          | "deepseek"
+          | "glm"
+          | "glm-coding-plan"
+          | "moonshot"
+          | "custom",
+        modelName: model.id,
+        tierCostId,
+        costPer1kTokens: totalPrice.toFixed(6),
+        maxTokens: model.context_length,
+        supportsImages: model.architecture.input_modalities.includes("image"),
+        isActive: true,
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
 
   const existingModels = await db.query.modelConfig.findMany();
   if (existingModels.length > 0) {
@@ -154,9 +160,16 @@ export const modelConfigRouter = router({
   getModels: adminProcedure.query(async () => {
     const models = await db.query.modelConfig.findMany({
       orderBy: [desc(modelConfig.createdAt)],
+      with: {
+        tierCost: true,
+      },
     });
 
-    return models;
+    return models.map((model) => ({
+      ...model,
+      tier: model.tierCost?.slug ?? "unknown",
+      tierName: model.tierCost?.name ?? "Unknown",
+    }));
   }),
 
   toggleModelActive: adminProcedure
@@ -257,15 +270,7 @@ export const modelConfigRouter = router({
           "custom",
         ]),
         modelName: z.string().min(1).max(100),
-        tier: z.enum([
-          "cheater",
-          "very_easy",
-          "easy",
-          "normal",
-          "hard",
-          "very_hard",
-          "impossible",
-        ]),
+        tierCostId: z.string().uuid(),
         costPer1kTokens: z.string().min(1),
         maxTokens: z.number().int().positive(),
         supportsImages: z.boolean().default(false),
@@ -284,12 +289,24 @@ export const modelConfigRouter = router({
         });
       }
 
+      // Verify tier cost exists
+      const tierCost = await db.query.tierCosts.findFirst({
+        where: eq(tierCosts.id, input.tierCostId),
+      });
+
+      if (!tierCost) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tier cost not found",
+        });
+      }
+
       const newModel = await db
         .insert(modelConfig)
         .values({
           provider: input.provider,
           modelName: input.modelName,
-          tier: input.tier,
+          tierCostId: input.tierCostId,
           costPer1kTokens: input.costPer1kTokens,
           maxTokens: input.maxTokens,
           supportsImages: input.supportsImages,
@@ -306,7 +323,8 @@ export const modelConfigRouter = router({
         metadata: JSON.stringify({
           provider: input.provider,
           modelName: input.modelName,
-          tier: input.tier,
+          tierCostId: input.tierCostId,
+          tierSlug: tierCost.slug,
           costPer1kTokens: input.costPer1kTokens,
         }),
       });
@@ -357,6 +375,9 @@ export const modelConfigRouter = router({
     .mutation(async ({ ctx, input }) => {
       const model = await db.query.modelConfig.findFirst({
         where: eq(modelConfig.id, input.id),
+        with: {
+          tierCost: true,
+        },
       });
 
       if (!model) {
@@ -377,7 +398,8 @@ export const modelConfigRouter = router({
         metadata: JSON.stringify({
           provider: model.provider,
           modelName: model.modelName,
-          tier: model.tier,
+          tierCostId: model.tierCostId,
+          tierSlug: model.tierCost?.slug,
         }),
       });
 
@@ -477,15 +499,7 @@ export const modelConfigRouter = router({
     .input(
       z.object({
         ids: z.array(z.string().uuid()).min(1),
-        tier: z.enum([
-          "cheater",
-          "very_easy",
-          "easy",
-          "normal",
-          "hard",
-          "very_hard",
-          "impossible",
-        ]),
+        tierCostId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -500,9 +514,21 @@ export const modelConfigRouter = router({
         });
       }
 
+      // Verify tier cost exists
+      const tierCost = await db.query.tierCosts.findFirst({
+        where: eq(tierCosts.id, input.tierCostId),
+      });
+
+      if (!tierCost) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tier cost not found",
+        });
+      }
+
       await db
         .update(modelConfig)
-        .set({ tier: input.tier })
+        .set({ tierCostId: input.tierCostId })
         .where(inArray(modelConfig.id, input.ids));
 
       await db.insert(adminActions).values({
@@ -510,10 +536,11 @@ export const modelConfigRouter = router({
         actionType: "bulk_update_models_tier",
         targetType: "model",
         targetId: "bulk",
-        reason: `Bulk updated ${models.length} models to tier: ${input.tier}`,
+        reason: `Bulk updated ${models.length} models to tier: ${tierCost.name} (${tierCost.slug})`,
         metadata: JSON.stringify({
           count: models.length,
-          tier: input.tier,
+          tierCostId: input.tierCostId,
+          tierSlug: tierCost.slug,
           modelNames: models.map((m) => m.modelName),
         }),
       });
@@ -521,7 +548,8 @@ export const modelConfigRouter = router({
       return {
         success: true,
         updatedCount: models.length,
-        tier: input.tier,
+        tierCostId: input.tierCostId,
+        tierSlug: tierCost.slug,
       };
     }),
 });

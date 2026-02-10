@@ -3,18 +3,9 @@ import { scores } from "@arcade-vibe/db/schema/scores";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
 import { games as gamesTable, gameScores } from "@arcade-vibe/db/schema/games";
 import { scoringWeights, platformStats } from "@arcade-vibe/db/schema/platform";
+import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { eq, and, desc } from "drizzle-orm";
 import { redis } from "./redis";
-
-// Model tier values from modelTierEnum
-type ModelTier =
-  | "cheater"
-  | "very_easy"
-  | "easy"
-  | "normal"
-  | "hard"
-  | "very_hard"
-  | "impossible";
 
 /**
  * Scoring Engine - Calculates game scores based on multiple factors
@@ -50,17 +41,6 @@ interface ScoreResult {
     popularity: number;
   };
 }
-
-// Model tier multipliers for difficulty score
-const TIER_MULTIPLIERS: Record<ModelTier, number> = {
-  cheater: 0.8,
-  very_easy: 0.85,
-  easy: 0.9,
-  normal: 1.0,
-  hard: 1.25,
-  very_hard: 1.75,
-  impossible: 2.5,
-};
 
 // Default scoring weights (percentages as decimals)
 const DEFAULT_WEIGHTS = {
@@ -108,13 +88,20 @@ async function calculateQualityScore(
 
 /**
  * Calculate Difficulty Score (25% of max)
- * Based on model tier multiplier
- * Formula: tierMultiplier × 20
+ * Based on tier cost's scoreMultiplier from the database
+ * Formula: scoreMultiplier × 20
  * Capped at 20 points
  */
-function calculateDifficultyScore(modelTier: ModelTier): number {
-  const tierMultiplier = TIER_MULTIPLIERS[modelTier];
-  const difficultyScore = tierMultiplier * 20;
+async function calculateDifficultyScore(tierCostId: string): Promise<number> {
+  // Fetch the tier cost to get the score multiplier
+  const tierCost = await db.query.tierCosts.findFirst({
+    where: eq(tierCosts.id, tierCostId),
+    columns: { scoreMultiplier: true },
+  });
+
+  // Use 1.0 as fallback if tier cost record not found
+  const scoreMultiplier = tierCost?.scoreMultiplier ?? 1.0;
+  const difficultyScore = scoreMultiplier * 20;
   return Math.min(difficultyScore, 20);
 }
 
@@ -245,13 +232,19 @@ async function fetchPlatformStats(): Promise<{
 export async function calculateGameScore(
   gameId: string,
 ): Promise<ScoreResult | null> {
-  // Fetch game with prompt and theme information
+  // Fetch game with prompt, theme, and tier cost information
   const game = await db.query.games.findFirst({
     where: eq(gamesTable.id, gameId),
     with: {
       prompt: {
         columns: {
           tokenCount: true,
+        },
+      },
+      tierCost: {
+        columns: {
+          id: true,
+          scoreMultiplier: true,
         },
       },
     },
@@ -285,7 +278,8 @@ export async function calculateGameScore(
     totalRatings,
   );
 
-  const difficultyScore = calculateDifficultyScore(game.modelTier);
+  // Use tierCostId from the game record
+  const difficultyScore = await calculateDifficultyScore(game.tierCostId);
 
   const efficiencyScore = calculateEfficiencyScore(game.prompt.tokenCount);
 

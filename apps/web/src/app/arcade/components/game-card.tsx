@@ -11,18 +11,9 @@ interface GameCardProps {
   onClick: () => void;
 }
 
-const TIER_CONFIG = {
-  cheater: { label: "Cheater" },
-  very_easy: { label: "Very Easy" },
-  easy: { label: "Easy" },
-  normal: { label: "Normal" },
-  hard: { label: "Hard" },
-  very_hard: { label: "Very Hard" },
-  impossible: { label: "Impossible" },
-};
-
 export function GameCard({ game, onClick }: GameCardProps) {
-  const tierInfo = TIER_CONFIG[game.modelTier];
+  // Use tier from tierCost relation
+  const tierLabel = game.tierCost?.slug ?? "unknown";
   const prompt = game.prompt as {
     id: string;
     content: string;
@@ -60,7 +51,7 @@ export function GameCard({ game, onClick }: GameCardProps) {
 
         {/* Difficulty Badge */}
         <div className="absolute top-3 right-3 shadow-lg">
-          <ArcadeBadge text={tierInfo.label} variant="default" />
+          <ArcadeBadge text={tierLabel} variant="default" />
         </div>
 
         {/* Submitted Badge */}

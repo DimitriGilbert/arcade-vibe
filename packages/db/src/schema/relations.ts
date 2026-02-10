@@ -6,6 +6,7 @@ import {
   creditBatches,
   subscriptionPlans,
   userSubscriptions,
+  tierCosts,
 } from "./credits";
 import { apiKeys, modelConfig } from "./models";
 import { themes } from "./themes";
@@ -109,6 +110,11 @@ export const userSubscriptionsRelations = relations(
   }),
 );
 
+export const tierCostsRelations = relations(tierCosts, ({ many }) => ({
+  models: many(modelConfig),
+  games: many(games),
+}));
+
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   user: one(user, {
     fields: [apiKeys.userId],
@@ -149,6 +155,10 @@ export const gamesRelations = relations(games, ({ one, many }) => ({
   theme: one(themes, {
     fields: [games.themeId],
     references: [themes.id],
+  }),
+  tierCost: one(tierCosts, {
+    fields: [games.tierCostId],
+    references: [tierCosts.id],
   }),
   gameScores: many(gameScores),
   promptRuns: many(promptRuns),
@@ -271,7 +281,12 @@ export const moderationAppealsRelations = relations(
   }),
 );
 
-export const modelConfigRelations = relations(modelConfig, () => ({}));
+export const modelConfigRelations = relations(modelConfig, ({ one }) => ({
+  tierCost: one(tierCosts, {
+    fields: [modelConfig.tierCostId],
+    references: [tierCosts.id],
+  }),
+}));
 
 export const allowedLibraryPatternsRelations = relations(
   allowedLibraryPatterns,

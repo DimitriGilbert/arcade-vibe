@@ -8,10 +8,11 @@ import {
   boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
-import { gameStatusEnum, modelTierEnum } from "./enums";
+import { gameStatusEnum } from "./enums";
 import { prompts } from "./prompts";
 import { themes } from "./themes";
 import { user } from "./auth";
+import { tierCosts } from "./credits";
 
 // per PRD lines 1260-1278
 export const games = pgTable(
@@ -27,7 +28,9 @@ export const games = pgTable(
     status: gameStatusEnum("status").notNull().default("generating"),
     modelProvider: text("model_provider").notNull(),
     modelName: text("model_name").notNull(),
-    modelTier: modelTierEnum("model_tier").notNull(),
+    tierCostId: uuid("tier_cost_id")
+      .notNull()
+      .references(() => tierCosts.id, { onDelete: "restrict" }),
     tokenUsage: integer("token_usage"),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
@@ -38,7 +41,9 @@ export const games = pgTable(
     isSubmitted: boolean("is_submitted").default(false).notNull(),
     submittedAt: timestamp("submitted_at"),
     blockedScriptUrls: jsonb("blocked_script_urls").$type<string[]>(),
-    sanitizationApplied: boolean("sanitization_applied").default(false).notNull(),
+    sanitizationApplied: boolean("sanitization_applied")
+      .default(false)
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

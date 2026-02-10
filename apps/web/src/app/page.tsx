@@ -297,6 +297,7 @@ function MonthlyChallengeSection() {
 
   const {
     data: leaderboardData,
+    isLoading: leaderboardLoading,
   } = useQuery({
     queryKey: ["leaderboard", currentTheme?.id],
     queryFn: async () => {
@@ -380,7 +381,7 @@ function MonthlyChallengeSection() {
                 </h3>
               </div>
 
-              {!leaderboardData ? (
+              {leaderboardLoading ? (
                 <LoadingState size="md" message="Loading leaderboard..." />
               ) : leaderboard.length === 0 ? (
                 <div className="text-center py-8 text-[var(--muted-foreground)]">

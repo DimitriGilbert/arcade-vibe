@@ -3,7 +3,6 @@ import { db } from "@arcade-vibe/db";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { games } from "@arcade-vibe/db/schema/games";
 import { apiKeys, modelConfig } from "@arcade-vibe/db/schema/models";
-import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { getProviderModel } from "@arcade-vibe/api/lib/ai-providers";
 import { deductCredits, getUserCredits } from "@arcade-vibe/api/lib/credits";
 import { decryptApiKey } from "@arcade-vibe/api/lib/encryption";
@@ -14,57 +13,10 @@ import { z } from "zod";
 import { eq, desc, and, isNotNull, notInArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-type ModelTier =
-  | "cheater"
-  | "very_easy"
-  | "easy"
-  | "normal"
-  | "hard"
-  | "very_hard"
-  | "impossible";
-
 const EncryptionData = z.object({
   encrypted: z.string(),
   iv: z.string(),
 });
-
-// Default credit costs by tier (used as fallback if not configured in database)
-const DEFAULT_TIER_COSTS: Record<string, number> = {
-  cheater: 20,
-  very_easy: 16,
-  easy: 12,
-  normal: 8,
-  hard: 5,
-  very_hard: 3,
-  impossible: 2,
-};
-
-// Cache for tier costs to avoid repeated database queries
-let tierCostsCache: Map<string, number> | null = null;
-let tierCostsCacheTime = 0;
-const TIER_COSTS_CACHE_TTL = 60 * 1000; // 1 minute
-
-// Helper function to get credit cost based on model tier
-const getCreditCostByTier = async (tier: string): Promise<number> => {
-  const now = Date.now();
-
-  // Use cache if valid
-  if (tierCostsCache && now - tierCostsCacheTime < TIER_COSTS_CACHE_TTL) {
-    return tierCostsCache.get(tier) ?? DEFAULT_TIER_COSTS[tier] ?? 8;
-  }
-
-  // Fetch tier costs from database
-  try {
-    const costs = await db.select().from(tierCosts);
-    tierCostsCache = new Map(costs.map((c) => [c.tier, c.creditCost]));
-    tierCostsCacheTime = now;
-
-    return tierCostsCache.get(tier) ?? DEFAULT_TIER_COSTS[tier] ?? 8;
-  } catch {
-    // Fallback to defaults if database query fails
-    return DEFAULT_TIER_COSTS[tier] ?? 8;
-  }
-};
 
 const getDecryptedUserKey = async (
   apiKeyId: string,
@@ -177,9 +129,12 @@ export const promptRunsRouter = router({
         });
       }
 
-      // Fetch model configuration
+      // Fetch model configuration with tier cost relation
       const modelConfigEntry = await db.query.modelConfig.findFirst({
         where: eq(modelConfig.modelName, input.modelKey),
+        with: {
+          tierCost: true,
+        },
       });
 
       if (!modelConfigEntry || !modelConfigEntry.isActive) {
@@ -189,9 +144,18 @@ export const promptRunsRouter = router({
         });
       }
 
+      // Get tier cost from the relation
+      const tierCost = modelConfigEntry.tierCost;
+      if (!tierCost) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Tier cost not found for model",
+        });
+      }
+
       // Check credits if not BYOK
       if (!input.apiKeyId) {
-        const creditCost = await getCreditCostByTier(modelConfigEntry.tier);
+        const creditCost = tierCost.creditCost;
         const userCredits = await getUserCredits(ctx.user.id);
 
         if (userCredits < creditCost) {
@@ -222,7 +186,7 @@ export const promptRunsRouter = router({
           themeId: prompt.themeId,
           modelProvider: modelConfigEntry.provider,
           modelName: modelConfigEntry.modelName,
-          modelTier: modelConfigEntry.tier as ModelTier,
+          tierCostId: tierCost.id,
           status: "generating",
         })
         .returning();

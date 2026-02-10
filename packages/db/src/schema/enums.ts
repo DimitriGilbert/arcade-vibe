@@ -28,16 +28,6 @@ export const gameStatusEnum = pgEnum("game_status", [
   "hidden",
 ]);
 
-export const modelTierEnum = pgEnum("model_tier", [
-  "cheater",
-  "very_easy",
-  "easy",
-  "normal",
-  "hard",
-  "very_hard",
-  "impossible",
-]);
-
 export const userRoleEnum = pgEnum("user_role", [
   "admin",
   "moderator",

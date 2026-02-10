@@ -1,4 +1,9 @@
-import { router, publicProcedure, protectedProcedure, moderatorProcedure } from "../index";
+import {
+  router,
+  publicProcedure,
+  protectedProcedure,
+  moderatorProcedure,
+} from "../index";
 import { db } from "@arcade-vibe/db";
 import { games } from "@arcade-vibe/db/schema/games";
 import { eq, desc, and } from "drizzle-orm";
@@ -160,7 +165,8 @@ export const gamesRouter = router({
       // Check access permissions
       const isPublic = game.status === "completed" && !game.isHidden;
       const isAuthor = ctx.user?.id === game.prompt.user?.id;
-      const isAdmin = ctx.user?.role === "admin" || ctx.user?.role === "moderator";
+      const isAdmin =
+        ctx.user?.role === "admin" || ctx.user?.role === "moderator";
 
       if (!isPublic && !isAuthor && !isAdmin) {
         throw new TRPCError({
@@ -285,6 +291,11 @@ export const gamesRouter = router({
             },
           },
           theme: true,
+          tierCost: {
+            columns: {
+              slug: true,
+            },
+          },
         },
       });
 
@@ -497,7 +508,8 @@ export const gamesRouter = router({
       // Check access permissions
       const isPublic = game.status === "completed" && !game.isHidden;
       const isAuthor = ctx.user.id === game.prompt.authorId;
-      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+      const isAdmin =
+        ctx.user.role === "admin" || ctx.user.role === "moderator";
 
       if (!isPublic && !isAuthor && !isAdmin) {
         throw new TRPCError({
@@ -518,11 +530,14 @@ export const gamesRouter = router({
       const sessionToken = await createGameSessionToken(ctx.user.id, game.id);
 
       // Get API endpoint from environment
-      const apiEndpoint = process.env.NEXT_PUBLIC_API_URL || "https://api.arcade-vibe.com";
+      const apiEndpoint =
+        process.env.NEXT_PUBLIC_API_URL || "https://api.arcade-vibe.com";
 
       // Inject SDK script into game HTML
-      const gameHtml = SDK_TEMPLATE
-        .replace("__ARCADE_VIBE_SESSION_TOKEN__", sessionToken)
+      const gameHtml = SDK_TEMPLATE.replace(
+        "__ARCADE_VIBE_SESSION_TOKEN__",
+        sessionToken,
+      )
         .replace("__ARCADE_VIBE_API_ENDPOINT__", apiEndpoint)
         .replace("__ARCADE_VIBE_GAME_ID__", game.id)
         .replace("__GAME_CODE__", game.gameData);

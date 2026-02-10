@@ -6,18 +6,41 @@ import {
   integer,
   boolean,
   timestamp,
+  real,
   index,
   unique,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { modelTierEnum } from "./enums";
 
 // Tier costs configuration - allows admins to set credit costs per tier
 export const tierCosts = pgTable("tier_costs", {
   id: uuid("id").defaultRandom().primaryKey(),
-  tier: modelTierEnum("tier").notNull().unique(),
+
+  // Machine-readable identifier - used in code references
+  slug: varchar("slug", { length: 50 }).notNull().unique(),
+
+  // Human-readable display name
+  name: varchar("name", { length: 100 }).notNull(),
+
+  // Credit cost for this tier
   creditCost: integer("credit_cost").notNull(),
+
+  // Description of what this tier means
   description: text("description"),
+
+  // Scoring multiplier - harder tiers get higher multipliers
+  scoreMultiplier: real("score_multiplier").notNull().default(1.0),
+
+  // Display order - lower numbers appear first
+  displayOrder: integer("display_order").notNull().default(0),
+
+  // UI color class for badges
+  colorClass: varchar("color_class", { length: 100 }),
+
+  // Soft delete support
+  isActive: boolean("is_active").notNull().default(true),
+
+  // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

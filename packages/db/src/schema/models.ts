@@ -8,8 +8,9 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { providerEnum, modelTierEnum } from "./enums";
+import { providerEnum } from "./enums";
 import { user } from "./auth";
+import { tierCosts } from "./credits";
 
 // per PRD lines 1192-1202
 export const apiKeys = pgTable(
@@ -39,7 +40,9 @@ export const modelConfig = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     provider: providerEnum("provider").notNull(),
     modelName: text("model_name").notNull(),
-    tier: modelTierEnum("tier").notNull(),
+    tierCostId: uuid("tier_cost_id")
+      .notNull()
+      .references(() => tierCosts.id, { onDelete: "restrict" }),
     costPer1kTokens: text("cost_per_1k_tokens").notNull(),
     maxTokens: integer("max_tokens").notNull(),
     supportsImages: boolean("supports_images").notNull().default(false),
@@ -55,6 +58,6 @@ export const modelConfig = pgTable(
       table.provider,
       table.modelName,
     ),
-    index("idx_model_config_active").on(table.isActive, table.tier),
+    index("idx_model_config_active").on(table.isActive, table.tierCostId),
   ],
 );

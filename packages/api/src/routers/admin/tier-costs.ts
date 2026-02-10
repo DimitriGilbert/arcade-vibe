@@ -1,92 +1,107 @@
-import { router, adminProcedure } from "@arcade-vibe/api";
+import { router, publicProcedure, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-
-type ModelTier =
-  | "cheater"
-  | "very_easy"
-  | "easy"
-  | "normal"
-  | "hard"
-  | "very_hard"
-  | "impossible";
-
-// Default credit costs by tier
-const DEFAULT_TIER_COSTS: Record<ModelTier, number> = {
-  cheater: 20,
-  very_easy: 16,
-  easy: 12,
-  normal: 8,
-  hard: 5,
-  very_hard: 3,
-  impossible: 2,
-};
+import { eq, and, asc } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 
 export const tierCostsRouter = router({
-  // Get all tier costs
-  getTierCosts: adminProcedure.query(async () => {
-    const costs = await db.query.tierCosts.findMany();
-
-    // Merge with defaults to ensure all tiers are represented
-    const allTiers: ModelTier[] = [
-      "cheater",
-      "very_easy",
-      "easy",
-      "normal",
-      "hard",
-      "very_hard",
-      "impossible",
-    ];
-
-    return allTiers.map((tier) => {
-      const existing = costs.find((c) => c.tier === tier);
-      return {
-        tier,
-        creditCost: existing?.creditCost ?? DEFAULT_TIER_COSTS[tier],
-        description: existing?.description ?? null,
-        isCustom: !!existing,
-      };
+  // List all active tier costs - public (for model selector)
+  list: publicProcedure.query(async () => {
+    return await db.query.tierCosts.findMany({
+      where: eq(tierCosts.isActive, true),
+      orderBy: [asc(tierCosts.displayOrder)],
     });
   }),
 
-  // Update a tier cost
-  updateTierCost: adminProcedure
+  // Get by slug - public
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ input }) => {
+      return await db.query.tierCosts.findFirst({
+        where: and(
+          eq(tierCosts.slug, input.slug),
+          eq(tierCosts.isActive, true),
+        ),
+      });
+    }),
+
+  // Get by ID - public
+  getById: publicProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input }) => {
+      return await db.query.tierCosts.findFirst({
+        where: eq(tierCosts.id, input.id),
+      });
+    }),
+
+  // Create - admin only
+  create: adminProcedure
     .input(
       z.object({
-        tier: z.enum([
-          "cheater",
-          "very_easy",
-          "easy",
-          "normal",
-          "hard",
-          "very_hard",
-          "impossible",
-        ]),
+        slug: z
+          .string()
+          .min(1)
+          .max(50)
+          .regex(/^[a-z_]+$/, "Slug must be lowercase with underscores only"),
+        name: z.string().min(1).max(100),
         creditCost: z.number().int().positive(),
         description: z.string().optional(),
+        scoreMultiplier: z.number().positive().default(1.0),
+        displayOrder: z.number().int().default(0),
+        colorClass: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await db.query.tierCosts.findFirst({
-        where: eq(tierCosts.tier, input.tier),
+      const [created] = await db.insert(tierCosts).values(input).returning();
+
+      if (!created) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create tier cost",
+        });
+      }
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "create_tier_cost",
+        targetType: "system",
+        targetId: created.id,
+        reason: `Created tier cost: ${input.name} (${input.slug})`,
+        metadata: JSON.stringify(input),
       });
 
-      if (existing) {
-        await db
-          .update(tierCosts)
-          .set({
-            creditCost: input.creditCost,
-            description: input.description ?? existing.description,
-          })
-          .where(eq(tierCosts.tier, input.tier));
-      } else {
-        await db.insert(tierCosts).values({
-          tier: input.tier,
-          creditCost: input.creditCost,
-          description: input.description,
+      return created;
+    }),
+
+  // Update - admin only
+  update: adminProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().min(1).max(100).optional(),
+        creditCost: z.number().int().positive().optional(),
+        description: z.string().optional(),
+        scoreMultiplier: z.number().positive().optional(),
+        displayOrder: z.number().int().optional(),
+        colorClass: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updates } = input;
+
+      const [updated] = await db
+        .update(tierCosts)
+        .set(updates)
+        .where(eq(tierCosts.id, id))
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update tier cost",
         });
       }
 
@@ -94,98 +109,40 @@ export const tierCostsRouter = router({
         adminId: ctx.user.id,
         actionType: "update_tier_cost",
         targetType: "system",
-        targetId: "tier_costs",
-        reason: `Updated ${input.tier} tier cost to ${input.creditCost} credits`,
-        metadata: JSON.stringify({
-          tier: input.tier,
-          oldCost:
-            existing?.creditCost ?? DEFAULT_TIER_COSTS[input.tier as ModelTier],
-          newCost: input.creditCost,
-        }),
+        targetId: id,
+        reason: `Updated tier cost: ${updated.name}`,
+        metadata: JSON.stringify({ id, updates }),
       });
 
-      return {
-        success: true,
-        tier: input.tier,
-        creditCost: input.creditCost,
-      };
+      return updated;
     }),
 
-  // Reset tier cost to default
-  resetTierCost: adminProcedure
-    .input(
-      z.object({
-        tier: z.enum([
-          "cheater",
-          "very_easy",
-          "easy",
-          "normal",
-          "hard",
-          "very_hard",
-          "impossible",
-        ]),
-      }),
-    )
+  // Soft delete - admin only
+  delete: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await db.query.tierCosts.findFirst({
-        where: eq(tierCosts.tier, input.tier),
-      });
+      const [deleted] = await db
+        .update(tierCosts)
+        .set({ isActive: false })
+        .where(eq(tierCosts.id, input.id))
+        .returning();
 
-      if (existing) {
-        await db.delete(tierCosts).where(eq(tierCosts.tier, input.tier));
+      if (!deleted) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to delete tier cost",
+        });
       }
 
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
-        actionType: "reset_tier_cost",
+        actionType: "delete_tier_cost",
         targetType: "system",
-        targetId: "tier_costs",
-        reason: `Reset ${input.tier} tier cost to default`,
-        metadata: JSON.stringify({
-          tier: input.tier,
-          resetFrom: existing?.creditCost ?? "default",
-          resetTo: DEFAULT_TIER_COSTS[input.tier as ModelTier],
-        }),
+        targetId: input.id,
+        reason: `Deleted tier cost: ${deleted.name}`,
+        metadata: JSON.stringify({ id: input.id }),
       });
 
-      return {
-        success: true,
-        tier: input.tier,
-        creditCost: DEFAULT_TIER_COSTS[input.tier as ModelTier],
-      };
+      return { success: true, id: input.id };
     }),
-
-  // Initialize all tier costs with defaults
-  initializeDefaults: adminProcedure.mutation(async ({ ctx }) => {
-    const existing = await db.query.tierCosts.findMany();
-    const existingTiers = new Set(existing.map((c) => c.tier));
-
-    const toInsert = Object.entries(DEFAULT_TIER_COSTS)
-      .filter(([tier]) => !existingTiers.has(tier as ModelTier))
-      .map(([tier, creditCost]) => ({
-        tier: tier as ModelTier,
-        creditCost,
-        description: `Default cost for ${tier} tier`,
-      }));
-
-    if (toInsert.length > 0) {
-      await db.insert(tierCosts).values(toInsert);
-    }
-
-    await db.insert(adminActions).values({
-      adminId: ctx.user.id,
-      actionType: "initialize_tier_costs",
-      targetType: "system",
-      targetId: "tier_costs",
-      reason: `Initialized ${toInsert.length} tier costs with defaults`,
-      metadata: JSON.stringify({
-        initializedTiers: toInsert.map((t) => t.tier),
-      }),
-    });
-
-    return {
-      success: true,
-      initializedCount: toInsert.length,
-    };
-  }),
 });

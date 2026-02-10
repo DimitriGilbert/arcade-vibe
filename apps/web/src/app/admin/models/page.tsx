@@ -28,13 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -43,14 +36,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 type SortField = "provider" | "modelName" | "tier" | "cost";
 type SortOrder = "asc" | "desc";
-type Tier =
-  | "cheater"
-  | "very_easy"
-  | "easy"
-  | "normal"
-  | "hard"
-  | "very_hard"
-  | "impossible";
 
 export default function AdminModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,7 +44,7 @@ export default function AdminModelsPage() {
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [addingModel, setAddingModel] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkTier, setBulkTier] = useState<Tier>("normal");
+  const [bulkTierCostId, setBulkTierCostId] = useState<string>("");
 
   // Fetch all models
   const {
@@ -116,7 +101,7 @@ export default function AdminModelsPage() {
         | "moonshot"
         | "custom";
       modelName: string;
-      tier: Tier;
+      tierCostId: string;
       costPer1kTokens: string;
       maxTokens: number;
       supportsImages: boolean;
@@ -198,12 +183,12 @@ export default function AdminModelsPage() {
 
   // Bulk update tier mutation
   const bulkUpdateTierMutation = useMutation({
-    mutationFn: async (input: { ids: string[]; tier: Tier }) => {
+    mutationFn: async (input: { ids: string[]; tierCostId: string }) => {
       return await trpcClient.admin.models.bulkUpdateModelsTier.mutate(input);
     },
     onSuccess: (data) => {
       toast.success(
-        `${data.updatedCount} models updated to ${data.tier} tier!`,
+        `${data.updatedCount} models updated to ${data.tierSlug} tier!`,
       );
       setSelectedIds(new Set());
       refetch();
@@ -318,11 +303,12 @@ export default function AdminModelsPage() {
   );
 
   const handleBulkUpdateTier = useCallback(() => {
+    if (!bulkTierCostId) return;
     bulkUpdateTierMutation.mutate({
       ids: Array.from(selectedIds),
-      tier: bulkTier,
+      tierCostId: bulkTierCostId,
     });
-  }, [selectedIds, bulkTier, bulkUpdateTierMutation]);
+  }, [selectedIds, bulkTierCostId, bulkUpdateTierMutation]);
 
   const ModelForm = ({
     mode,
@@ -345,15 +331,7 @@ export default function AdminModelsPage() {
         "custom",
       ]),
       modelName: z.string().min(1).max(100),
-      tier: z.enum([
-        "cheater",
-        "very_easy",
-        "easy",
-        "normal",
-        "hard",
-        "very_hard",
-        "impossible",
-      ]),
+      tierCostId: z.string().uuid(),
       costPer1kTokens: z.string().min(1),
       maxTokens: z.number().int().positive(),
       supportsImages: z.boolean().default(false),
@@ -381,20 +359,7 @@ export default function AdminModelsPage() {
           ],
         },
         { name: "modelName", type: "text", label: "Model Name" },
-        {
-          name: "tier",
-          type: "select",
-          label: "Difficulty Tier",
-          options: [
-            { value: "cheater", label: "Cheater (Easiest)" },
-            { value: "very_easy", label: "Very Easy" },
-            { value: "easy", label: "Easy" },
-            { value: "normal", label: "Normal" },
-            { value: "hard", label: "Hard" },
-            { value: "very_hard", label: "Very Hard" },
-            { value: "impossible", label: "Impossible (Hardest)" },
-          ],
-        },
+        { name: "tierCostId", type: "text", label: "Tier Cost ID (UUID)" },
         { name: "costPer1kTokens", type: "text", label: "Cost per 1k Tokens" },
         { name: "maxTokens", type: "number", label: "Max Tokens", min: 1 },
         { name: "supportsImages", type: "switch", label: "Supports Images" },
@@ -405,7 +370,7 @@ export default function AdminModelsPage() {
           ? {
               provider: "openai",
               modelName: "",
-              tier: "normal",
+              tierCostId: "",
               costPer1kTokens: "0.01",
               maxTokens: 128000,
               supportsImages: false,
@@ -425,7 +390,7 @@ export default function AdminModelsPage() {
                   | "moonshot"
                   | "custom",
                 modelName: model.modelName,
-                tier: model.tier as Tier,
+                tierCostId: model.tierCostId,
                 costPer1kTokens: model.costPer1kTokens,
                 maxTokens: model.maxTokens,
                 supportsImages: model.supportsImages,
@@ -446,7 +411,7 @@ export default function AdminModelsPage() {
                 | "moonshot"
                 | "custom",
               modelName: value.modelName,
-              tier: value.tier as Tier,
+              tierCostId: value.tierCostId,
               costPer1kTokens: value.costPer1kTokens,
               maxTokens: value.maxTokens,
               supportsImages: value.supportsImages || false,
@@ -552,26 +517,20 @@ export default function AdminModelsPage() {
                   Deactivate
                 </ArcadeButton>
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={bulkTier}
-                    onValueChange={(value) => setBulkTier(value as Tier)}
-                  >
-                    <SelectTrigger className="w-32 h-8">
-                      <SelectValue placeholder="Tier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cheater">Cheater</SelectItem>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
-                      <SelectItem value="impossible">Impossible</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ArcadeInput
+                    type="text"
+                    placeholder="Tier Cost ID"
+                    value={bulkTierCostId}
+                    onChange={(e) => setBulkTierCostId(e.target.value)}
+                    className="w-48 h-8"
+                  />
                   <ArcadeButton
                     variant="outline"
                     size="sm"
                     onClick={handleBulkUpdateTier}
-                    disabled={bulkUpdateTierMutation.isPending}
+                    disabled={
+                      bulkUpdateTierMutation.isPending || !bulkTierCostId
+                    }
                   >
                     <Zap className="h-4 w-4" />
                     Set Tier
@@ -798,7 +757,9 @@ type Model = {
   id: string;
   provider: string;
   modelName: string;
+  tierCostId: string;
   tier: string;
+  tierName: string;
   costPer1kTokens: string;
   maxTokens: number;
   supportsImages: boolean;

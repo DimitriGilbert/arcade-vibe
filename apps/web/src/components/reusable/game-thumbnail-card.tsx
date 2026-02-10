@@ -32,10 +32,13 @@ type BadgeVariant =
   | "link";
 
 const tierBadgeColors: Record<string, string> = {
-  cheater: "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]/30",
-  impossible: "bg-[var(--primary)]/15 text-[var(--primary)] border-[var(--primary)]/30",
+  cheater:
+    "bg-[var(--destructive)]/15 text-[var(--destructive)] border-[var(--destructive)]/30",
+  impossible:
+    "bg-[var(--primary)]/15 text-[var(--primary)] border-[var(--primary)]/30",
   hard: "bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30",
-  normal: "bg-[var(--secondary)]/15 text-[var(--secondary)] border-[var(--secondary)]/30",
+  normal:
+    "bg-[var(--secondary)]/15 text-[var(--secondary)] border-[var(--secondary)]/30",
   easy: "bg-[var(--muted)]/40 text-[var(--foreground)] border-[var(--border)]",
 };
 
@@ -65,19 +68,21 @@ function GameThumbnailCard({
     creator: meta?.creator ?? game.prompt?.user?.name,
     createdAt: meta?.createdAt ?? game.createdAt,
     status: meta?.status ?? game.status,
-    tier: meta?.tier ?? game.modelTier,
+    tier: meta?.tier,
   };
 
-  const tierBadgeStyle = displayMeta.tier ? tierBadgeColors[displayMeta.tier] : null;
+  const tierBadgeStyle = displayMeta.tier
+    ? tierBadgeColors[displayMeta.tier]
+    : null;
   const statusBadgeVariant = displayMeta.status
-    ? statusBadgeVariants[displayMeta.status] ?? "outline"
+    ? (statusBadgeVariants[displayMeta.status] ?? "outline")
     : "outline";
 
   return (
     <Card
       className={cn(
         "group cursor-pointer transition-all hover:shadow-md hover:border-primary/50",
-        onClick && "hover:-translate-y-1"
+        onClick && "hover:-translate-y-1",
       )}
       onClick={onClick}
     >
@@ -96,13 +101,7 @@ function GameThumbnailCard({
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
         <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5">
           {displayMeta.tier && tierBadgeStyle && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "border",
-                tierBadgeStyle
-              )}
-            >
+            <Badge variant="outline" className={cn("border", tierBadgeStyle)}>
               {displayMeta.tier}
             </Badge>
           )}
@@ -132,7 +131,9 @@ function GameThumbnailCard({
             </h3>
           )}
           {displayDescription && (
-            <p className="text-muted-foreground text-xs line-clamp-2">{displayDescription}</p>
+            <p className="text-muted-foreground text-xs line-clamp-2">
+              {displayDescription}
+            </p>
           )}
           {(displayMeta.creator || displayMeta.createdAt) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
