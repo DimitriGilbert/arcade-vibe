@@ -22,6 +22,20 @@
       "when": 1770598267414,
       "tag": "0002_sturdy_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770681706780,
+      "tag": "0003_tan_winter_soldier",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770685389578,
+      "tag": "0004_zippy_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

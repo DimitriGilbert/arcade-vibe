@@ -1,15 +1,17 @@
 import type { NextRequest } from "next/server";
 
-import { auth } from "@arcade-vibe/auth";
+import { auth, getUserRole } from "@arcade-vibe/auth";
 
 export async function createContext(req: NextRequest) {
   const session = await auth.api.getSession({
     headers: req.headers,
   });
-  const user = session?.user ? {
-    id: session.user.id,
-    role: ((session.user as { role?: string }).role || 'participant') as "admin" | "moderator" | "participant" | "viewer"
-  } : undefined;
+  const user = session?.user
+    ? {
+        id: session.user.id,
+        role: await getUserRole(session.user.id),
+      }
+    : undefined;
   return {
     session,
     req,

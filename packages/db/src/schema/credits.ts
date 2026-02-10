@@ -10,6 +10,20 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { modelTierEnum } from "./enums";
+
+// Tier costs configuration - allows admins to set credit costs per tier
+export const tierCosts = pgTable("tier_costs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tier: modelTierEnum("tier").notNull().unique(),
+  creditCost: integer("credit_cost").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
 
 // per PRD lines 1143-1153
 export const creditTransactions = pgTable(
@@ -39,6 +53,8 @@ export const subscriptionPlans = pgTable(
     features: text("features").array(),
     stripePriceId: text("stripe_price_id").unique(),
     isActive: boolean("is_active").notNull().default(true),
+    isOneTime: boolean("is_one_time").notNull().default(false),
+    isPopular: boolean("is_popular").notNull().default(false),
     extraCreditMarkupPercent: integer("extra_credit_markup_percent")
       .default(30)
       .notNull(),

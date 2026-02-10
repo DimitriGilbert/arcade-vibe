@@ -57,7 +57,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     queryFn: () => trpcClient.themes.list.query(),
   });
 
-  // Fetch models
   const { data: models, isLoading: modelsLoading } = useQuery({
     queryKey: ["models"],
     queryFn: async (): Promise<ModelConfig[]> => {
@@ -84,6 +83,19 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const { data: credits } = useQuery({
     queryKey: ["credits"],
     queryFn: () => trpcClient.credits.getBalance.query(),
+  });
+
+  const currentThemeId = existingPrompt?.themeId || selectedTheme;
+
+  const { data: libraryPatterns, isLoading: libraryPatternsLoading } = useQuery({
+    queryKey: ["libraryPatterns", currentThemeId],
+    queryFn: async () => {
+      if (!currentThemeId) return { globalPatterns: [], themePatterns: [] };
+      return await trpcClient.admin.libraryPatterns.getByTheme.query({
+        themeId: currentThemeId,
+      });
+    },
+    enabled: !!currentThemeId,
   });
 
   // Fetch prompt versions for history
@@ -523,6 +535,65 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                 )}
               </div>
             </ArcadeCard>
+
+            {/* Available Libraries */}
+            {libraryPatternsLoading ? (
+              <ArcadeCard>
+                <div className="p-6">
+                  <div className="flex items-center justify-center h-20">
+                    <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+                  </div>
+                </div>
+              </ArcadeCard>
+            ) : libraryPatterns && (libraryPatterns.globalPatterns.length > 0 || libraryPatterns.themePatterns.length > 0) ? (
+              <ArcadeCard>
+                <div className="p-6">
+                  <h3 className="font-semibold mb-3 text-[var(--foreground)]">
+                    Available Libraries for this Theme
+                  </h3>
+                  <div className="space-y-3">
+                    {libraryPatterns.globalPatterns.length > 0 && (
+                      <div>
+                        <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                          Global Libraries
+                        </p>
+                        <div className="space-y-1">
+                          {libraryPatterns.globalPatterns.map((pattern) => (
+                            <div
+                              key={pattern.id}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <span className="text-[var(--foreground)]">
+                                {pattern.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {libraryPatterns.themePatterns.length > 0 && (
+                      <div>
+                        <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                          Theme-Specific Libraries
+                        </p>
+                        <div className="space-y-1">
+                          {libraryPatterns.themePatterns.map((pattern) => (
+                            <div
+                              key={pattern.id}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <span className="text-[var(--foreground)]">
+                                {pattern.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ArcadeCard>
+            ) : null}
 
             {/* Version History */}
             {isEditing && versions && versions.length > 0 && (

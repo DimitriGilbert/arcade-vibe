@@ -40,6 +40,7 @@ function themeListToTheme(theme: ThemeList): Theme {
     ...theme,
     systemPrompt: theme.systemPrompt || "",
     requirements: theme.requirements || null,
+    allowedLibraryPatterns: [],
   };
 }
 
@@ -66,6 +67,15 @@ export default function AdminThemesPage() {
     queryFn: async () => {
       return await trpcClient.themes.list.query();
     },
+  });
+
+  // Fetch library patterns
+  const { data: libraryPatterns } = useQuery({
+    queryKey: ["library-patterns"],
+    queryFn: async () => {
+      return await trpcClient.admin.libraryPatterns.list.query();
+    },
+    enabled: !!editingTheme,
   });
 
   // Update theme mutation
@@ -121,6 +131,7 @@ export default function AdminThemesPage() {
       endDate: Date | null;
       requirements: Record<string, unknown>;
       systemPrompt: string;
+      libraryPatternIds?: string[];
     }) => {
       return await trpcClient.themes.create.mutate(input);
     },
@@ -131,6 +142,26 @@ export default function AdminThemesPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to create theme");
+    },
+  });
+
+  // Add library pattern to theme mutation
+  const addLibraryPatternMutation = useMutation({
+    mutationFn: async (input: { themeId: string; patternId: string }) => {
+      return await trpcClient.admin.libraryPatterns.addToTheme.mutate(input);
+    },
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  // Remove library pattern from theme mutation
+  const removeLibraryPatternMutation = useMutation({
+    mutationFn: async (input: { themeId: string; patternId: string }) => {
+      return await trpcClient.admin.libraryPatterns.removeFromTheme.mutate(input);
+    },
+    onSuccess: () => {
+      refetch();
     },
   });
 
@@ -172,6 +203,23 @@ export default function AdminThemesPage() {
     }
   };
 
+  const addLibraryPatternsToTheme = async (themeId: string, patternIds: string[]) => {
+    const existingTheme = themes?.find((t) => t.id === themeId);
+    if (!existingTheme) return;
+
+    const existingPatternIds = (existingTheme as any).libraryPatternIds || [];
+    const patternsToAdd = patternIds.filter((id: string) => !existingPatternIds.includes(id));
+    const patternsToRemove = existingPatternIds.filter((id: string) => !patternIds.includes(id));
+
+    for (const patternId of patternsToAdd) {
+      await addLibraryPatternMutation.mutateAsync({ themeId, patternId });
+    }
+
+    for (const patternId of patternsToRemove) {
+      await removeLibraryPatternMutation.mutateAsync({ themeId, patternId });
+    }
+  };
+
   const ThemeForm = () => {
     const schema = z.object({
       id: z.string().uuid().optional(),
@@ -183,6 +231,7 @@ export default function AdminThemesPage() {
       endDate: z.date().nullable(),
       requirements: z.record(z.string(), z.unknown()),
       systemPrompt: z.string().min(1),
+      libraryPatternIds: z.array(z.string().uuid()).optional(),
     });
 
     const { Form } = useFormedible({
@@ -224,6 +273,26 @@ export default function AdminThemesPage() {
           label: "System Prompt",
           textareaConfig: { rows: 4 },
         },
+        ...(libraryPatterns
+          ? [
+              {
+                name: "libraryPatternIds" as const,
+                type: "multiSelect" as const,
+                label: "Allowed Library Patterns",
+                description: "Select additional library patterns for this theme (global patterns are always available)",
+                multiSelectConfig: {
+                  maxSelections: 50,
+                  searchable: true,
+                },
+                options: libraryPatterns
+                  .filter((p) => !p.isGlobal)
+                  .map((p) => ({
+                    value: p.id,
+                    label: `${p.name} (${p.category})`,
+                  })),
+              },
+            ]
+          : []),
       ],
       formOptions: {
         defaultValues: editingTheme
@@ -241,6 +310,7 @@ export default function AdminThemesPage() {
                 : null,
               requirements: editingTheme.requirements || {},
               systemPrompt: editingTheme.systemPrompt || "",
+              libraryPatternIds: [],
             }
           : {
               title: "",
@@ -251,6 +321,7 @@ export default function AdminThemesPage() {
               endDate: null,
               requirements: {},
               systemPrompt: "",
+              libraryPatternIds: [],
             },
         onSubmit: async ({ value }) => {
           if (value.id) {
@@ -266,8 +337,18 @@ export default function AdminThemesPage() {
               systemPrompt: value.systemPrompt,
             };
             await updateThemeMutation.mutateAsync(updateInput);
+
+            if (value.libraryPatternIds) {
+              await addLibraryPatternsToTheme(value.id, value.libraryPatternIds);
+            }
           } else {
-            await createThemeMutation.mutateAsync(value);
+            const createResult = await createThemeMutation.mutateAsync(value);
+
+            if (value.libraryPatternIds && (createResult as any)?.themeId) {
+              for (const patternId of value.libraryPatternIds) {
+                await addLibraryPatternMutation.mutateAsync({ themeId: (createResult as any).themeId, patternId });
+              }
+            }
           }
         },
       },
@@ -314,6 +395,7 @@ export default function AdminThemesPage() {
               endDate: null,
               requirements: null,
               systemPrompt: "",
+              allowedLibraryPatterns: [],
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             })
@@ -454,7 +536,7 @@ export default function AdminThemesPage() {
         open={!!editingTheme}
         onOpenChange={(open) => !open && setEditingTheme(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingTheme?.id ? "Edit Theme" : "Create Theme"}

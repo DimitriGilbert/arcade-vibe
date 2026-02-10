@@ -48,6 +48,65 @@ export const plansRouter = router({
   }),
 
   /**
+   * Add Plan
+   *
+   * Create a new subscription plan.
+   */
+  addPlan: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        displayName: z.string().min(1).optional(),
+        price: z.number().int().min(0),
+        credits: z.number().int().min(0),
+        features: z.array(z.string()).optional(),
+        isOneTime: z.boolean().optional(),
+        isPopular: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [plan] = await db
+        .insert(subscriptionPlans)
+        .values({
+          name: input.name,
+          displayName: input.displayName ?? input.name,
+          price: input.price,
+          credits: input.credits,
+          features: input.features ?? [],
+          isActive: true,
+          isOneTime: input.isOneTime ?? false,
+          isPopular: input.isPopular ?? false,
+        })
+        .returning();
+
+      if (!plan) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create plan",
+        });
+      }
+
+      // Log the action
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "add_plan",
+        targetType: "plan",
+        targetId: plan.id,
+        reason: `Created new plan: ${input.name}`,
+        metadata: JSON.stringify({
+          name: input.name,
+          price: input.price,
+          credits: input.credits,
+          features: input.features,
+          isOneTime: input.isOneTime,
+          isPopular: input.isPopular,
+        }),
+      });
+
+      return plan;
+    }),
+
+  /**
    * Update Plan
    *
    * PRD Lines: 1508-1542
@@ -68,6 +127,8 @@ export const plansRouter = router({
         credits: z.number().int().min(0),
         features: z.array(z.string()).optional(),
         stripePriceId: z.string().optional(),
+        isOneTime: z.boolean().optional(),
+        isPopular: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -89,6 +150,8 @@ export const plansRouter = router({
         credits: plan.credits,
         features: plan.features,
         stripePriceId: plan.stripePriceId,
+        isOneTime: plan.isOneTime,
+        isPopular: plan.isPopular,
       };
 
       const newValues = {
@@ -96,6 +159,8 @@ export const plansRouter = router({
         credits: input.credits,
         features: input.features ?? plan.features,
         stripePriceId: input.stripePriceId,
+        isOneTime: input.isOneTime ?? plan.isOneTime,
+        isPopular: input.isPopular ?? plan.isPopular,
       };
 
       // PRD lines 1527-1534: Update plan configuration
@@ -106,6 +171,8 @@ export const plansRouter = router({
           credits: input.credits,
           features: input.features,
           stripePriceId: input.stripePriceId,
+          isOneTime: input.isOneTime,
+          isPopular: input.isPopular,
         })
         .where(eq(subscriptionPlans.id, input.id));
 

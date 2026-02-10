@@ -5,6 +5,7 @@ import { env } from "@arcade-vibe/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { eq } from "drizzle-orm";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -20,15 +21,29 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          await db.insert(userExtended).values({
-            id: user.id,
-            role: "participant",
-            reputation: 0,
-            credits: 100,
-            isSuspended: false,
-          }).onConflictDoNothing();
+          await db
+            .insert(userExtended)
+            .values({
+              id: user.id,
+              role: "participant",
+              reputation: 0,
+              credits: 100,
+              isSuspended: false,
+            })
+            .onConflictDoNothing();
         },
       },
     },
   },
 });
+
+// Helper to get user role from userExtended table
+export async function getUserRole(
+  userId: string,
+): Promise<"admin" | "moderator" | "participant" | "viewer"> {
+  const extended = await db.query.userExtended.findFirst({
+    where: eq(userExtended.id, userId),
+    columns: { role: true },
+  });
+  return extended?.role ?? "participant";
+}

@@ -14,6 +14,7 @@ import { promptRuns, ratings } from "./ratings";
 import { scores } from "./scores";
 import { platformStats, adminActions, scoringWeights } from "./platform";
 import { moderationReports, moderationAppeals } from "./moderation";
+import { allowedLibraryPatterns, themeAllowedPatterns } from "./library-patterns";
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -93,6 +94,7 @@ export const themesRelations = relations(themes, ({ many }) => ({
   prompts: many(prompts),
   scoringWeights: many(scoringWeights),
   scores: many(scores),
+  themeAllowedPatterns: many(themeAllowedPatterns),
 }));
 
 export const promptsRelations = relations(prompts, ({ one, many }) => ({
@@ -241,3 +243,22 @@ export const moderationAppealsRelations = relations(moderationAppeals, ({ one })
 }));
 
 export const modelConfigRelations = relations(modelConfig, () => ({}));
+
+export const allowedLibraryPatternsRelations = relations(allowedLibraryPatterns, ({ one, many }) => ({
+  createdBy: one(user, {
+    fields: [allowedLibraryPatterns.createdById],
+    references: [user.id],
+  }),
+  themeAllowedPatterns: many(themeAllowedPatterns),
+}));
+
+export const themeAllowedPatternsRelations = relations(themeAllowedPatterns, ({ one }) => ({
+  theme: one(themes, {
+    fields: [themeAllowedPatterns.themeId],
+    references: [themes.id],
+  }),
+  pattern: one(allowedLibraryPatterns, {
+    fields: [themeAllowedPatterns.patternId],
+    references: [allowedLibraryPatterns.id],
+  }),
+}));

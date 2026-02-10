@@ -41,6 +41,49 @@ async function recalculateThemeScores(themeId: string): Promise<void> {
 
 export const directActionsRouter = router({
   /**
+   * Get Users
+   *
+   * List all users with their extended data for admin management.
+   */
+  getUsers: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const users = await db.query.userExtended.findMany({
+        limit: input.limit,
+        offset: input.offset,
+        with: {
+          user: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      return users.map((u) => ({
+        id: u.id,
+        name: u.user?.name ?? null,
+        email: u.user?.email ?? "",
+        image: u.user?.image ?? null,
+        role: u.role,
+        credits: u.credits,
+        isSuspended: u.isSuspended,
+        suspensionReason: u.suspensionReason,
+        reputation: u.reputation,
+        createdAt: u.user?.createdAt ?? null,
+      }));
+    }),
+
+  /**
    * Hide Game
    *
    * PRD Lines: 2095-2536

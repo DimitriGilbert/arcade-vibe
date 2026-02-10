@@ -1,8 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Power, Search, ArrowUpDown, Zap, Settings, RefreshCw } from "lucide-react";
+import {
+  Plus,
+  Power,
+  Search,
+  ArrowUpDown,
+  Zap,
+  Settings,
+  RefreshCw,
+  Trash2,
+  X,
+  CheckSquare,
+} from "lucide-react";
 import {
   ArcadeCard,
   ArcadeButton,
@@ -16,15 +27,30 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SortField = "provider" | "modelName" | "tier" | "cost";
 type SortOrder = "asc" | "desc";
+type Tier =
+  | "cheater"
+  | "very_easy"
+  | "easy"
+  | "normal"
+  | "hard"
+  | "very_hard"
+  | "impossible";
 
 export default function AdminModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +58,8 @@ export default function AdminModelsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [addingModel, setAddingModel] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkTier, setBulkTier] = useState<Tier>("normal");
 
   // Fetch all models
   const {
@@ -88,7 +116,7 @@ export default function AdminModelsPage() {
         | "moonshot"
         | "custom";
       modelName: string;
-      tier: "cheater" | "easy" | "normal" | "hard" | "impossible";
+      tier: Tier;
       costPer1kTokens: string;
       maxTokens: number;
       supportsImages: boolean;
@@ -112,11 +140,76 @@ export default function AdminModelsPage() {
       return await trpcClient.admin.models.seedModels.mutate();
     },
     onSuccess: (data) => {
-      toast.success(`Successfully seeded ${data.insertedCount} models from OpenRouter!`);
+      toast.success(
+        `Successfully seeded ${data.insertedCount} models from OpenRouter!`,
+      );
       refetch();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to seed models");
+    },
+  });
+
+  // Delete model mutation
+  const deleteModelMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      return await trpcClient.admin.models.deleteModel.mutate(input);
+    },
+    onSuccess: () => {
+      toast.success("Model deleted successfully!");
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete model");
+    },
+  });
+
+  // Bulk delete models mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (input: { ids: string[] }) => {
+      return await trpcClient.admin.models.bulkDeleteModels.mutate(input);
+    },
+    onSuccess: (data) => {
+      toast.success(`${data.deletedCount} models deleted successfully!`);
+      setSelectedIds(new Set());
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete models");
+    },
+  });
+
+  // Bulk toggle active mutation
+  const bulkToggleMutation = useMutation({
+    mutationFn: async (input: { ids: string[]; isActive: boolean }) => {
+      return await trpcClient.admin.models.bulkToggleModelsActive.mutate(input);
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `${data.updatedCount} models ${data.isActive ? "activated" : "deactivated"}!`,
+      );
+      setSelectedIds(new Set());
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update models");
+    },
+  });
+
+  // Bulk update tier mutation
+  const bulkUpdateTierMutation = useMutation({
+    mutationFn: async (input: { ids: string[]; tier: Tier }) => {
+      return await trpcClient.admin.models.bulkUpdateModelsTier.mutate(input);
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `${data.updatedCount} models updated to ${data.tier} tier!`,
+      );
+      setSelectedIds(new Set());
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update models");
     },
   });
 
@@ -151,10 +244,12 @@ export default function AdminModelsPage() {
         case "tier": {
           const tierOrder: Record<string, number> = {
             cheater: 1,
-            easy: 2,
-            normal: 3,
-            hard: 4,
-            impossible: 5,
+            very_easy: 2,
+            easy: 3,
+            normal: 4,
+            hard: 5,
+            very_hard: 6,
+            impossible: 7,
           };
           comparison = (tierOrder[a.tier] || 0) - (tierOrder[b.tier] || 0);
           break;
@@ -180,6 +275,55 @@ export default function AdminModelsPage() {
     }
   };
 
+  // Selection handlers
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredModels.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredModels.map((m) => m.id)));
+    }
+  }, [selectedIds.size, filteredModels]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    if (
+      confirm(
+        `Are you sure you want to delete ${selectedIds.size} models? This action cannot be undone.`,
+      )
+    ) {
+      bulkDeleteMutation.mutate({ ids: Array.from(selectedIds) });
+    }
+  }, [selectedIds, bulkDeleteMutation]);
+
+  const handleBulkActivate = useCallback(
+    (isActive: boolean) => {
+      bulkToggleMutation.mutate({ ids: Array.from(selectedIds), isActive });
+    },
+    [selectedIds, bulkToggleMutation],
+  );
+
+  const handleBulkUpdateTier = useCallback(() => {
+    bulkUpdateTierMutation.mutate({
+      ids: Array.from(selectedIds),
+      tier: bulkTier,
+    });
+  }, [selectedIds, bulkTier, bulkUpdateTierMutation]);
+
   const ModelForm = ({
     mode,
     model,
@@ -201,7 +345,15 @@ export default function AdminModelsPage() {
         "custom",
       ]),
       modelName: z.string().min(1).max(100),
-      tier: z.enum(["cheater", "easy", "normal", "hard", "impossible"]),
+      tier: z.enum([
+        "cheater",
+        "very_easy",
+        "easy",
+        "normal",
+        "hard",
+        "very_hard",
+        "impossible",
+      ]),
       costPer1kTokens: z.string().min(1),
       maxTokens: z.number().int().positive(),
       supportsImages: z.boolean().default(false),
@@ -235,9 +387,11 @@ export default function AdminModelsPage() {
           label: "Difficulty Tier",
           options: [
             { value: "cheater", label: "Cheater (Easiest)" },
+            { value: "very_easy", label: "Very Easy" },
             { value: "easy", label: "Easy" },
             { value: "normal", label: "Normal" },
             { value: "hard", label: "Hard" },
+            { value: "very_hard", label: "Very Hard" },
             { value: "impossible", label: "Impossible (Hardest)" },
           ],
         },
@@ -271,12 +425,7 @@ export default function AdminModelsPage() {
                   | "moonshot"
                   | "custom",
                 modelName: model.modelName,
-                tier: model.tier as
-                  | "cheater"
-                  | "easy"
-                  | "normal"
-                  | "hard"
-                  | "impossible",
+                tier: model.tier as Tier,
                 costPer1kTokens: model.costPer1kTokens,
                 maxTokens: model.maxTokens,
                 supportsImages: model.supportsImages,
@@ -297,12 +446,7 @@ export default function AdminModelsPage() {
                 | "moonshot"
                 | "custom",
               modelName: value.modelName,
-              tier: value.tier as
-                | "cheater"
-                | "easy"
-                | "normal"
-                | "hard"
-                | "impossible",
+              tier: value.tier as Tier,
               costPer1kTokens: value.costPer1kTokens,
               maxTokens: value.maxTokens,
               supportsImages: value.supportsImages || false,
@@ -357,7 +501,9 @@ export default function AdminModelsPage() {
             <RefreshCw
               className={`h-4 w-4 ${seedModelsMutation.isPending ? "animate-spin" : ""}`}
             />
-            {seedModelsMutation.isPending ? "Seeding..." : "Seed from OpenRouter"}
+            {seedModelsMutation.isPending
+              ? "Seeding..."
+              : "Seed from OpenRouter"}
           </ArcadeButton>
           <ArcadeButton variant="primary" onClick={() => setAddingModel(true)}>
             <Plus className="h-4 w-4" />
@@ -365,6 +511,87 @@ export default function AdminModelsPage() {
           </ArcadeButton>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <ArcadeCard className="bg-[var(--accent)]/10 border-[var(--accent)]">
+          <div className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <CheckSquare className="h-5 w-5 text-[var(--accent)]" />
+                <span className="font-medium">
+                  {selectedIds.size} model{selectedIds.size !== 1 ? "s" : ""}{" "}
+                  selected
+                </span>
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSelection}
+                >
+                  <X className="h-4 w-4" />
+                  Clear
+                </ArcadeButton>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkActivate(true)}
+                  disabled={bulkToggleMutation.isPending}
+                >
+                  <Power className="h-4 w-4" />
+                  Activate
+                </ArcadeButton>
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkActivate(false)}
+                  disabled={bulkToggleMutation.isPending}
+                >
+                  <Power className="h-4 w-4" />
+                  Deactivate
+                </ArcadeButton>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={bulkTier}
+                    onValueChange={(value) => setBulkTier(value as Tier)}
+                  >
+                    <SelectTrigger className="w-32 h-8">
+                      <SelectValue placeholder="Tier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cheater">Cheater</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                      <SelectItem value="impossible">Impossible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <ArcadeButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkUpdateTier}
+                    disabled={bulkUpdateTierMutation.isPending}
+                  >
+                    <Zap className="h-4 w-4" />
+                    Set Tier
+                  </ArcadeButton>
+                </div>
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="text-red-500 hover:text-red-600 border-red-500/50 hover:border-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </ArcadeButton>
+              </div>
+            </div>
+          </div>
+        </ArcadeCard>
+      )}
 
       {/* Search and Filters */}
       <ArcadeCard>
@@ -390,6 +617,16 @@ export default function AdminModelsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
+                  <th className="px-4 py-3 text-left">
+                    <Checkbox
+                      checked={
+                        selectedIds.size === filteredModels.length &&
+                        filteredModels.length > 0
+                      }
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all models"
+                    />
+                  </th>
                   {[
                     { field: "provider" as SortField, label: "Provider" },
                     { field: "modelName" as SortField, label: "Model Name" },
@@ -426,7 +663,7 @@ export default function AdminModelsPage() {
                   <tr>
                     <EmptyState
                       variant="table"
-                      colSpan={8}
+                      colSpan={9}
                       message="No models found"
                     />
                   </tr>
@@ -434,8 +671,15 @@ export default function AdminModelsPage() {
                   filteredModels.map((model) => (
                     <tr
                       key={model.id}
-                      className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
+                      className={`border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors ${selectedIds.has(model.id) ? "bg-[var(--accent)]/5" : ""}`}
                     >
+                      <td className="px-4 py-3">
+                        <Checkbox
+                          checked={selectedIds.has(model.id)}
+                          onCheckedChange={() => toggleSelect(model.id)}
+                          aria-label={`Select ${model.modelName}`}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <ArcadeBadge
                           text={model.provider}
@@ -491,6 +735,22 @@ export default function AdminModelsPage() {
                           >
                             <Settings className="h-4 w-4" />
                           </ArcadeButton>
+                          <ArcadeButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Are you sure you want to delete "${model.modelName}"? This action cannot be undone.`,
+                                )
+                              ) {
+                                deleteModelMutation.mutate({ id: model.id });
+                              }
+                            }}
+                            disabled={deleteModelMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </ArcadeButton>
                         </div>
                       </td>
                     </tr>
@@ -507,7 +767,7 @@ export default function AdminModelsPage() {
         open={!!editingModel}
         onOpenChange={(open) => !open && setEditingModel(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Model Configuration</DialogTitle>
             <DialogDescription>
@@ -520,7 +780,7 @@ export default function AdminModelsPage() {
 
       {/* Add Model Dialog */}
       <Dialog open={addingModel} onOpenChange={setAddingModel}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Model</DialogTitle>
             <DialogDescription>

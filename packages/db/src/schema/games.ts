@@ -6,6 +6,7 @@ import {
   integer,
   index,
   boolean,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { gameStatusEnum, modelTierEnum } from "./enums";
 import { prompts } from "./prompts";
@@ -36,6 +37,8 @@ export const games = pgTable(
     hiddenAt: timestamp("hidden_at"),
     isSubmitted: boolean("is_submitted").default(false).notNull(),
     submittedAt: timestamp("submitted_at"),
+    blockedScriptUrls: jsonb("blocked_script_urls").$type<string[]>(),
+    sanitizationApplied: boolean("sanitization_applied").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

@@ -7,7 +7,14 @@ import { eq, and, desc } from "drizzle-orm";
 import { redis } from "./redis";
 
 // Model tier values from modelTierEnum
-type ModelTier = "cheater" | "easy" | "normal" | "hard" | "impossible";
+type ModelTier =
+  | "cheater"
+  | "very_easy"
+  | "easy"
+  | "normal"
+  | "hard"
+  | "very_hard"
+  | "impossible";
 
 /**
  * Scoring Engine - Calculates game scores based on multiple factors
@@ -47,9 +54,11 @@ interface ScoreResult {
 // Model tier multipliers for difficulty score
 const TIER_MULTIPLIERS: Record<ModelTier, number> = {
   cheater: 0.8,
+  very_easy: 0.85,
   easy: 0.9,
   normal: 1.0,
   hard: 1.25,
+  very_hard: 1.75,
   impossible: 2.5,
 };
 

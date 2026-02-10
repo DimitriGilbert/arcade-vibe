@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard } from "@/components/arcade";
@@ -13,63 +12,14 @@ import { toast } from "sonner";
 interface SubscriptionPlan {
   id: string;
   name: string;
+  displayName: string | null;
   price: number;
   credits: number;
-  features: string[];
+  features: string[] | null;
+  isActive: boolean | null;
+  isOneTime: boolean | null;
+  isPopular: boolean | null;
 }
-
-// Mock subscription plans (these would normally come from the backend)
-const PLANS: SubscriptionPlan[] = [
-  {
-    id: "free",
-    name: "Free",
-    price: 0,
-    credits: 100,
-    features: [
-      "100 free credits to start",
-      "Access to basic models",
-      "Create and share games",
-      "Community support",
-    ],
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    price: 9,
-    credits: 500,
-    features: [
-      "500 credits per month",
-      "Access to all models",
-      "Priority generation queue",
-      "Email support",
-      "Early access to new features",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 29,
-    credits: 2000,
-    features: [
-      "2000 credits per month",
-      "Access to premium models",
-      "Fastest generation queue",
-      "Priority support",
-      "Custom model configurations",
-      "Analytics dashboard",
-      "API access",
-    ],
-  },
-];
-
-// Credit purchase options
-const CREDIT_PACKAGES = [
-  { credits: 100, price: 5, bonus: 0 },
-  { credits: 500, price: 20, bonus: 50 },
-  { credits: 1000, price: 35, bonus: 150 },
-  { credits: 2000, price: 60, bonus: 400 },
-  { credits: 5000, price: 120, bonus: 1000 },
-];
 
 function PlanCard({
   plan,
@@ -81,7 +31,7 @@ function PlanCard({
   onSelect: (plan: SubscriptionPlan) => void;
 }) {
   const isFree = plan.price === 0;
-  const isPopular = plan.name === "Starter";
+  const isPopular = plan.isPopular === true;
 
   return (
     <ArcadeCard
@@ -109,7 +59,9 @@ function PlanCard({
       <div className="p-4">
         <div className="mb-4">
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold">${plan.price}</span>
+            <span className="text-4xl font-bold">
+              ${(plan.price / 100).toFixed(2)}
+            </span>
             {plan.price > 0 && (
               <span className="text-[var(--muted-foreground)]">/month</span>
             )}
@@ -120,7 +72,7 @@ function PlanCard({
         </div>
 
         <ul className="space-y-2 mb-6">
-          {plan.features.map((feature) => (
+          {(plan.features ?? []).map((feature) => (
             <li key={feature} className="flex items-start gap-2">
               <Check className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5" />
               <span className="text-sm">{feature}</span>
@@ -147,35 +99,38 @@ function PlanCard({
   );
 }
 
-function CreditPackage({
-  pkg,
+function OneTimePackage({
+  plan,
   onSelect,
 }: {
-  pkg: { credits: number; price: number; bonus: number };
-  onSelect: (pkg: { credits: number; price: number; bonus: number }) => void;
+  plan: SubscriptionPlan;
+  onSelect: (plan: SubscriptionPlan) => void;
 }) {
-  const totalCredits = pkg.credits + pkg.bonus;
-  const hasBonus = pkg.bonus > 0;
+  const isPopular = plan.isPopular === true;
+  // For one-time purchases, the first feature is used as badge text
+  const badgeText = plan.features?.[0];
 
   return (
-    // ArcadeCard is shit ! It doesn't support onclick !
-    <ArcadeCard className="cursor-pointer" onClick={() => onSelect(pkg)}>
+    <ArcadeCard
+      className={`relative cursor-pointer ${isPopular ? "ring-2 ring-[var(--primary)]/60" : ""}`}
+      onClick={() => onSelect(plan)}
+    >
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <ArcadeBadge text="Best Value" variant="neon" />
+        </div>
+      )}
       <div className="p-6">
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-1">
             <span className="text-3xl font-bold">
-              {pkg.credits.toLocaleString()}
+              {plan.credits.toLocaleString()}
             </span>
             <span className="text-[var(--muted-foreground)]">credits</span>
           </div>
-          {hasBonus && (
-            <ArcadeBadge
-              text={`+${pkg.bonus.toLocaleString()} bonus`}
-              variant="neon"
-            />
-          )}
+          {badgeText && <ArcadeBadge text={badgeText} variant="neon" />}
           <div className="text-2xl font-bold text-[var(--primary)]">
-            ${pkg.price}
+            ${(plan.price / 100).toFixed(2)}
           </div>
           <ArcadeButton variant="outline" className="w-full">
             Purchase
@@ -188,6 +143,15 @@ function CreditPackage({
 
 export default function SubscriptionSettingsPage() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
+
+  // Fetch subscription plans from API
+  const { data: plansData, isLoading: plansLoading } = useQuery({
+    queryKey: ["subscription-plans"],
+    queryFn: async () => {
+      const plans = await trpcClient.admin.plans.getPlans.query();
+      return plans.filter((p) => p.isActive !== false) as SubscriptionPlan[];
+    },
+  });
 
   // Fetch user credits
   const { data: creditsData, isLoading: creditsLoading } = useQuery({
@@ -210,6 +174,11 @@ export default function SubscriptionSettingsPage() {
     enabled: !!session,
   });
 
+  // Separate subscription plans from one-time purchases
+  const allPlans = plansData ?? [];
+  const subscriptionPlans = allPlans.filter((p) => p.isOneTime !== true);
+  const oneTimePackages = allPlans.filter((p) => p.isOneTime === true);
+
   const credits = creditsData?.balance ?? 0;
   const transactions = transactionsData?.transactions ?? [];
 
@@ -230,19 +199,7 @@ export default function SubscriptionSettingsPage() {
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
     if (plan.price === 0) return;
-
-    // For now, use creditAmount-based checkout since plans are mock data
-    // In production, this would use plan.id with actual database plan IDs
-    checkoutMutation.mutate({ creditAmount: plan.credits });
-  };
-
-  const handlePurchaseCredits = (pkg: {
-    credits: number;
-    price: number;
-    bonus: number;
-  }) => {
-    const totalCredits = pkg.credits + pkg.bonus;
-    checkoutMutation.mutate({ creditAmount: totalCredits });
+    checkoutMutation.mutate({ planId: plan.id, creditAmount: plan.credits });
   };
 
   if (sessionPending || creditsLoading || userLoading) {
@@ -298,36 +255,59 @@ export default function SubscriptionSettingsPage() {
       </ArcadeCard>
 
       {/* Subscription Plans */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Choose a Plan</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              isCurrent={plan.id === "free"}
-              onSelect={handleSelectPlan}
-            />
-          ))}
-        </div>
-      </section>
+      {subscriptionPlans.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Subscription Plans</h2>
+          {plansLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {subscriptionPlans.map((plan) => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  isCurrent={false}
+                  onSelect={handleSelectPlan}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* Purchase Credits */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Purchase Credits</h2>
-        <p className="text-[var(--muted-foreground)]">
-          Buy credits in bulk and get bonus credits. Credits never expire.
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {CREDIT_PACKAGES.map((pkg) => (
-            <CreditPackage
-              key={`${pkg.credits}-${pkg.price}`}
-              pkg={pkg}
-              onSelect={handlePurchaseCredits}
-            />
-          ))}
-        </div>
-      </section>
+      {/* One-time Credit Packages */}
+      {oneTimePackages.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Purchase Credits</h2>
+          <p className="text-[var(--muted-foreground)]">
+            Buy credits in bulk. Credits never expire.
+          </p>
+          {plansLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {oneTimePackages.map((plan) => (
+                <OneTimePackage
+                  key={plan.id}
+                  plan={plan}
+                  onSelect={handleSelectPlan}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* No plans message */}
+      {allPlans.length === 0 && !plansLoading && (
+        <section className="space-y-4">
+          <p className="text-[var(--muted-foreground)]">No plans available.</p>
+        </section>
+      )}
 
       {/* Transaction History */}
       {!transactionsLoading && transactions.length > 0 && (

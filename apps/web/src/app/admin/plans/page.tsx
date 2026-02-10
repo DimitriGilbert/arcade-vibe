@@ -39,6 +39,7 @@ export default function AdminPlansPage() {
   const [sortField, setSortField] = useState<SortField>("price");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [addingPlan, setAddingPlan] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     plan: Plan | null;
@@ -66,6 +67,8 @@ export default function AdminPlansPage() {
       price: number;
       credits: number;
       features: string[];
+      isOneTime?: boolean;
+      isPopular?: boolean;
     }) => {
       return await trpcClient.admin.plans.updatePlan.mutate(input);
     },
@@ -76,6 +79,28 @@ export default function AdminPlansPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update plan");
+    },
+  });
+
+  // Add plan mutation
+  const addPlanMutation = useMutation({
+    mutationFn: async (input: {
+      name: string;
+      price: number;
+      credits: number;
+      features: string[];
+      isOneTime?: boolean;
+      isPopular?: boolean;
+    }) => {
+      return await trpcClient.admin.plans.addPlan.mutate(input);
+    },
+    onSuccess: () => {
+      toast.success("Plan added successfully!");
+      refetch();
+      setAddingPlan(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add plan");
     },
   });
 
@@ -146,6 +171,8 @@ export default function AdminPlansPage() {
       price: z.number().int().min(0),
       credits: z.number().int().min(0),
       features: z.array(z.string()),
+      isOneTime: z.boolean(),
+      isPopular: z.boolean(),
     });
 
     const { Form } = useFormedible({
@@ -154,6 +181,18 @@ export default function AdminPlansPage() {
         { name: "name", type: "text", label: "Plan Name", disabled: true },
         { name: "price", type: "number", label: "Price (USD cents)", min: 0 },
         { name: "credits", type: "number", label: "Credits per Month", min: 0 },
+        {
+          name: "isOneTime",
+          type: "switch",
+          label: "One-time Purchase",
+          description: "This is a one-time credit purchase, not a subscription",
+        },
+        {
+          name: "isPopular",
+          type: "switch",
+          label: "Popular",
+          description: "Mark this plan as the popular choice",
+        },
         {
           name: "features",
           type: "array",
@@ -176,6 +215,8 @@ export default function AdminPlansPage() {
               price: editingPlan.price,
               credits: editingPlan.credits,
               features: editingPlan.features || [],
+              isOneTime: editingPlan.isOneTime ?? false,
+              isPopular: editingPlan.isPopular ?? false,
             }
           : {
               id: "",
@@ -183,6 +224,8 @@ export default function AdminPlansPage() {
               price: 0,
               credits: 0,
               features: [],
+              isOneTime: false,
+              isPopular: false,
             },
         onSubmit: async ({ value }) => {
           await updatePlanMutation.mutateAsync({
@@ -190,6 +233,92 @@ export default function AdminPlansPage() {
             price: value.price,
             credits: value.credits,
             features: value.features,
+            isOneTime: value.isOneTime,
+            isPopular: value.isPopular,
+          });
+        },
+      },
+    });
+
+    return <Form className="space-y-4" />;
+  };
+
+  const AddPlanForm = () => {
+    const schema = z.object({
+      name: z.string().min(1, "Plan name is required"),
+      price: z.number().int().min(0),
+      credits: z.number().int().min(0),
+      features: z.array(z.string()),
+      isOneTime: z.boolean(),
+      isPopular: z.boolean(),
+    });
+
+    const { Form } = useFormedible({
+      schema,
+      fields: [
+        {
+          name: "name",
+          type: "text",
+          label: "Plan Name",
+          placeholder: "e.g., Pro",
+        },
+        {
+          name: "price",
+          type: "number",
+          label: "Price (USD cents)",
+          min: 0,
+          placeholder: "e.g., 999 for $9.99",
+        },
+        {
+          name: "credits",
+          type: "number",
+          label: "Credits per Month",
+          min: 0,
+          placeholder: "e.g., 1000",
+        },
+        {
+          name: "isOneTime",
+          type: "switch",
+          label: "One-time Purchase",
+          description: "This is a one-time credit purchase, not a subscription",
+        },
+        {
+          name: "isPopular",
+          type: "switch",
+          label: "Popular",
+          description: "Mark this plan as the popular choice",
+        },
+        {
+          name: "features",
+          type: "array",
+          label: "Features",
+          arrayConfig: {
+            itemType: "text",
+            itemLabel: "Feature",
+            addButtonLabel: "Add Feature",
+            objectConfig: {
+              fields: [{ name: "value", type: "text", label: "Feature" }],
+            },
+          },
+        },
+      ],
+      formOptions: {
+        defaultValues: {
+          name: "",
+          price: 0,
+          credits: 0,
+          features: [],
+          isOneTime: false,
+          isPopular: false,
+        },
+        onSubmit: async ({ value }) => {
+          await addPlanMutation.mutateAsync({
+            name: value.name,
+            price: value.price,
+            credits: value.credits,
+            features: value.features,
+            isOneTime: value.isOneTime,
+            isPopular: value.isPopular,
           });
         },
       },
@@ -223,7 +352,7 @@ export default function AdminPlansPage() {
             Manage subscription plans and pricing
           </p>
         </div>
-        <ArcadeButton variant="primary">
+        <ArcadeButton variant="primary" onClick={() => setAddingPlan(true)}>
           <Plus className="h-4 w-4" />
           Add Plan
         </ArcadeButton>
@@ -367,7 +496,7 @@ export default function AdminPlansPage() {
         open={!!editingPlan}
         onOpenChange={(open) => !open && setEditingPlan(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Plan</DialogTitle>
             <DialogDescription>
@@ -375,6 +504,19 @@ export default function AdminPlansPage() {
             </DialogDescription>
           </DialogHeader>
           <PlanForm />
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Plan Dialog */}
+      <Dialog open={addingPlan} onOpenChange={setAddingPlan}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Plan</DialogTitle>
+            <DialogDescription>
+              Create a new subscription plan
+            </DialogDescription>
+          </DialogHeader>
+          <AddPlanForm />
         </DialogContent>
       </Dialog>
 
@@ -434,6 +576,8 @@ type Plan = {
   credits: number;
   features: string[] | null;
   stripePriceId: string | null;
+  isOneTime: boolean | null;
+  isPopular: boolean | null;
   createdAt: string;
   updatedAt: string;
 };

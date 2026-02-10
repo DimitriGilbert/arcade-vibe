@@ -13,10 +13,12 @@ interface GameCardProps {
 
 const TIER_CONFIG = {
   cheater: { label: "Cheater" },
-  impossible: { label: "Impossible" },
-  hard: { label: "Hard" },
-  normal: { label: "Normal" },
+  very_easy: { label: "Very Easy" },
   easy: { label: "Easy" },
+  normal: { label: "Normal" },
+  hard: { label: "Hard" },
+  very_hard: { label: "Very Hard" },
+  impossible: { label: "Impossible" },
 };
 
 export function GameCard({ game, onClick }: GameCardProps) {

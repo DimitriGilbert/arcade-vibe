@@ -49,43 +49,14 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  // Fetch users (using mock data since user endpoint doesn't exist yet)
+  // Fetch users
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users", page],
     queryFn: async () => {
-      // Mock data for now - in production this would call actual endpoint
-      return [
-        {
-          id: "1",
-          name: "Alice Johnson",
-          email: "alice@example.com",
-          role: "participant",
-          credits: 500,
-          isSuspended: false,
-          reputation: 0,
-          suspensionReason: null,
-        },
-        {
-          id: "2",
-          name: "Bob Smith",
-          email: "bob@example.com",
-          role: "participant",
-          credits: 1250,
-          isSuspended: false,
-          reputation: 0,
-          suspensionReason: null,
-        },
-        {
-          id: "3",
-          name: "Charlie Brown",
-          email: "charlie@example.com",
-          role: "admin",
-          credits: 10000,
-          isSuspended: false,
-          reputation: 0,
-          suspensionReason: null,
-        },
-      ] as User[];
+      return await trpcClient.admin.direct.getUsers.query({
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      });
     },
   });
 
@@ -373,7 +344,7 @@ export default function AdminUsersPage() {
           !open && setSuspendDialog({ open: false, user: null })
         }
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Suspend User</DialogTitle>
             <DialogDescription>

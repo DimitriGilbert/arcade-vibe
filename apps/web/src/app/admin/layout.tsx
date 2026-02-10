@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   Loader2,
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
+import { trpcClient } from "@/utils/trpc";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -39,9 +41,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending: sessionPending } = authClient.useSession();
   const user = session?.user;
-  const userRole = user ? (user as { role?: string }).role : undefined;
+
+  // Fetch user's role from userExtended table via tRPC
+  const { data: userExtended, isPending: rolePending } = useQuery({
+    queryKey: ["user", "extended"],
+    queryFn: () => trpcClient.credits.getUserExtended.query(),
+    enabled: !!user,
+  });
+
+  const userRole = userExtended?.role;
+  const isPending = sessionPending || rolePending;
 
   if (!isPending && (!user || userRole !== "admin")) {
     toast.error("Access denied", {

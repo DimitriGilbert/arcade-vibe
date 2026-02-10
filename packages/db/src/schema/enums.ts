@@ -30,9 +30,11 @@ export const gameStatusEnum = pgEnum("game_status", [
 
 export const modelTierEnum = pgEnum("model_tier", [
   "cheater",
+  "very_easy",
   "easy",
   "normal",
   "hard",
+  "very_hard",
   "impossible",
 ]);
 
@@ -74,4 +76,19 @@ export const moderationTargetTypeEnum = pgEnum("moderation_target_type", [
   "game",
   "user",
   "review",
+]);
+
+export const libraryCategoryEnum = pgEnum("library_category", [
+  "game_engine",
+  "physics",
+  "audio",
+  "graphics",
+  "utility",
+  "analytics",
+  "other",
+]);
+
+export const libraryStatusEnum = pgEnum("library_status", [
+  "active",
+  "disabled",
 ]);

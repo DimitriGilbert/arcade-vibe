@@ -3,29 +3,35 @@
  * Script to promote an existing user to admin role.
  *
  * Usage:
- *   pnpm run --filter @arcade-vibe/db promote-admin <email|userId>
+ *   pnpm run promote-admin <email|userId>
  *
  * Examples:
- *   pnpm run --filter @arcade-vibe/db promote-admin user@example.com
- *   pnpm run --filter @arcade-vibe/db promote-admin abc123xyz
+ *   pnpm run promote-admin user@example.com
+ *   pnpm run promote-admin abc123xyz
  */
 
-import "dotenv/config";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, or } from "drizzle-orm";
-import { user } from "../src/schema/auth";
-import { userExtended } from "../src/schema/users";
+import { config } from "dotenv";
+import { resolve } from "node:path";
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Load .env from apps/web/.env (where DATABASE_URL is defined)
+// Must be done BEFORE any imports that depend on env vars
+config({ path: resolve(import.meta.dirname, "../../../apps/web/.env") });
 
-if (!DATABASE_URL) {
-  console.error("❌ DATABASE_URL environment variable is required");
-  process.exit(1);
-}
+async function main() {
+  // Dynamic imports to ensure dotenv loads first
+  const { eq, or } = await import("drizzle-orm");
+  const { db } = await import("../src/index");
+  const { user } = await import("../src/schema/auth");
+  const { userExtended } = await import("../src/schema/users");
 
-const db = drizzle(DATABASE_URL);
+  const identifier = process.argv[2];
 
-async function promoteToAdmin(identifier: string) {
+  if (!identifier) {
+    console.error("❌ Please provide a user email or id");
+    console.error("Usage: pnpm run promote-admin <email|userId>");
+    process.exit(1);
+  }
+
   console.log(`🔍 Looking for user: ${identifier}`);
 
   // First, find the user by email or id
@@ -94,18 +100,7 @@ async function promoteToAdmin(identifier: string) {
   );
 }
 
-// Get the identifier from command line arguments
-const identifier = process.argv[2];
-
-if (!identifier) {
-  console.error("❌ Please provide a user email or id");
-  console.error(
-    "Usage: pnpm run --filter @arcade-vibe/db promote-admin <email|userId>",
-  );
-  process.exit(1);
-}
-
-promoteToAdmin(identifier)
+main()
   .then(() => {
     console.log("\n👋 Done!");
     process.exit(0);

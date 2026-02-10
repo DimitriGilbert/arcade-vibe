@@ -13,3 +13,4 @@ export * from "./platform";
 export * from "./moderation";
 export * from "./security";
 export * from "./relations";
+export * from "./library-patterns";

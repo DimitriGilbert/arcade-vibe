@@ -1,6 +1,7 @@
 import { router, publicProcedure, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { themes } from "@arcade-vibe/db/schema/themes";
+import { themeAllowedPatterns } from "@arcade-vibe/db/schema/library-patterns";
 import { z } from "zod";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -67,6 +68,11 @@ export const themesRouter = router({
         });
       }
 
+      const allowedPatterns = await db.query.themeAllowedPatterns.findMany({
+        where: eq(themeAllowedPatterns.themeId, input.id),
+        with: { pattern: true },
+      });
+
       return {
         id: theme.id,
         title: theme.title,
@@ -78,6 +84,10 @@ export const themesRouter = router({
         systemPrompt: theme.systemPrompt,
         createdAt: theme.createdAt,
         updatedAt: theme.updatedAt,
+        allowedLibraryPatterns: allowedPatterns.map((tp) => ({
+          ...tp.pattern,
+          isGlobal: tp.pattern.isGlobal,
+        })),
       };
     }),
 
