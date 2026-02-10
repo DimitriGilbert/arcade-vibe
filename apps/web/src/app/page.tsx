@@ -4,6 +4,7 @@ import type { Route } from "next";
 import type { ReactNode } from "react";
 
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Gamepad2,
   Send,
@@ -24,82 +25,61 @@ import {
   ArcadeBadge,
   ArcadeStats,
 } from "@/components/arcade";
+import { trpcClient } from "@/utils/trpc";
+import { LoadingState } from "@/components/reusable";
 
-// Mock data for the homepage
 const HOW_IT_WORKS_STEPS = [
   {
-    title: "CRAFT",
+    title: "WRITE",
     description:
-      "Write your single-shot prompt. No context, no history - pure instruction to generate a playable game.",
+      "Write a prompt that makes an AI build a game. One message, no do-overs.",
     icon: Code2,
   },
   {
-    title: "SUBMIT",
+    title: "PICK",
     description:
-      "Choose your model difficulty. From powerhouse AIs to tiny models - higher risk, higher reward.",
+      "Pick your model. Easy mode with big AIs, or go hard with smaller ones.",
     icon: Send,
   },
   {
-    title: "COMPETE",
+    title: "PLAY",
     description:
-      "The community plays and rates your game. Climb the leaderboard and earn eternal glory.",
+      "People play your game, rate it. See where you land on the board.",
     icon: Trophy,
   },
 ] as const;
 
 const MODEL_TIERS = [
   {
-    name: "Cheater",
+    name: "Easy",
     models: "GPT-5.3, Opus-4.6",
     multiplier: "1x",
-    description: "Maximum power, minimum glory",
+    description: "Big models. Easy wins. No bragging rights.",
     variant: "default" as const,
   },
   {
     name: "Normal",
     models: "GLM-4.7, Kimi-k2.5",
     multiplier: "1.5x",
-    description: "Balanced competition",
+    description: "The sweet spot.",
     variant: "default" as const,
   },
   {
     name: "Hard",
     models: "Deepseek-3.2, GPT-5.1-mini, Haiku-4.5",
     multiplier: "2x",
-    description: "Challenge mode activated",
+    description: "Now we're talking.",
     variant: "neon" as const,
   },
   {
-    name: "Impossible",
+    name: "Insane",
     models: "Tiny models",
     multiplier: "3x",
-    description: "Ultimate glory awaits",
+    description: "Tiny models. Big flex if you pull it off.",
     variant: "neon" as const,
   },
 ] as const;
 
-const MOCK_STATS = [
-  {
-    value: "2,847",
-    label: "Games Created",
-    icon: <Gamepad2 className="size-4" />,
-  },
-  {
-    value: "1,234",
-    label: "Prompt Engineers",
-    icon: <Users className="size-4" />,
-  },
-  { value: "15.2K", label: "Ratings Given", icon: <Star className="size-4" /> },
-  { value: "892", label: "Prompts Forked", icon: <Code2 className="size-4" /> },
-];
-
-const TOP_PLAYERS = [
-  { rank: 1, name: "PromptMaster", score: 2847 },
-  { rank: 2, name: "NeonCoder", score: 2651 },
-  { rank: 3, name: "PixelAlchemist", score: 2498 },
-] as const;
-
-// Section wrapper component
 function Section({
   children,
   className,
@@ -114,7 +94,6 @@ function Section({
   );
 }
 
-// Section title component
 function SectionTitle({
   title,
   subtitle,
@@ -136,7 +115,21 @@ function SectionTitle({
   );
 }
 
-// Hero Section
+function formatTimeRemaining(endDate: Date): string {
+  const now = new Date();
+  const diff = endDate.getTime() - now.getTime();
+  
+  if (diff <= 0) return "Ended";
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  
+  if (days > 0) {
+    return `${days} day${days > 1 ? "s" : ""} ${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+  return `${hours} hour${hours !== 1 ? "s" : ""}`;
+}
+
 function HeroSection() {
   return (
     <Section className="home-hero">
@@ -144,61 +137,48 @@ function HeroSection() {
         <div className="home-hero-grid-lines" />
         <div className="home-hero-horizon" />
       </div>
-      {/* Content */}
       <div className="home-content text-center px-4 max-w-5xl mx-auto">
-        {/* Main title */}
         <h1 className="home-title text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black mb-6">
           <span className="home-title-main">ARCADE</span>
           <span className="home-title-sub">VIBE</span>
         </h1>
 
-        {/* Tagline */}
         <p className="home-subtitle text-xl md:text-2xl lg:text-3xl text-[var(--foreground)] mb-4 font-semibold">
-          One prompt. One shot. One month to prove you're the best prompt
-          engineer.
+          Make games with AI. Compete with friends. Get better at prompting
+          while you're at it.
         </p>
 
         <p className="text-base md:text-lg text-[var(--muted-foreground)] mb-10 max-w-2xl mx-auto">
-          Competitive prompt engineering disguised as a retro arcade. Craft the
-          perfect prompt, generate playable games, and climb the eternal
-          leaderboard.
+          A chill place to test your prompting skills, play some fun games, and
+          see how different AI models stack up.
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href={"/arcade" as Route}>
             <ArcadeButton variant="glow" size="lg">
               <Play className="size-5" />
-              Start Playing
+              Play Games
             </ArcadeButton>
           </Link>
           <Link href={"/arcade" as Route}>
             <ArcadeButton variant="outline" size="lg">
               <Trophy className="size-5" />
-              View Leaderboard
+              Leaderboard
             </ArcadeButton>
           </Link>
         </div>
-
-        {/* Scroll indicator */}
-        {/* <div className="home-scroll-indicator home-float text-[var(--primary)]">
-          <div className="home-scroll-shell">
-            <div className="home-scroll-dot" />
-          </div>
-        </div> */}
       </div>
     </Section>
   );
 }
 
-// How It Works Section
 function HowItWorksSection() {
   return (
     <Section className="bg-[var(--card)]/30">
       <div className="max-w-6xl mx-auto px-4">
         <SectionTitle
           title="How It Works"
-          subtitle="Master the art of single-shot prompt engineering in three steps"
+          subtitle="Pretty simple, actually"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -211,24 +191,20 @@ function HowItWorksSection() {
                 className="text-center hover:scale-[1.02] transition-transform duration-300"
               >
                 <div className="p-6">
-                  {/* Step number */}
                   <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/20 flex items-center justify-center">
                     <span className="text-sm font-bold text-[var(--primary)]">
                       {index + 1}
                     </span>
                   </div>
 
-                  {/* Icon */}
                   <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center">
                     <Icon className="size-8 text-[var(--primary)]" />
                   </div>
 
-                  {/* Title */}
                   <h3 className="text-xl font-bold text-[var(--foreground)] mb-3">
                     {step.title}
                   </h3>
 
-                  {/* Description */}
                   <p className="text-sm text-[var(--muted-foreground)]">
                     {step.description}
                   </p>
@@ -242,14 +218,13 @@ function HowItWorksSection() {
   );
 }
 
-// Model Tiers Section
 function ModelTiersSection() {
   return (
     <Section>
       <div className="max-w-6xl mx-auto px-4">
         <SectionTitle
-          title="Choose Your Weapon"
-          subtitle="Select your model difficulty - smaller models mean higher multipliers"
+          title="Choose Your Model"
+          subtitle="Harder models = bigger bragging rights"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -259,7 +234,6 @@ function ModelTiersSection() {
               className="relative overflow-hidden hover:border-[var(--primary)] transition-colors duration-300"
             >
               <div className="p-5">
-                {/* Tier badge */}
                 <div className="flex items-center justify-between mb-4">
                   <ArcadeBadge
                     text={tier.name}
@@ -271,17 +245,14 @@ function ModelTiersSection() {
                   </span>
                 </div>
 
-                {/* Models */}
                 <p className="text-sm font-medium text-[var(--foreground)] mb-2">
                   {tier.models}
                 </p>
 
-                {/* Description */}
                 <p className="text-xs text-[var(--muted-foreground)]">
                   {tier.description}
                 </p>
 
-                {/* Multiplier indicator */}
                 <div className="mt-4 pt-4 border-t border-[var(--border)]">
                   <div className="flex items-center gap-2">
                     <Zap className="size-4 text-[var(--accent)]" />
@@ -312,18 +283,48 @@ function ModelTiersSection() {
   );
 }
 
-// Monthly Challenge Section
 function MonthlyChallengeSection() {
+  const { data: currentTheme, isLoading: themeLoading } = useQuery({
+    queryKey: ["currentTheme"],
+    queryFn: async () => {
+      try {
+        return await trpcClient.themes.getCurrent.query();
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  const {
+    data: leaderboardData,
+  } = useQuery({
+    queryKey: ["leaderboard", currentTheme?.id],
+    queryFn: async () => {
+      return await trpcClient.leaderboard.getTop.query({
+        themeId: currentTheme!.id,
+        limit: 3,
+      });
+    },
+    enabled: !!currentTheme?.id,
+  });
+
+  const leaderboard = leaderboardData ?? [];
+
+  const themeTitle = currentTheme?.title ?? "No Active Theme";
+  const themeDescription = currentTheme?.description ?? "Check back soon for the next challenge.";
+  const timeRemaining = currentTheme?.endDate 
+    ? formatTimeRemaining(new Date(currentTheme.endDate))
+    : null;
+
   return (
     <Section className="bg-[var(--card)]/30">
       <div className="max-w-6xl mx-auto px-4">
         <SectionTitle
-          title="Monthly Challenge"
-          subtitle="A new theme every month. Fresh leaderboards. Eternal glory."
+          title="This Month's Theme"
+          subtitle="New theme each month. New games to play. New people to beat."
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Current theme card */}
           <ArcadeCard variant="glow">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -333,85 +334,99 @@ function MonthlyChallengeSection() {
                 </h3>
               </div>
 
-              <h4 className="text-3xl font-black text-[var(--primary)] mb-4">
-                RETRO RACERS
-              </h4>
+              {themeLoading ? (
+                <LoadingState size="md" message="Loading theme..." />
+              ) : (
+                <>
+                  <h4 className="text-3xl font-black text-[var(--primary)] mb-4">
+                    {themeTitle.toUpperCase()}
+                  </h4>
 
-              <p className="text-sm text-[var(--muted-foreground)] mb-6">
-                Create a racing game with retro aesthetics. Think pixel art,
-                chiptune sounds, and fast-paced action.
-              </p>
-
-              {/* Countdown placeholder */}
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-[var(--background)]/50">
-                <Timer className="size-5 text-[var(--accent)]" />
-                <div>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Time remaining
+                  <p className="text-sm text-[var(--muted-foreground)] mb-6">
+                    {themeDescription}
                   </p>
-                  <p className="text-lg font-bold text-[var(--foreground)]">
-                    18 days 14 hours
-                  </p>
-                </div>
-              </div>
 
-              <Link href={"/arcade" as Route} className="block mt-6">
-                <ArcadeButton variant="primary" className="w-full">
-                  Enter Challenge
-                  <ArrowRight className="size-4" />
-                </ArcadeButton>
-              </Link>
+                  {timeRemaining && (
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-[var(--background)]/50">
+                      <Timer className="size-5 text-[var(--accent)]" />
+                      <div>
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          Time remaining
+                        </p>
+                        <p className="text-lg font-bold text-[var(--foreground)]">
+                          {timeRemaining}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <Link href={"/arcade" as Route} className="block mt-6">
+                    <ArcadeButton variant="primary" className="w-full">
+                      Join In
+                      <ArrowRight className="size-4" />
+                    </ArcadeButton>
+                  </Link>
+                </>
+              )}
             </div>
           </ArcadeCard>
 
-          {/* Top 3 leaderboard preview */}
           <ArcadeCard>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <Trophy className="size-6 text-[var(--accent)]" />
                 <h3 className="text-xl font-bold text-[var(--foreground)]">
-                  Top Players This Month
+                  Top Players
                 </h3>
               </div>
 
-              <div className="space-y-4">
-                {TOP_PLAYERS.map((player) => (
-                  <div
-                    key={player.name}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50 hover:bg-[var(--primary)]/10 transition-colors"
-                  >
-                    {/* Rank */}
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                        player.rank === 1
-                          ? "bg-[var(--accent)]/15 text-[var(--accent)]"
-                          : player.rank === 2
-                            ? "bg-[var(--primary)]/15 text-[var(--primary)]"
-                            : "bg-[var(--secondary)]/15 text-[var(--secondary)]"
-                      }`}
-                    >
-                      {player.rank}
-                    </div>
+              {!leaderboardData ? (
+                <LoadingState size="md" message="Loading leaderboard..." />
+              ) : leaderboard.length === 0 ? (
+                <div className="text-center py-8 text-[var(--muted-foreground)]">
+                  <p>No players yet. Be the first!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {leaderboard.map((entry, index) => {
+                    const rank = index + 1;
+                    const playerName = entry.game.prompt.user.name ?? "Anonymous";
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50 hover:bg-[var(--primary)]/10 transition-colors"
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                            rank === 1
+                              ? "bg-[var(--accent)]/15 text-[var(--accent)]"
+                              : rank === 2
+                                ? "bg-[var(--primary)]/15 text-[var(--primary)]"
+                                : "bg-[var(--secondary)]/15 text-[var(--secondary)]"
+                          }`}
+                        >
+                          {rank}
+                        </div>
 
-                    {/* Player info */}
-                    <div className="flex-1">
-                      <p className="font-semibold text-[var(--foreground)]">
-                        {player.name}
-                      </p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {player.score} points
-                      </p>
-                    </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-[var(--foreground)]">
+                            {playerName}
+                          </p>
+                          <p className="text-xs text-[var(--muted-foreground)]">
+                            {entry.score.toLocaleString()} points
+                          </p>
+                        </div>
 
-                    {/* Score badge */}
-                    <ArcadeBadge text={`${player.score}`} variant="default" />
-                  </div>
-                ))}
-              </div>
+                        <ArcadeBadge text={entry.score.toLocaleString()} variant="default" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <Link href={"/arcade" as Route} className="block mt-6">
                 <ArcadeButton variant="outline" className="w-full">
-                  View Full Leaderboard
+                  See Full Leaderboard
                 </ArcadeButton>
               </Link>
             </div>
@@ -422,44 +437,90 @@ function MonthlyChallengeSection() {
   );
 }
 
-// Stats Section
 function StatsSection() {
+  const { data: themes } = useQuery({
+    queryKey: ["themes"],
+    queryFn: async () => {
+      return await trpcClient.themes.list.query();
+    },
+  });
+
+  const currentTheme = themes?.find((t) => t.status === "active");
+
+  const { data: games } = useQuery({
+    queryKey: ["homeGames", currentTheme?.id],
+    queryFn: async () => {
+      if (!currentTheme?.id) return [];
+      return await trpcClient.games.listByTheme.query({
+        themeId: currentTheme.id,
+        includeSubmitted: true,
+        limit: 100,
+      });
+    },
+    enabled: !!currentTheme?.id,
+  });
+
+  const gamesCount = games?.length ?? 0;
+  const uniqueCreators = games 
+    ? new Set(games.map((g) => g.prompt.authorId)).size 
+    : 0;
+
+  const stats = [
+    {
+      value: gamesCount.toLocaleString(),
+      label: "Games Created",
+      icon: <Gamepad2 className="size-4" />,
+    },
+    {
+      value: uniqueCreators.toLocaleString(),
+      label: "Creators",
+      icon: <Users className="size-4" />,
+    },
+    {
+      value: themes?.length.toLocaleString() ?? "0",
+      label: "Themes",
+      icon: <Star className="size-4" />,
+    },
+    {
+      value: "Live",
+      label: "Competition",
+      icon: <Code2 className="size-4" />,
+    },
+  ];
+
   return (
     <Section>
       <div className="max-w-6xl mx-auto px-4">
         <SectionTitle
-          title="The Arena Awaits"
-          subtitle="Join thousands of prompt engineers competing for glory"
+          title="By the Numbers"
+          subtitle="People making games, playing games, comparing models"
         />
 
-        <ArcadeStats stats={MOCK_STATS} className="max-w-4xl mx-auto" />
+        <ArcadeStats stats={stats} className="max-w-4xl mx-auto" />
       </div>
     </Section>
   );
 }
 
-// CTA Footer Section
 function CTASection() {
   return (
     <Section className="relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute inset-0 opacity-30 home-cta-glow" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6">
-          Ready to Enter the Arena?
+          Wanna try it?
         </h2>
 
         <p className="text-lg text-[var(--muted-foreground)] mb-8">
-          The prompt is your weapon. The model is your handicap. The leaderboard
-          is immortal.
+          Write prompts. Make games. See what happens.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href={"/login" as Route}>
             <ArcadeButton variant="glow" size="lg">
               <Gamepad2 className="size-5" />
-              Create Account
+              Sign Up
             </ArcadeButton>
           </Link>
           <Link href={"/arcade" as Route}>
@@ -469,22 +530,18 @@ function CTASection() {
           </Link>
         </div>
 
-        {/* Footer tagline */}
         <p className="mt-12 text-sm text-[var(--muted-foreground)]">
-          Welcome to{" "}
+          Come hang out at{" "}
           <span className="font-bold text-[var(--primary)]">Arcade Vibe</span>.
-          May the best prompt win.
         </p>
       </div>
     </Section>
   );
 }
 
-// Main Homepage Component
 export default function Home() {
   return (
     <>
-      {/* Main content */}
       <main className="home-shell bg-[var(--background)] text-[var(--foreground)]">
         <div className="home-backdrop">
           <div className="home-sky" />

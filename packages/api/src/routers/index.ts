@@ -1,5 +1,6 @@
 import { publicProcedure, router } from "../index";
 import { creditsRouter } from "./credits";
+import { billingRouter } from "./billing";
 import { apiKeysRouter } from "./api-keys";
 import { themesRouter } from "./themes";
 import { promptsRouter } from "./prompts";
@@ -24,6 +25,7 @@ export const appRouter = router({
   // Auth & User
   user: userRouter,
   credits: creditsRouter,
+  billing: billingRouter,
   apiKeys: apiKeysRouter,
 
   // Content

@@ -3,6 +3,7 @@ import { user, session, account, verification } from "./auth";
 import { userExtended } from "./users";
 import {
   creditTransactions,
+  creditBatches,
   subscriptionPlans,
   userSubscriptions,
 } from "./credits";
@@ -14,7 +15,10 @@ import { promptRuns, ratings } from "./ratings";
 import { scores } from "./scores";
 import { platformStats, adminActions, scoringWeights } from "./platform";
 import { moderationReports, moderationAppeals } from "./moderation";
-import { allowedLibraryPatterns, themeAllowedPatterns } from "./library-patterns";
+import {
+  allowedLibraryPatterns,
+  themeAllowedPatterns,
+} from "./library-patterns";
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -24,6 +28,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     references: [userExtended.id],
   }),
   creditTransactions: many(creditTransactions),
+  creditBatches: many(creditBatches),
   userSubscriptions: many(userSubscriptions),
   apiKeys: many(apiKeys),
   prompts: many(prompts),
@@ -65,23 +70,44 @@ export const creditTransactionsRelations = relations(
       fields: [creditTransactions.userId],
       references: [user.id],
     }),
+    batch: one(creditBatches, {
+      fields: [creditTransactions.batchId],
+      references: [creditBatches.id],
+    }),
   }),
 );
 
-export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
-  userSubscriptions: many(userSubscriptions),
-}));
+export const creditBatchesRelations = relations(
+  creditBatches,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [creditBatches.userId],
+      references: [user.id],
+    }),
+    transactions: many(creditTransactions),
+  }),
+);
 
-export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
-  user: one(user, {
-    fields: [userSubscriptions.userId],
-    references: [user.id],
+export const subscriptionPlansRelations = relations(
+  subscriptionPlans,
+  ({ many }) => ({
+    userSubscriptions: many(userSubscriptions),
   }),
-  plan: one(subscriptionPlans, {
-    fields: [userSubscriptions.planId],
-    references: [subscriptionPlans.id],
+);
+
+export const userSubscriptionsRelations = relations(
+  userSubscriptions,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [userSubscriptions.userId],
+      references: [user.id],
+    }),
+    plan: one(subscriptionPlans, {
+      fields: [userSubscriptions.planId],
+      references: [subscriptionPlans.id],
+    }),
   }),
-}));
+);
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   user: one(user, {
@@ -226,39 +252,48 @@ export const moderationReportsRelations = relations(
   }),
 );
 
-export const moderationAppealsRelations = relations(moderationAppeals, ({ one }) => ({
-  report: one(moderationReports, {
-    fields: [moderationAppeals.reportId],
-    references: [moderationReports.id],
+export const moderationAppealsRelations = relations(
+  moderationAppeals,
+  ({ one }) => ({
+    report: one(moderationReports, {
+      fields: [moderationAppeals.reportId],
+      references: [moderationReports.id],
+    }),
+    appellant: one(user, {
+      fields: [moderationAppeals.appellantId],
+      references: [user.id],
+    }),
+    reviewer: one(user, {
+      fields: [moderationAppeals.reviewedBy],
+      references: [user.id],
+      relationName: "reviewedAppeals",
+    }),
   }),
-  appellant: one(user, {
-    fields: [moderationAppeals.appellantId],
-    references: [user.id],
-  }),
-  reviewer: one(user, {
-    fields: [moderationAppeals.reviewedBy],
-    references: [user.id],
-    relationName: "reviewedAppeals",
-  }),
-}));
+);
 
 export const modelConfigRelations = relations(modelConfig, () => ({}));
 
-export const allowedLibraryPatternsRelations = relations(allowedLibraryPatterns, ({ one, many }) => ({
-  createdBy: one(user, {
-    fields: [allowedLibraryPatterns.createdById],
-    references: [user.id],
+export const allowedLibraryPatternsRelations = relations(
+  allowedLibraryPatterns,
+  ({ one, many }) => ({
+    createdBy: one(user, {
+      fields: [allowedLibraryPatterns.createdById],
+      references: [user.id],
+    }),
+    themeAllowedPatterns: many(themeAllowedPatterns),
   }),
-  themeAllowedPatterns: many(themeAllowedPatterns),
-}));
+);
 
-export const themeAllowedPatternsRelations = relations(themeAllowedPatterns, ({ one }) => ({
-  theme: one(themes, {
-    fields: [themeAllowedPatterns.themeId],
-    references: [themes.id],
+export const themeAllowedPatternsRelations = relations(
+  themeAllowedPatterns,
+  ({ one }) => ({
+    theme: one(themes, {
+      fields: [themeAllowedPatterns.themeId],
+      references: [themes.id],
+    }),
+    pattern: one(allowedLibraryPatterns, {
+      fields: [themeAllowedPatterns.patternId],
+      references: [allowedLibraryPatterns.id],
+    }),
   }),
-  pattern: one(allowedLibraryPatterns, {
-    fields: [themeAllowedPatterns.patternId],
-    references: [allowedLibraryPatterns.id],
-  }),
-}));
+);

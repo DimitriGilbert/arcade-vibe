@@ -1,10 +1,139 @@
 import { db } from "@arcade-vibe/db";
-import { creditTransactions } from "@arcade-vibe/db/schema/credits";
+import {
+  creditTransactions,
+  creditBatches,
+} from "@arcade-vibe/db/schema/credits";
 import { userExtended } from "@arcade-vibe/db/schema/users";
-import { eq } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-// Deduct credits from user's balance (internal helper)
+// Credit expiry constants
+export const CREDIT_EXPIRY = {
+  // One-time purchase credits: 1 year
+  ONE_TIME_DAYS: 365,
+  // Subscription credits: 1 month
+  SUBSCRIPTION_DAYS: 30,
+  // Admin grants: 1 year
+  ADMIN_GRANT_DAYS: 365,
+  // Free trial: 1 month
+  FREE_TRIAL_DAYS: 30,
+} as const;
+
+export type CreditSourceType =
+  | "one_time_purchase"
+  | "subscription"
+  | "admin_grant"
+  | "free_trial";
+
+// Calculate expiry date based on source type
+export function calculateExpiryDate(sourceType: CreditSourceType): Date {
+  const now = new Date();
+  const daysMap: Record<CreditSourceType, number> = {
+    one_time_purchase: CREDIT_EXPIRY.ONE_TIME_DAYS,
+    subscription: CREDIT_EXPIRY.SUBSCRIPTION_DAYS,
+    admin_grant: CREDIT_EXPIRY.ADMIN_GRANT_DAYS,
+    free_trial: CREDIT_EXPIRY.FREE_TRIAL_DAYS,
+  };
+
+  const days = daysMap[sourceType];
+  const expiry = new Date(now);
+  expiry.setDate(expiry.getDate() + days);
+  return expiry;
+}
+
+// Get valid credit balance (excluding expired credits)
+export const getValidCreditBalance = async (
+  userId: string,
+): Promise<number> => {
+  const now = new Date();
+
+  const batches = await db.query.creditBatches.findMany({
+    where: and(
+      eq(creditBatches.userId, userId),
+      gt(creditBatches.remainingAmount, 0),
+      gt(creditBatches.expiresAt, now),
+    ),
+    columns: {
+      remainingAmount: true,
+    },
+  });
+
+  return batches.reduce((sum, batch) => sum + batch.remainingAmount, 0);
+};
+
+// Get credit breakdown by expiry
+export interface CreditBatchInfo {
+  id: string;
+  amount: number;
+  remainingAmount: number;
+  sourceType: string;
+  expiresAt: Date;
+  daysUntilExpiry: number;
+  createdAt: Date;
+}
+
+export interface CreditBreakdown {
+  total: number;
+  expiringWithin7Days: number;
+  expiringWithin30Days: number;
+  validBeyond30Days: number;
+  batches: CreditBatchInfo[];
+}
+
+export const getCreditBreakdown = async (
+  userId: string,
+): Promise<CreditBreakdown> => {
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now);
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  const thirtyDaysFromNow = new Date(now);
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+  const batches = await db.query.creditBatches.findMany({
+    where: and(
+      eq(creditBatches.userId, userId),
+      gt(creditBatches.remainingAmount, 0),
+      gt(creditBatches.expiresAt, now),
+    ),
+    orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
+  });
+
+  const batchInfos: CreditBatchInfo[] = batches.map((batch) => {
+    const daysUntilExpiry = Math.ceil(
+      (batch.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return {
+      id: batch.id,
+      amount: batch.amount,
+      remainingAmount: batch.remainingAmount,
+      sourceType: batch.sourceType,
+      expiresAt: batch.expiresAt,
+      daysUntilExpiry,
+      createdAt: batch.createdAt,
+    };
+  });
+
+  const total = batchInfos.reduce((sum, b) => sum + b.remainingAmount, 0);
+  const expiringWithin7Days = batchInfos
+    .filter((b) => b.daysUntilExpiry <= 7)
+    .reduce((sum, b) => sum + b.remainingAmount, 0);
+  const expiringWithin30Days = batchInfos
+    .filter((b) => b.daysUntilExpiry <= 30)
+    .reduce((sum, b) => sum + b.remainingAmount, 0);
+  const validBeyond30Days = batchInfos
+    .filter((b) => b.daysUntilExpiry > 30)
+    .reduce((sum, b) => sum + b.remainingAmount, 0);
+
+  return {
+    total,
+    expiringWithin7Days,
+    expiringWithin30Days,
+    validBeyond30Days,
+    batches: batchInfos,
+  };
+};
+
+// Deduct credits from user's balance using FIFO (oldest batches first)
 // per PRD lines 34-38: Credits are deducted BEFORE generation starts. No refunds for...
 export const deductCredits = async (
   userId: string,
@@ -20,33 +149,55 @@ export const deductCredits = async (
     });
   }
 
-  // Get current user credits
-  const user = await db.query.userExtended.findFirst({
-    where: eq(userExtended.id, userId),
-    columns: { id: true, credits: true },
+  const now = new Date();
+
+  // Get valid batches ordered by expiry date (FIFO - oldest first)
+  const batches = await db.query.creditBatches.findMany({
+    where: and(
+      eq(creditBatches.userId, userId),
+      gt(creditBatches.remainingAmount, 0),
+      gt(creditBatches.expiresAt, now),
+    ),
+    orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
   });
 
-  if (!user) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "User not found",
-    });
-  }
+  const totalAvailable = batches.reduce((sum, b) => sum + b.remainingAmount, 0);
 
-  const currentCredits = user.credits;
-
-  if (currentCredits < amount) {
+  if (totalAvailable < amount) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Insufficient credits",
+      message: `Insufficient credits. Available: ${totalAvailable}, Required: ${amount}`,
     });
   }
 
-  // Update user's credit balance
+  // Deduct from batches using FIFO
+  let remainingToDeduct = amount;
+
+  for (const batch of batches) {
+    if (remainingToDeduct <= 0) break;
+
+    const deductFromThisBatch = Math.min(
+      batch.remainingAmount,
+      remainingToDeduct,
+    );
+
+    await db
+      .update(creditBatches)
+      .set({
+        remainingAmount: batch.remainingAmount - deductFromThisBatch,
+      })
+      .where(eq(creditBatches.id, batch.id));
+
+    remainingToDeduct -= deductFromThisBatch;
+  }
+
+  // Update user's total credit balance (denormalized for quick access)
+  const newBalance = await getValidCreditBalance(userId);
+
   await db
     .update(userExtended)
     .set({
-      credits: currentCredits - amount,
+      credits: newBalance,
     })
     .where(eq(userExtended.id, userId));
 
@@ -61,27 +212,24 @@ export const deductCredits = async (
   });
 };
 
-// Get user credit balance (helper)
+// Get user credit balance (helper - returns denormalized balance)
 export const getUserCredits = async (userId: string): Promise<number> => {
   const user = await db.query.userExtended.findFirst({
     where: eq(userExtended.id, userId),
     columns: { credits: true },
   });
 
-  if (!user) {
-    return 0;
-  }
-
-  return user.credits;
+  return user?.credits ?? 0;
 };
 
-// Add credits to user's balance (internal helper)
+// Add credits to user's balance with batch tracking
 export const addCreditsInternal = async (
   userId: string,
   amount: number,
   reason: string,
-  type: string = "grant",
+  type: CreditSourceType = "admin_grant",
   description?: string,
+  sourceId?: string,
 ): Promise<number> => {
   // Validate amount is positive integer
   if (!Number.isInteger(amount) || amount <= 0) {
@@ -91,10 +239,10 @@ export const addCreditsInternal = async (
     });
   }
 
-  // Get current user credits
+  // Verify user exists
   const user = await db.query.userExtended.findFirst({
     where: eq(userExtended.id, userId),
-    columns: { id: true, credits: true },
+    columns: { id: true },
   });
 
   if (!user) {
@@ -104,11 +252,26 @@ export const addCreditsInternal = async (
     });
   }
 
-  const currentCredits = user.credits;
+  // Calculate expiry date
+  const expiresAt = calculateExpiryDate(type);
 
-  // Update user's credit balance
-  const newBalance = currentCredits + amount;
+  // Create credit batch
+  const [batch] = await db
+    .insert(creditBatches)
+    .values({
+      userId,
+      amount,
+      remainingAmount: amount,
+      sourceType: type,
+      sourceId: sourceId ?? null,
+      expiresAt,
+    })
+    .returning();
 
+  // Calculate new balance
+  const newBalance = await getValidCreditBalance(userId);
+
+  // Update user's denormalized credit balance
   await db
     .update(userExtended)
     .set({
@@ -121,8 +284,69 @@ export const addCreditsInternal = async (
     userId,
     amount,
     type,
-    description: description || reason,
+    description: description ?? reason,
+    batchId: batch?.id,
+    expiresAt,
   });
 
   return newBalance;
+};
+
+// Expire old credits (to be called by a cron job or scheduled task)
+export const expireOldCredits = async (): Promise<number> => {
+  const now = new Date();
+
+  // Find all expired batches with remaining credits
+  const expiredBatches = await db.query.creditBatches.findMany({
+    where: and(
+      gt(creditBatches.remainingAmount, 0),
+      sql`${creditBatches.expiresAt} <= ${now}`,
+    ),
+  });
+
+  let expiredCount = 0;
+
+  for (const batch of expiredBatches) {
+    if (batch.remainingAmount > 0) {
+      // Create expiry transaction
+      await db.insert(creditTransactions).values({
+        userId: batch.userId,
+        amount: -batch.remainingAmount,
+        type: "expiry",
+        description: `Credits expired (source: ${batch.sourceType})`,
+        batchId: batch.id,
+      });
+
+      // Set remaining to 0
+      await db
+        .update(creditBatches)
+        .set({ remainingAmount: 0 })
+        .where(eq(creditBatches.id, batch.id));
+
+      // Update user's denormalized balance
+      const newBalance = await getValidCreditBalance(batch.userId);
+      await db
+        .update(userExtended)
+        .set({ credits: newBalance })
+        .where(eq(userExtended.id, batch.userId));
+
+      expiredCount += batch.remainingAmount;
+    }
+  }
+
+  return expiredCount;
+};
+
+// Sync user's credit balance with actual batch totals (for data consistency)
+export const syncUserCreditBalance = async (
+  userId: string,
+): Promise<number> => {
+  const actualBalance = await getValidCreditBalance(userId);
+
+  await db
+    .update(userExtended)
+    .set({ credits: actualBalance })
+    .where(eq(userExtended.id, userId));
+
+  return actualBalance;
 };

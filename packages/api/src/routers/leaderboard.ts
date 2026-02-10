@@ -21,7 +21,7 @@ export const leaderboardRouter = router({
     .query(async ({ input }) => {
       // Check Redis cache first
       const cacheKey = `lb:${input.themeId}`;
-      const cached = await cacheGet(cacheKey);
+      const cached = await cacheGet<typeof result>(cacheKey);
       if (cached) {
         return cached;
       }

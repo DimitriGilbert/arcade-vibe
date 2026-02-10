@@ -5,204 +5,257 @@ import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard } from "@/components/arcade";
 import { ArcadeButton } from "@/components/arcade";
 import { ArcadeBadge } from "@/components/arcade";
-import { Loader2, CreditCard, Crown, Sparkles, Zap, Check } from "lucide-react";
+import {
+  Loader2,
+  CreditCard,
+  Crown,
+  AlertTriangle,
+  Clock,
+  Calendar,
+  ExternalLink,
+  Receipt,
+  TrendingUp,
+  TrendingDown,
+  MinusCircle,
+} from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
+import type { Route } from "next";
+import Link from "next/link";
 
-interface SubscriptionPlan {
+interface CreditBatch {
   id: string;
-  name: string;
-  displayName: string | null;
-  price: number;
-  credits: number;
-  features: string[] | null;
-  isActive: boolean | null;
-  isOneTime: boolean | null;
-  isPopular: boolean | null;
+  amount: number;
+  remainingAmount: number;
+  sourceType: string;
+  expiresAt: Date;
+  daysUntilExpiry: number;
+  createdAt: Date;
 }
 
-function PlanCard({
-  plan,
-  isCurrent,
-  onSelect,
-}: {
-  plan: SubscriptionPlan;
-  isCurrent: boolean;
-  onSelect: (plan: SubscriptionPlan) => void;
-}) {
-  const isFree = plan.price === 0;
-  const isPopular = plan.isPopular === true;
+interface CreditBreakdown {
+  total: number;
+  expiringWithin7Days: number;
+  expiringWithin30Days: number;
+  validBeyond30Days: number;
+  batches: CreditBatch[];
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+interface Subscription {
+  id: string;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  plan: {
+    id: string;
+    name: string;
+    displayName: string;
+    credits: number;
+    price: number;
+    creditValidityDays: number | null;
+  };
+  stripeSubscriptionId: string | null;
+}
+
+function ExpiryTimeline({ breakdown }: { breakdown: CreditBreakdown }) {
+  const maxCredits = Math.max(
+    breakdown.expiringWithin7Days,
+    breakdown.expiringWithin30Days,
+    breakdown.validBeyond30Days,
+    1,
+  );
 
   return (
-    <ArcadeCard
-      className={`relative ${isPopular ? "scale-105" : ""} ${isCurrent ? "ring-2 ring-[var(--primary)]/60" : ""}`}
-    >
-      {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <ArcadeBadge text="Most Popular" variant="neon" />
-        </div>
-      )}
-      <div className="p-4 border-b border-[var(--border)]">
-        <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-          {plan.name === "Free" && (
-            <Sparkles className="h-5 w-5 text-[var(--muted-foreground)]" />
-          )}
-          {plan.name === "Starter" && (
-            <Zap className="h-5 w-5 text-[var(--primary)]" />
-          )}
-          {plan.name === "Pro" && (
-            <Crown className="h-5 w-5 text-[var(--accent)]" />
-          )}
-          {plan.name}
-        </h3>
-      </div>
-      <div className="p-4">
-        <div className="mb-4">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold">
-              ${(plan.price / 100).toFixed(2)}
-            </span>
-            {plan.price > 0 && (
-              <span className="text-[var(--muted-foreground)]">/month</span>
-            )}
-          </div>
-          <p className="text-lg text-[var(--primary)]">
-            {plan.credits.toLocaleString()} credits
-          </p>
-        </div>
+    <div className="space-y-4">
+      <h3 className="font-semibold">Credit Expiry Timeline</h3>
 
-        <ul className="space-y-2 mb-6">
-          {(plan.features ?? []).map((feature) => (
-            <li key={feature} className="flex items-start gap-2">
-              <Check className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{feature}</span>
-            </li>
-          ))}
-        </ul>
-
-        {isCurrent ? (
-          <ArcadeButton variant="outline" disabled className="w-full">
-            Current Plan
-          </ArcadeButton>
-        ) : (
-          <ArcadeButton
-            variant={isPopular ? "primary" : "outline"}
-            className="w-full"
-            onClick={() => onSelect(plan)}
-            disabled={isFree}
-          >
-            {isFree ? "Free Plan" : "Upgrade"}
-          </ArcadeButton>
-        )}
+      {/* Expiring within 7 days */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-red-500" />
+            Expiring in 7 days
+          </span>
+          <span className="font-medium">
+            {breakdown.expiringWithin7Days.toLocaleString()} credits
+          </span>
+        </div>
+        <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-red-500 rounded-full transition-all"
+            style={{
+              width: `${(breakdown.expiringWithin7Days / maxCredits) * 100}%`,
+            }}
+          />
+        </div>
       </div>
-    </ArcadeCard>
+
+      {/* Expiring within 30 days */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-yellow-500" />
+            Expiring in 8-30 days
+          </span>
+          <span className="font-medium">
+            {Math.max(
+              0,
+              breakdown.expiringWithin30Days - breakdown.expiringWithin7Days,
+            ).toLocaleString()}{" "}
+            credits
+          </span>
+        </div>
+        <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-yellow-500 rounded-full transition-all"
+            style={{
+              width: `${(Math.max(0, breakdown.expiringWithin30Days - breakdown.expiringWithin7Days) / maxCredits) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Valid beyond 30 days */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-green-500" />
+            Valid for 30+ days
+          </span>
+          <span className="font-medium">
+            {breakdown.validBeyond30Days.toLocaleString()} credits
+          </span>
+        </div>
+        <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-500 rounded-full transition-all"
+            style={{
+              width: `${(breakdown.validBeyond30Days / maxCredits) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function OneTimePackage({
-  plan,
-  onSelect,
-}: {
-  plan: SubscriptionPlan;
-  onSelect: (plan: SubscriptionPlan) => void;
-}) {
-  const isPopular = plan.isPopular === true;
-  // For one-time purchases, the first feature is used as badge text
-  const badgeText = plan.features?.[0];
+function TransactionIcon({ type }: { type: string }) {
+  switch (type) {
+    case "purchase":
+    case "one_time_purchase":
+    case "subscription":
+    case "grant":
+    case "admin_grant":
+      return <TrendingUp className="h-4 w-4 text-green-500" />;
+    case "deduction":
+      return <TrendingDown className="h-4 w-4 text-red-500" />;
+    case "expiry":
+      return <MinusCircle className="h-4 w-4 text-orange-500" />;
+    default:
+      return <CreditCard className="h-4 w-4 text-[var(--muted-foreground)]" />;
+  }
+}
 
-  return (
-    <ArcadeCard
-      className={`relative cursor-pointer ${isPopular ? "ring-2 ring-[var(--primary)]/60" : ""}`}
-      onClick={() => onSelect(plan)}
-    >
-      {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <ArcadeBadge text="Best Value" variant="neon" />
-        </div>
-      )}
-      <div className="p-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-1">
-            <span className="text-3xl font-bold">
-              {plan.credits.toLocaleString()}
-            </span>
-            <span className="text-[var(--muted-foreground)]">credits</span>
-          </div>
-          {badgeText && <ArcadeBadge text={badgeText} variant="neon" />}
-          <div className="text-2xl font-bold text-[var(--primary)]">
-            ${(plan.price / 100).toFixed(2)}
-          </div>
-          <ArcadeButton variant="outline" className="w-full">
-            Purchase
-          </ArcadeButton>
-        </div>
-      </div>
-    </ArcadeCard>
-  );
+function SourceTypeLabel({ type }: { type: string }) {
+  const labels: Record<string, string> = {
+    one_time_purchase: "One-time Purchase",
+    subscription: "Subscription",
+    admin_grant: "Admin Grant",
+    free_trial: "Free Trial",
+  };
+  return <span>{labels[type] ?? type}</span>;
 }
 
 export default function SubscriptionSettingsPage() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
 
-  // Fetch subscription plans from API
-  const { data: plansData, isLoading: plansLoading } = useQuery({
-    queryKey: ["subscription-plans"],
-    queryFn: async () => {
-      const plans = await trpcClient.admin.plans.getPlans.query();
-      return plans.filter((p) => p.isActive !== false) as SubscriptionPlan[];
-    },
-  });
-
-  // Fetch user credits
-  const { data: creditsData, isLoading: creditsLoading } = useQuery({
+  // Fetch credit balance with breakdown
+  const { data: balanceData, isLoading: balanceLoading } = useQuery({
     queryKey: ["credits", "balance"],
     queryFn: () => trpcClient.credits.getBalance.query(),
     enabled: !!session,
   });
 
-  // Fetch user extended data
-  const { isLoading: userLoading } = useQuery({
-    queryKey: ["user", "extended"],
-    queryFn: () => trpcClient.credits.getUserExtended.query(),
+  // Fetch detailed credit breakdown
+  const { data: breakdownData, isLoading: breakdownLoading } = useQuery({
+    queryKey: ["credits", "breakdown"],
+    queryFn: () => trpcClient.credits.getCreditBreakdown.query(),
     enabled: !!session,
   });
 
-  // Fetch credit transactions
+  // Fetch subscription info
+  const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: () => trpcClient.billing.getSubscription.query(),
+    enabled: !!session,
+  });
+
+  // Fetch transactions
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
     queryKey: ["credits", "transactions"],
     queryFn: () => trpcClient.credits.getTransactions.query({ limit: 10 }),
     enabled: !!session,
   });
 
-  // Separate subscription plans from one-time purchases
-  const allPlans = plansData ?? [];
-  const subscriptionPlans = allPlans.filter((p) => p.isOneTime !== true);
-  const oneTimePackages = allPlans.filter((p) => p.isOneTime === true);
+  // Fetch invoices
+  const { data: invoicesData } = useQuery({
+    queryKey: ["billing", "invoices"],
+    queryFn: () => trpcClient.billing.getInvoices.query({ limit: 5 }),
+    enabled: !!session && !!subscriptionData?.hasSubscription,
+  });
 
-  const credits = creditsData?.balance ?? 0;
-  const transactions = transactionsData?.transactions ?? [];
-
-  // Stripe checkout mutation
-  const checkoutMutation = useMutation({
-    mutationFn: async (input: { planId?: string; creditAmount?: number }) => {
-      return await trpcClient.stripe.createCheckoutSession.mutate(input);
-    },
+  // Cancel subscription mutation
+  const cancelMutation = useMutation({
+    mutationFn: () => trpcClient.billing.cancelSubscription.mutate(),
     onSuccess: (data) => {
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      }
+      toast.success(data.message);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to create checkout session");
+      toast.error(error.message || "Failed to cancel subscription");
     },
   });
 
-  const handleSelectPlan = (plan: SubscriptionPlan) => {
-    if (plan.price === 0) return;
-    checkoutMutation.mutate({ planId: plan.id, creditAmount: plan.credits });
-  };
+  // Reactivate subscription mutation
+  const reactivateMutation = useMutation({
+    mutationFn: () => trpcClient.billing.reactivateSubscription.mutate(),
+    onSuccess: (data) => {
+      toast.success(data.message);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to reactivate subscription");
+    },
+  });
 
-  if (sessionPending || creditsLoading || userLoading) {
+  // Create portal session mutation
+  const portalMutation = useMutation({
+    mutationFn: () => trpcClient.billing.createPortalSession.mutate(),
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to open billing portal");
+    },
+  });
+
+  const isLoading =
+    sessionPending ||
+    balanceLoading ||
+    breakdownLoading ||
+    subscriptionLoading ||
+    transactionsLoading;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-4">
@@ -215,6 +268,14 @@ export default function SubscriptionSettingsPage() {
     );
   }
 
+  const balance = balanceData?.balance ?? 0;
+  const breakdown = breakdownData as CreditBreakdown | undefined;
+  const subscription = subscriptionData?.subscription as
+    | Subscription
+    | undefined;
+  const transactions = transactionsData?.transactions ?? [];
+  const invoices = invoicesData?.invoices ?? [];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -226,118 +287,308 @@ export default function SubscriptionSettingsPage() {
           <div>
             <h1 className="text-2xl font-bold">Subscription & Credits</h1>
             <p className="text-[var(--muted-foreground)]">
-              Manage your plan and purchase credits
+              Manage your plan and view credit history
             </p>
           </div>
         </div>
       </div>
 
-      {/* Current Status */}
-      <ArcadeCard className="">
+      {/* Current Subscription */}
+      {subscription ? (
+        <ArcadeCard>
+          <div className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[var(--primary)]/10 rounded-lg">
+                  <Crown className="h-6 w-6 text-[var(--primary)]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">
+                    {subscription.plan.displayName}
+                  </h2>
+                  <p className="text-[var(--muted-foreground)]">
+                    ${((subscription.plan.price ?? 0) / 100).toFixed(2)}/month
+                  </p>
+                </div>
+              </div>
+              <ArcadeBadge
+                text={
+                  subscription.status === "canceling"
+                    ? "Canceling"
+                    : subscription.status === "active"
+                      ? "Active"
+                      : subscription.status
+                }
+                variant={subscription.status === "active" ? "neon" : "default"}
+              />
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-[var(--muted-foreground)]" />
+                <span>
+                  Current period:{" "}
+                  {new Date(
+                    subscription.currentPeriodStart,
+                  ).toLocaleDateString()}{" "}
+                  -{" "}
+                  {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-[var(--muted-foreground)]" />
+                <span>
+                  {subscription.plan.creditValidityDays ?? 30} day credit
+                  validity
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              {subscription.status === "canceling" ? (
+                <ArcadeButton
+                  variant="primary"
+                  onClick={() => reactivateMutation.mutate()}
+                  disabled={reactivateMutation.isPending}
+                >
+                  {reactivateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Reactivate"
+                  )}
+                </ArcadeButton>
+              ) : (
+                <ArcadeButton
+                  variant="outline"
+                  onClick={() => cancelMutation.mutate()}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Cancel Subscription"
+                  )}
+                </ArcadeButton>
+              )}
+              <ArcadeButton
+                variant="outline"
+                onClick={() => portalMutation.mutate()}
+                disabled={portalMutation.isPending}
+              >
+                {portalMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Manage Billing
+                  </>
+                )}
+              </ArcadeButton>
+            </div>
+          </div>
+        </ArcadeCard>
+      ) : (
+        <ArcadeCard>
+          <div className="p-6 text-center">
+            <p className="text-[var(--muted-foreground)] mb-4">
+              You don't have an active subscription
+            </p>
+            <Link href={"/pricing" as Route}>
+              <ArcadeButton variant="primary">View Plans</ArcadeButton>
+            </Link>
+          </div>
+        </ArcadeCard>
+      )}
+
+      {/* Credit Balance */}
+      <ArcadeCard>
         <div className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold mb-1">Current Plan: Free</h2>
+              <h2 className="text-xl font-bold mb-1">Credit Balance</h2>
               <p className="text-[var(--muted-foreground)]">
-                Your credits never expire
+                Credits are consumed oldest first
               </p>
             </div>
             <div className="text-right">
               <p className="text-4xl font-bold text-[var(--primary)]">
-                {credits.toLocaleString()}
+                {balance.toLocaleString()}
               </p>
               <p className="text-sm text-[var(--muted-foreground)]">
                 Credits Available
               </p>
             </div>
           </div>
+
+          {/* Expiry Warning */}
+          {breakdown && breakdown.expiringWithin7Days > 0 && (
+            <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-orange-500">
+                  Credits Expiring Soon
+                </p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  {breakdown.expiringWithin7Days.toLocaleString()} credits will
+                  expire within the next 7 days. Use them before they're gone!
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Expiry Timeline */}
+          {breakdown && breakdown.batches.length > 0 && (
+            <ExpiryTimeline breakdown={breakdown} />
+          )}
         </div>
       </ArcadeCard>
 
-      {/* Subscription Plans */}
-      {subscriptionPlans.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Subscription Plans</h2>
-          {plansLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {subscriptionPlans.map((plan) => (
-                <PlanCard
-                  key={plan.id}
-                  plan={plan}
-                  isCurrent={false}
-                  onSelect={handleSelectPlan}
-                />
+      {/* Credit Batches Detail */}
+      {breakdown && breakdown.batches.length > 0 && (
+        <ArcadeCard>
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-4">Credit Batches</h2>
+            <div className="space-y-3">
+              {breakdown.batches.slice(0, 5).map((batch) => (
+                <div
+                  key={batch.id}
+                  className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        batch.daysUntilExpiry <= 7
+                          ? "bg-red-500"
+                          : batch.daysUntilExpiry <= 30
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
+                      }`}
+                    />
+                    <div>
+                      <p className="font-medium">
+                        {batch.remainingAmount.toLocaleString()} credits
+                      </p>
+                      <p className="text-sm text-[var(--muted-foreground)]">
+                        <SourceTypeLabel type={batch.sourceType} />
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      Expires {new Date(batch.expiresAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      {batch.daysUntilExpiry} days left
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
-          )}
-        </section>
-      )}
-
-      {/* One-time Credit Packages */}
-      {oneTimePackages.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Purchase Credits</h2>
-          <p className="text-[var(--muted-foreground)]">
-            Buy credits in bulk. Credits never expire.
-          </p>
-          {plansLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {oneTimePackages.map((plan) => (
-                <OneTimePackage
-                  key={plan.id}
-                  plan={plan}
-                  onSelect={handleSelectPlan}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* No plans message */}
-      {allPlans.length === 0 && !plansLoading && (
-        <section className="space-y-4">
-          <p className="text-[var(--muted-foreground)]">No plans available.</p>
-        </section>
+          </div>
+        </ArcadeCard>
       )}
 
       {/* Transaction History */}
-      {!transactionsLoading && transactions.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Recent Transactions</h2>
-          <ArcadeCard className="">
-            <div className="p-6">
-              <div className="space-y-4">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
-                  >
+      {transactions.length > 0 && (
+        <ArcadeCard>
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
+            <div className="space-y-3">
+              {transactions.map((transaction: Transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <TransactionIcon type={transaction.type} />
                     <div>
-                      <p className="font-medium">{transaction.description}</p>
+                      <p className="font-medium">
+                        {transaction.description ?? transaction.type}
+                      </p>
                       <p className="text-sm text-[var(--muted-foreground)]">
                         {new Date(transaction.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <ArcadeBadge
-                      text={`${transaction.amount > 0 ? "+" : ""}${transaction.amount} credits`}
-                      variant={transaction.amount > 0 ? "neon" : "default"}
-                    />
                   </div>
-                ))}
-              </div>
+                  <ArcadeBadge
+                    text={`${transaction.amount > 0 ? "+" : ""}${transaction.amount} credits`}
+                    variant={transaction.amount > 0 ? "neon" : "default"}
+                  />
+                </div>
+              ))}
             </div>
-          </ArcadeCard>
-        </section>
+          </div>
+        </ArcadeCard>
       )}
+
+      {/* Invoice History */}
+      {invoices.length > 0 && (
+        <ArcadeCard>
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-4">Billing History</h2>
+            <div className="space-y-3">
+              {invoices.map(
+                (invoice: {
+                  id: string;
+                  number: string | null;
+                  status: string | null;
+                  amountPaid: number;
+                  currency: string;
+                  createdAt: string;
+                  invoicePdf?: string | null;
+                  hostedInvoiceUrl?: string | null;
+                }) => (
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Receipt className="h-4 w-4 text-[var(--muted-foreground)]" />
+                      <div>
+                        <p className="font-medium">
+                          Invoice {invoice.number ?? invoice.id.slice(-8)}
+                        </p>
+                        <p className="text-sm text-[var(--muted-foreground)]">
+                          {new Date(invoice.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">
+                        ${(invoice.amountPaid / 100).toFixed(2)}{" "}
+                        {invoice.currency.toUpperCase()}
+                      </span>
+                      {invoice.hostedInvoiceUrl && (
+                        <a
+                          href={invoice.hostedInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--primary)] hover:underline"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </ArcadeCard>
+      )}
+
+      {/* Upgrade CTA */}
+      <ArcadeCard className="bg-gradient-to-r from-[var(--primary)]/10 to-[var(--accent)]/10">
+        <div className="p-6 text-center">
+          <h2 className="text-xl font-bold mb-2">Need More Credits?</h2>
+          <p className="text-[var(--muted-foreground)] mb-4">
+            Purchase more credits or upgrade your subscription
+          </p>
+          <Link href={"/pricing" as Route}>
+            <ArcadeButton variant="primary">View Pricing</ArcadeButton>
+          </Link>
+        </div>
+      </ArcadeCard>
     </div>
   );
 }

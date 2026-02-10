@@ -25,6 +25,29 @@ export const tierCosts = pgTable("tier_costs", {
     .notNull(),
 });
 
+// Credit batches track credits with expiry dates using FIFO consumption
+// One-time purchases: 1 year expiry
+// Subscription credits: 1 month expiry
+export const creditBatches = pgTable(
+  "credit_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(), // Original amount credited
+    remainingAmount: integer("remaining_amount").notNull(), // Remaining after consumption
+    sourceType: text("source_type").notNull(), // "one_time_purchase" | "subscription" | "admin_grant" | "free_trial"
+    sourceId: text("source_id"), // Stripe payment ID or subscription ID
+    expiresAt: timestamp("expires_at").notNull(), // Expiry date
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("credit_batches_userId_idx").on(table.userId),
+    index("credit_batches_expiresAt_idx").on(table.expiresAt),
+  ],
+);
+
 // per PRD lines 1143-1153
 export const creditTransactions = pgTable(
   "credit_transactions",
@@ -36,6 +59,8 @@ export const creditTransactions = pgTable(
     amount: integer("amount").notNull(),
     type: text("type").notNull(),
     description: text("description"),
+    batchId: uuid("batch_id"), // Optional link to credit batch
+    expiresAt: timestamp("expires_at"), // When these credits expire (for display)
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("credit_transactions_userId_idx").on(table.userId)],
@@ -55,6 +80,7 @@ export const subscriptionPlans = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     isOneTime: boolean("is_one_time").notNull().default(false),
     isPopular: boolean("is_popular").notNull().default(false),
+    creditValidityDays: integer("credit_validity_days"), // Days until credits expire (null = never, 365 for one-time, 30 for subscription)
     extraCreditMarkupPercent: integer("extra_credit_markup_percent")
       .default(30)
       .notNull(),

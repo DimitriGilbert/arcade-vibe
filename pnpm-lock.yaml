@@ -189,6 +189,9 @@ importers:
       streamdown:
         specifier: ^1.6.10
         version: 1.6.11(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.4)
+      stripe:
+        specifier: ^20.3.1
+        version: 20.3.1(@types/node@20.19.32)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -9930,6 +9933,10 @@ snapshots:
   strip-final-newline@2.0.0: {}
 
   strip-final-newline@4.0.0: {}
+
+  stripe@20.3.1(@types/node@20.19.32):
+    optionalDependencies:
+      '@types/node': 20.19.32
 
   stripe@20.3.1(@types/node@22.19.9):
     optionalDependencies:
