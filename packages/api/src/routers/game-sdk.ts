@@ -6,6 +6,10 @@ import { redis } from "../lib/redis";
 import { verifyGameSessionToken } from "../lib/game-session";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 /**
  * Extract Bearer token from Authorization header
@@ -111,6 +115,7 @@ export const gameSdkRouter = router({
    * Called when the player achieves a score during gameplay
    */
   score: publicProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         gameId: z.string().uuid(),
@@ -187,12 +192,21 @@ export const gameSdkRouter = router({
     .input(
       z.object({
         gameId: z.string().uuid(),
-        token: z.string(),
         playtime: z.number().int().min(0),
       }),
     )
-    .mutation(async ({ input }) => {
-      const session = await verifyGameSessionToken(input.token);
+    .mutation(async ({ input, ctx }) => {
+      const authHeader = ctx.req.headers.get("authorization");
+      const token = extractBearerToken(authHeader);
+
+      if (!token) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Missing or invalid authorization token",
+        });
+      }
+
+      const session = await verifyGameSessionToken(token);
 
       if (!session) {
         throw new TRPCError({

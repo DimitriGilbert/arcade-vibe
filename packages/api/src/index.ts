@@ -9,7 +9,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.session) {
+  if (!ctx.session || !ctx.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Authentication required",
@@ -20,6 +20,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     ctx: {
       ...ctx,
       session: ctx.session,
+      user: ctx.user,
     },
   });
 });
@@ -35,7 +36,10 @@ export const adminProcedure = t.procedure.use(({ ctx, next }) => {
 });
 
 export const moderatorProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "moderator")) {
+  if (
+    !ctx.user ||
+    (ctx.user.role !== "admin" && ctx.user.role !== "moderator")
+  ) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Moderator access required",

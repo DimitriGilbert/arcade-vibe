@@ -46,7 +46,10 @@ function ArcadeTabs({
     <TabsPrimitive.Root
       data-slot="arcade-tabs"
       data-orientation={orientation}
-      className={cn("gap-2 group/arcade-tabs flex data-horizontal:flex-col", className)}
+      className={cn(
+        "gap-2 group/arcade-tabs flex data-horizontal:flex-col",
+        className,
+      )}
       {...props}
     />
   );
@@ -69,13 +72,14 @@ function ArcadeTabsList({
 
 function ArcadeTabsTrigger({
   className,
+  variant,
   ...props
 }: TabsPrimitive.Tab.Props & VariantProps<typeof arcadeTabsTriggerVariants>) {
   return (
     <TabsPrimitive.Tab
       data-slot="arcade-tabs-trigger"
       className={cn(
-        arcadeTabsTriggerVariants({ variant: props.variant as any }),
+        arcadeTabsTriggerVariants({ variant }),
         "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
         "data-active:bg-[var(--primary)] data-active:text-[var(--primary-foreground)]",
         "data-active:shadow-sm",
@@ -102,4 +106,11 @@ function ArcadeTabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   );
 }
 
-export { ArcadeTabs, ArcadeTabsList, ArcadeTabsTrigger, ArcadeTabsContent, arcadeTabsListVariants, arcadeTabsTriggerVariants };
+export {
+  ArcadeTabs,
+  ArcadeTabsList,
+  ArcadeTabsTrigger,
+  ArcadeTabsContent,
+  arcadeTabsListVariants,
+  arcadeTabsTriggerVariants,
+};

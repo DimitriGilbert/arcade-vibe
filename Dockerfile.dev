@@ -1,0 +1,26 @@
+# Development Dockerfile - Simple, fast, versatile
+# No multi-stage builds, optimized for iteration speed
+
+FROM node:20-alpine
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+
+WORKDIR /app
+
+# Copy everything
+COPY . .
+
+# Install dependencies
+RUN pnpm install
+
+# Set environment
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3001
+ENV HOSTNAME="0.0.0.0"
+
+EXPOSE 3001
+
+# Start development server
+CMD ["pnpm", "run", "dev"]

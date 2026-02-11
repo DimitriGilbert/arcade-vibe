@@ -23,13 +23,6 @@ function getStripe(): Stripe {
 export const billingRouter = router({
   // Get user's current subscription
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const subscription = await db.query.userSubscriptions.findFirst({
       where: and(
         eq(userSubscriptions.userId, ctx.user.id),
@@ -76,13 +69,6 @@ export const billingRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       // Get user's Stripe customer ID from their subscriptions
       const subscription = await db.query.userSubscriptions.findFirst({
         where: eq(userSubscriptions.userId, ctx.user.id),
@@ -145,13 +131,6 @@ export const billingRouter = router({
 
   // Cancel subscription
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const subscription = await db.query.userSubscriptions.findFirst({
       where: and(
         eq(userSubscriptions.userId, ctx.user.id),
@@ -199,13 +178,6 @@ export const billingRouter = router({
 
   // Reactivate a canceled subscription
   reactivateSubscription: protectedProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const subscription = await db.query.userSubscriptions.findFirst({
       where: and(
         eq(userSubscriptions.userId, ctx.user.id),
@@ -251,13 +223,6 @@ export const billingRouter = router({
 
   // Create customer portal session for payment method updates
   createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const subscription = await db.query.userSubscriptions.findFirst({
       where: eq(userSubscriptions.userId, ctx.user.id),
     });

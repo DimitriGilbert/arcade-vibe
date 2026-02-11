@@ -298,6 +298,11 @@ export default function ApiKeysSettingsPage() {
                             )
                           }
                           className="p-2"
+                          aria-label={
+                            copiedKeyId === apiKey.id
+                              ? "Copied"
+                              : "Copy API key"
+                          }
                         >
                           {copiedKeyId === apiKey.id ? (
                             <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -324,6 +329,7 @@ export default function ApiKeysSettingsPage() {
                       onClick={() => deleteKeyMutation.mutate(apiKey.id)}
                       disabled={deleteKeyMutation.isPending}
                       className="text-[var(--destructive)] hover:text-[var(--destructive)]"
+                      aria-label={`Delete ${apiKey.name} API key`}
                     >
                       {deleteKeyMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

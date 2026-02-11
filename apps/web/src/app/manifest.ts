@@ -4,9 +4,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "arcade-vibe",
     short_name: "arcade-vibe",
-    description: "my pwa app",
-    start_url: "/new",
-    display: "standalone",
+    description: "your friendly competitive prompting game to make games",
+    start_url: "/",
+    display: "browser",
+    // display: "standalone",
     background_color: "#ffffff",
     theme_color: "#000000",
     icons: [

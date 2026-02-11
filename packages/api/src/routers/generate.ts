@@ -20,6 +20,10 @@ import { streamText } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 const EncryptionData = z.object({
   encrypted: z.string(),
@@ -86,6 +90,7 @@ const getPlatformKey = (provider: string): string => {
 
 export const generateRouter = router({
   streamGeneration: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
       z.object({
         promptId: z.string().uuid(),

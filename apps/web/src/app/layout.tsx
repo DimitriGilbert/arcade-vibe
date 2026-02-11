@@ -25,8 +25,19 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "arcade-vibe",
-  description: "arcade-vibe",
+  title: {
+    default: "Arcade Vibe - AI-Powered Game Arcade",
+    template: "%s | Arcade Vibe",
+  },
+  description:
+    "Create, play, and rate AI-generated games in a retro arcade environment. Join monthly challenges and compete on leaderboards.",
+  keywords: [
+    "arcade",
+    "AI games",
+    "game generation",
+    "retro gaming",
+    "monthly challenge",
+  ],
 };
 
 export default function RootLayout({
@@ -39,10 +50,18 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--background)] focus:border focus:border-[var(--border)] focus:rounded-md"
+        >
+          Skip to main content
+        </a>
         <Providers>
           <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-svh">
             <Header />
-            <main className="min-h-0 overflow-y-auto">{children}</main>
+            <main id="main-content" className="min-h-0 overflow-y-auto">
+              {children}
+            </main>
           </div>
         </Providers>
       </body>

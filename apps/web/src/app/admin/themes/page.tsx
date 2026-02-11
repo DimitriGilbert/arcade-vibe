@@ -132,7 +132,7 @@ export default function AdminThemesPage() {
       requirements: Record<string, unknown>;
       systemPrompt: string;
       libraryPatternIds?: string[];
-    }) => {
+    }): Promise<{ success: boolean; themeId: string | undefined }> => {
       return await trpcClient.themes.create.mutate(input);
     },
     onSuccess: () => {
@@ -212,7 +212,11 @@ export default function AdminThemesPage() {
     const existingTheme = themes?.find((t) => t.id === themeId);
     if (!existingTheme) return;
 
-    const existingPatternIds = (existingTheme as any).libraryPatternIds || [];
+    // Fetch the full theme with library patterns
+    const fullTheme = await trpcClient.themes.getById.query({ id: themeId });
+    const existingPatternIds = fullTheme.allowedLibraryPatterns.map(
+      (p) => p.id,
+    );
     const patternsToAdd = patternIds.filter(
       (id: string) => !existingPatternIds.includes(id),
     );
@@ -357,10 +361,10 @@ export default function AdminThemesPage() {
           } else {
             const createResult = await createThemeMutation.mutateAsync(value);
 
-            if (value.libraryPatternIds && (createResult as any)?.themeId) {
+            if (value.libraryPatternIds && createResult?.themeId) {
               for (const patternId of value.libraryPatternIds) {
                 await addLibraryPatternMutation.mutateAsync({
-                  themeId: (createResult as any).themeId,
+                  themeId: createResult.themeId,
                   patternId,
                 });
               }

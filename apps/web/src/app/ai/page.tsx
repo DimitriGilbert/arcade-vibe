@@ -85,7 +85,7 @@ export default function AIPage() {
           autoComplete="off"
           autoFocus
         />
-        <ArcadeButton type="submit">
+        <ArcadeButton type="submit" aria-label="Send message">
           <Send size={18} />
         </ArcadeButton>
       </form>

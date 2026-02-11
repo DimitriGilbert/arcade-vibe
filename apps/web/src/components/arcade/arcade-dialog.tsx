@@ -224,7 +224,9 @@ export function ArcadeDialogDescription({
   );
 }
 
-interface ArcadeDialogCloseProps {
+interface ArcadeDialogCloseProps extends React.ComponentProps<
+  typeof DialogPrimitive.Close
+> {
   children: ReactNode;
   className?: string;
 }
@@ -232,11 +234,13 @@ interface ArcadeDialogCloseProps {
 export function ArcadeDialogClose({
   children,
   className,
+  ...props
 }: ArcadeDialogCloseProps) {
   return (
     <DialogPrimitive.Close
       data-slot="arcade-dialog-close"
       className={className}
+      {...props}
     >
       {children}
     </DialogPrimitive.Close>

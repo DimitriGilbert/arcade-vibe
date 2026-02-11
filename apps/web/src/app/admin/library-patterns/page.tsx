@@ -442,7 +442,7 @@ export default function AdminLibraryPatternsPage() {
                         </span>
                       ) : (
                         <span className="text-xs">
-                          {(pattern as any).themePatterns?.length ?? 0} themes
+                          {pattern.themeAllowedPatterns?.length ?? 0} themes
                         </span>
                       )}
                     </td>
@@ -561,7 +561,7 @@ type LibraryPattern = {
     name: string;
     email: string;
   };
-  themePatterns?: Array<{
+  themeAllowedPatterns?: Array<{
     theme: {
       id: string;
       title: string;

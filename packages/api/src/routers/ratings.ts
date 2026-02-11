@@ -6,9 +6,14 @@ import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { cacheDeletePattern } from "@arcade-vibe/api/lib/redis";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 export const ratingsRouter = router({
   create: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         gameId: z.string().uuid(),
@@ -22,13 +27,6 @@ export const ratingsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       // Verify playtime >= 60s if provided
       if (input.playtime !== undefined && input.playtime < 60) {
         throw new TRPCError({
@@ -89,17 +87,20 @@ export const ratingsRouter = router({
       }
 
       // Insert the rating
-      const newRating = await db.insert(ratings).values({
-        userId: ctx.user.id,
-        gameId: input.gameId,
-        promptId: input.promptId,
-        themeId: game.themeId,
-        overall: input.rating,
-        feedback: input.feedback,
-        promptQuality: input.promptQuality,
-        gameQuality: input.gameQuality,
-        themeRelevance: input.themeRelevance,
-      }).returning();
+      const newRating = await db
+        .insert(ratings)
+        .values({
+          userId: ctx.user.id,
+          gameId: input.gameId,
+          promptId: input.promptId,
+          themeId: game.themeId,
+          overall: input.rating,
+          feedback: input.feedback,
+          promptQuality: input.promptQuality,
+          gameQuality: input.gameQuality,
+          themeRelevance: input.themeRelevance,
+        })
+        .returning();
 
       // Invalidate game cache
       await cacheDeletePattern(`game:*:${input.gameId}`);
@@ -128,13 +129,6 @@ export const ratingsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       // Fetch existing rating
       const existingRating = await db.query.ratings.findFirst({
         where: eq(ratings.id, input.ratingId),
@@ -279,13 +273,6 @@ export const ratingsRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const ratingsQuery = db.query.ratings;
       if (!ratingsQuery) {
         throw new TRPCError({

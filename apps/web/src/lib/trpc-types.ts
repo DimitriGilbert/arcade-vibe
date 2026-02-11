@@ -210,6 +210,14 @@ export type CreditsGetBalanceOutput = CreditsOutput["getBalance"];
 export type CreditsGetTransactionsOutput = CreditsOutput["getTransactions"];
 export type CreditsAddCreditsOutput = CreditsOutput["addCredits"];
 
+// --- Admin Router ---
+
+export type AdminOutput = RouterOutput["admin"];
+export type AdminInput = RouterInput["admin"];
+
+export type AdminLibraryPatternsListOutput =
+  AdminOutput["libraryPatterns"]["list"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -408,3 +416,11 @@ export type CreditBalanceInfo = CreditsGetBalanceOutput;
  * Extract credit transactions info
  */
 export type CreditTransactionsInfo = CreditsGetTransactionsOutput;
+
+// --- Library Pattern Entity Types ---
+
+/**
+ * Library pattern entity from admin list
+ * @source RouterOutput["admin"]["libraryPatterns"]["list"][number]
+ */
+export type LibraryPattern = AdminLibraryPatternsListOutput[number];

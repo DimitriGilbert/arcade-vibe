@@ -1,22 +1,30 @@
-import { TRPCError } from "@trpc/server";
+import { TRPCError, initTRPC } from "@trpc/server";
 import type { Context } from "../context";
 import { redis } from "../lib/redis";
 import { z } from "zod";
 
 export const rateLimitConfigSchema = z.object({
-  windowMs: z.number().positive().default(60 * 1000),
+  windowMs: z
+    .number()
+    .positive()
+    .default(60 * 1000),
   maxRequests: z.number().positive().default(10),
   keyPrefix: z.string().default("ratelimit"),
 });
 
 export type RateLimitConfig = z.infer<typeof rateLimitConfigSchema>;
 
+const t = initTRPC.context<Context>().create();
+
 export const createRateLimitMiddleware = (config: RateLimitConfig) => {
   const validatedConfig = rateLimitConfigSchema.parse(config);
 
-  return async ({ ctx, next }: { ctx: Context; next: () => Promise<unknown> }) => {
+  return t.middleware(async ({ ctx, next }) => {
     const userId = ctx.user?.id || ctx.session?.user?.id;
-    const ip = ctx.req?.headers.get("x-forwarded-for") || ctx.req?.headers.get("x-real-ip") || "anonymous";
+    const ip =
+      ctx.req?.headers.get("x-forwarded-for") ||
+      ctx.req?.headers.get("x-real-ip") ||
+      "anonymous";
 
     const identifier = userId || ip;
     const key = `${validatedConfig.keyPrefix}:${identifier}`;
@@ -44,11 +52,19 @@ export const createRateLimitMiddleware = (config: RateLimitConfig) => {
       console.error("Rate limiting error:", error);
       return next();
     }
-  };
+  });
 };
 
 export const rateLimits = {
-  strict: { windowMs: 60 * 1000, maxRequests: 5, keyPrefix: "ratelimit:strict" },
-  default: { windowMs: 60 * 1000, maxRequests: 10, keyPrefix: "ratelimit:default" },
+  strict: {
+    windowMs: 60 * 1000,
+    maxRequests: 5,
+    keyPrefix: "ratelimit:strict",
+  },
+  default: {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    keyPrefix: "ratelimit:default",
+  },
   loose: { windowMs: 60 * 1000, maxRequests: 30, keyPrefix: "ratelimit:loose" },
 };

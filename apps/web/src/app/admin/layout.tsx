@@ -18,6 +18,8 @@ import {
   LogOut,
   Layers,
   DollarSign,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -81,6 +83,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <aside
+        id="admin-sidebar"
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-background/80 backdrop-blur-sm border-r border-[var(--border)] transition-all duration-300",
           !isSidebarOpen && "-translate-x-full lg:translate-x-0 lg:w-20",
@@ -152,6 +155,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   window.location.href = "/";
                 }}
                 className="p-2 hover:bg-[var(--muted)] rounded-lg transition-colors"
+                aria-label="Exit admin dashboard"
                 title="Exit Admin"
               >
                 <LogOut className="h-4 w-4 text-[var(--muted-foreground)]" />
@@ -182,12 +186,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <button
               type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              aria-expanded={isSidebarOpen}
+              aria-controls="admin-sidebar"
               className="p-2 hover:bg-[var(--muted)] rounded-lg"
             >
               {isSidebarOpen ? (
-                <LogOut className="h-5 w-5" />
+                <X className="h-5 w-5" />
               ) : (
-                <LayoutDashboard className="h-5 w-5" />
+                <Menu className="h-5 w-5" />
               )}
             </button>
           </div>

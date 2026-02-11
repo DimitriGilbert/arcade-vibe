@@ -15,6 +15,8 @@ export const auth = betterAuth({
   trustedOrigins: [env.CORS_ORIGIN],
   emailAndPassword: {
     enabled: true,
+    minPasswordLength: 12,
+    maxPasswordLength: 128,
   },
   plugins: [nextCookies()],
   databaseHooks: {

@@ -4,7 +4,15 @@ import { apiKeys } from "@arcade-vibe/db/schema/models";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { encryptApiKey, maskApiKey, decryptApiKey } from "@arcade-vibe/api/lib/encryption";
+import {
+  encryptApiKey,
+  maskApiKey,
+  decryptApiKey,
+} from "@arcade-vibe/api/lib/encryption";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 const EncryptionData = z.object({
   encrypted: z.string(),
@@ -13,6 +21,7 @@ const EncryptionData = z.object({
 
 export const apiKeysRouter = router({
   addKey: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
       z.object({
         provider: z.enum([
@@ -32,13 +41,6 @@ export const apiKeysRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const existingKey = await db.query.apiKeys.findFirst({
         where: and(
           eq(apiKeys.userId, ctx.user.id),
@@ -57,13 +59,16 @@ export const apiKeysRouter = router({
 
       const keyHash = JSON.stringify({ encrypted, iv });
 
-      const newKey = await db.insert(apiKeys).values({
-        userId: ctx.user.id,
-        provider: input.provider,
-        keyHash,
-        name: input.name,
-        isActive: true,
-      }).returning();
+      const newKey = await db
+        .insert(apiKeys)
+        .values({
+          userId: ctx.user.id,
+          provider: input.provider,
+          keyHash,
+          name: input.name,
+          isActive: true,
+        })
+        .returning();
 
       return {
         success: true,
@@ -73,13 +78,6 @@ export const apiKeysRouter = router({
     }),
 
   listKeys: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const keys = await db.query.apiKeys.findMany({
       where: eq(apiKeys.userId, ctx.user.id),
       columns: {
@@ -102,18 +100,8 @@ export const apiKeysRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const key = await db.query.apiKeys.findFirst({
-        where: and(
-          eq(apiKeys.id, input.id),
-          eq(apiKeys.userId, ctx.user.id),
-        ),
+        where: and(eq(apiKeys.id, input.id), eq(apiKeys.userId, ctx.user.id)),
       });
 
       if (!key) {
@@ -138,18 +126,8 @@ export const apiKeysRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const keyRecord = await db.query.apiKeys.findFirst({
-        where: and(
-          eq(apiKeys.id, input.id),
-          eq(apiKeys.userId, ctx.user.id),
-        ),
+        where: and(eq(apiKeys.id, input.id), eq(apiKeys.userId, ctx.user.id)),
       });
 
       if (!keyRecord) {
@@ -165,7 +143,9 @@ export const apiKeysRouter = router({
           message: "Invalid keyHash data",
         });
       }
-      const encryptionData = EncryptionData.parse(JSON.parse(keyRecord.keyHash));
+      const encryptionData = EncryptionData.parse(
+        JSON.parse(keyRecord.keyHash),
+      );
       decryptApiKey(encryptionData.encrypted, encryptionData.iv);
 
       return {

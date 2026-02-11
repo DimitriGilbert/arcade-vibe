@@ -542,10 +542,15 @@ export const gamesRouter = router({
         .replace("__ARCADE_VIBE_GAME_ID__", game.id)
         .replace("__GAME_CODE__", game.gameData);
 
+      /**
+       * @security Session token is returned in response body and embedded in HTML
+       * @security HTTPS is REQUIRED in production - tokens must not be transmitted over plain HTTP
+       * @security Treat sessionToken as sensitive session data - do not log or expose
+       */
       return {
         html: gameHtml,
         gameId: game.id,
-        sessionToken,
+        sessionToken, // WARNING: Sensitive session token - handle securely
       };
     }),
 });

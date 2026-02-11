@@ -345,6 +345,7 @@ export default function AdminTierCostsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setEditingTierCost(tierCost)}
+                    aria-label={`Edit ${tierCost.name} tier cost`}
                   >
                     <Edit className="h-3 w-3" />
                   </ArcadeButton>
@@ -354,6 +355,7 @@ export default function AdminTierCostsPage() {
                     onClick={() => handleDelete(tierCost)}
                     disabled={deleteTierCostMutation.isPending}
                     className="text-red-500 hover:text-red-600 border-red-500/50 hover:border-red-500"
+                    aria-label={`Delete ${tierCost.name} tier cost`}
                   >
                     <Trash2 className="h-3 w-3" />
                   </ArcadeButton>

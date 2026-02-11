@@ -680,6 +680,11 @@ export default function AdminModelsPage() {
                               })
                             }
                             disabled={toggleModelMutation.isPending}
+                            aria-label={
+                              model.isActive
+                                ? `Deactivate ${model.modelName}`
+                                : `Activate ${model.modelName}`
+                            }
                           >
                             <Power
                               className={`h-4 w-4 ${model.isActive ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`}
@@ -689,6 +694,7 @@ export default function AdminModelsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setEditingModel(model)}
+                            aria-label={`Edit ${model.modelName} settings`}
                           >
                             <Settings className="h-4 w-4" />
                           </ArcadeButton>
@@ -705,6 +711,7 @@ export default function AdminModelsPage() {
                               }
                             }}
                             disabled={deleteModelMutation.isPending}
+                            aria-label={`Delete ${model.modelName}`}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </ArcadeButton>

@@ -118,12 +118,12 @@ function SectionTitle({
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
   const diff = endDate.getTime() - now.getTime();
-  
+
   if (diff <= 0) return "Ended";
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
+
   if (days > 0) {
     return `${days} day${days > 1 ? "s" : ""} ${hours} hour${hours !== 1 ? "s" : ""}`;
   }
@@ -176,10 +176,7 @@ function HowItWorksSection() {
   return (
     <Section className="bg-[var(--card)]/30">
       <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle
-          title="How It Works"
-          subtitle="Pretty simple, actually"
-        />
+        <SectionTitle title="How It Works" subtitle="Pretty simple, actually" />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {HOW_IT_WORKS_STEPS.map((step, index) => {
@@ -295,10 +292,7 @@ function MonthlyChallengeSection() {
     },
   });
 
-  const {
-    data: leaderboardData,
-    isLoading: leaderboardLoading,
-  } = useQuery({
+  const { data: leaderboardData, isLoading: leaderboardLoading } = useQuery({
     queryKey: ["leaderboard", currentTheme?.id],
     queryFn: async () => {
       return await trpcClient.leaderboard.getTop.query({
@@ -312,8 +306,9 @@ function MonthlyChallengeSection() {
   const leaderboard = leaderboardData ?? [];
 
   const themeTitle = currentTheme?.title ?? "No Active Theme";
-  const themeDescription = currentTheme?.description ?? "Check back soon for the next challenge.";
-  const timeRemaining = currentTheme?.endDate 
+  const themeDescription =
+    currentTheme?.description ?? "Check back soon for the next challenge.";
+  const timeRemaining = currentTheme?.endDate
     ? formatTimeRemaining(new Date(currentTheme.endDate))
     : null;
 
@@ -391,7 +386,8 @@ function MonthlyChallengeSection() {
                 <div className="space-y-4">
                   {leaderboard.map((entry, index) => {
                     const rank = index + 1;
-                    const playerName = entry.game.prompt.user.name ?? "Anonymous";
+                    const playerName =
+                      entry.game.prompt.user.name ?? "Anonymous";
                     return (
                       <div
                         key={entry.id}
@@ -418,7 +414,10 @@ function MonthlyChallengeSection() {
                           </p>
                         </div>
 
-                        <ArcadeBadge text={entry.score.toLocaleString()} variant="default" />
+                        <ArcadeBadge
+                          text={entry.score.toLocaleString()}
+                          variant="default"
+                        />
                       </div>
                     );
                   })}
@@ -438,8 +437,17 @@ function MonthlyChallengeSection() {
   );
 }
 
+function StatSkeleton() {
+  return (
+    <div className="flex flex-col items-center gap-2 p-4">
+      <div className="animate-pulse h-8 w-16 bg-[var(--muted)] rounded-md" />
+      <div className="animate-pulse h-4 w-24 bg-[var(--muted)] rounded-md" />
+    </div>
+  );
+}
+
 function StatsSection() {
-  const { data: themes } = useQuery({
+  const { data: themes, isLoading: themesLoading } = useQuery({
     queryKey: ["themes"],
     queryFn: async () => {
       return await trpcClient.themes.list.query();
@@ -448,7 +456,7 @@ function StatsSection() {
 
   const currentTheme = themes?.find((t) => t.status === "active");
 
-  const { data: games } = useQuery({
+  const { data: games, isLoading: gamesLoading } = useQuery({
     queryKey: ["homeGames", currentTheme?.id],
     queryFn: async () => {
       if (!currentTheme?.id) return [];
@@ -461,9 +469,12 @@ function StatsSection() {
     enabled: !!currentTheme?.id,
   });
 
+  const isLoading =
+    themesLoading || gamesLoading || (!games && currentTheme?.id);
+
   const gamesCount = games?.length ?? 0;
-  const uniqueCreators = games 
-    ? new Set(games.map((g) => g.prompt.authorId)).size 
+  const uniqueCreators = games
+    ? new Set(games.map((g) => g.prompt.authorId)).size
     : 0;
 
   const stats = [
@@ -497,7 +508,16 @@ function StatsSection() {
           subtitle="People making games, playing games, comparing models"
         />
 
-        <ArcadeStats stats={stats} className="max-w-4xl mx-auto" />
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <StatSkeleton />
+            <StatSkeleton />
+            <StatSkeleton />
+            <StatSkeleton />
+          </div>
+        ) : (
+          <ArcadeStats stats={stats} className="max-w-4xl mx-auto" />
+        )}
       </div>
     </Section>
   );

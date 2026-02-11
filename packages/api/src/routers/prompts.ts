@@ -4,7 +4,10 @@ import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { z } from "zod";
 import { eq, desc, asc, or, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { getTokenCount, generateContentHash } from "@arcade-vibe/api/lib/tokenizer";
+import {
+  getTokenCount,
+  generateContentHash,
+} from "@arcade-vibe/api/lib/tokenizer";
 
 export const promptsRouter = router({
   create: protectedProcedure
@@ -13,30 +16,28 @@ export const promptsRouter = router({
         themeId: z.string().uuid(),
         content: z.string().min(1),
         tokenizer: z.string().default("gpt-4"),
-        visibility: z.enum(["private", "public_on_freeze", "public"]).default("private"),
+        visibility: z
+          .enum(["private", "public_on_freeze", "public"])
+          .default("private"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const tokenCount = getTokenCount(input.content, input.tokenizer);
       const contentHash = generateContentHash(input.content);
 
-      const newPrompt = await db.insert(prompts).values({
-        authorId: ctx.user.id,
-        themeId: input.themeId,
-        content: input.content,
-        contentHash,
-        tokenCount,
-        tokenizer: input.tokenizer,
-        visibility: input.visibility,
-        version: 1,
-      }).returning();
+      const newPrompt = await db
+        .insert(prompts)
+        .values({
+          authorId: ctx.user.id,
+          themeId: input.themeId,
+          content: input.content,
+          contentHash,
+          tokenCount,
+          tokenizer: input.tokenizer,
+          visibility: input.visibility,
+          version: 1,
+        })
+        .returning();
 
       return {
         success: true,
@@ -52,7 +53,9 @@ export const promptsRouter = router({
         id: z.string().uuid(),
         content: z.string().min(1),
         tokenizer: z.string().default("gpt-4"),
-        visibility: z.enum(["private", "public_on_freeze", "public"]).optional(),
+        visibility: z
+          .enum(["private", "public_on_freeze", "public"])
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -85,17 +88,20 @@ export const promptsRouter = router({
       const tokenCount = getTokenCount(input.content, input.tokenizer);
       const contentHash = generateContentHash(input.content);
 
-      const newVersion = await db.insert(prompts).values({
-        authorId: originalPrompt.authorId,
-        themeId: originalPrompt.themeId,
-        parentId: originalPrompt.id,
-        content: input.content,
-        contentHash,
-        tokenCount,
-        tokenizer: input.tokenizer,
-        visibility: input.visibility ?? originalPrompt.visibility,
-        version: originalPrompt.version + 1,
-      }).returning();
+      const newVersion = await db
+        .insert(prompts)
+        .values({
+          authorId: originalPrompt.authorId,
+          themeId: originalPrompt.themeId,
+          parentId: originalPrompt.id,
+          content: input.content,
+          contentHash,
+          tokenCount,
+          tokenizer: input.tokenizer,
+          visibility: input.visibility ?? originalPrompt.visibility,
+          version: originalPrompt.version + 1,
+        })
+        .returning();
 
       return {
         success: true,
@@ -109,17 +115,12 @@ export const promptsRouter = router({
     .input(
       z.object({
         promptId: z.string().uuid(),
-        visibility: z.enum(["private", "public_on_freeze", "public"]).default("private"),
+        visibility: z
+          .enum(["private", "public_on_freeze", "public"])
+          .default("private"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const promptsQuery = db.query.prompts;
       if (!promptsQuery) {
         throw new TRPCError({
@@ -139,17 +140,20 @@ export const promptsRouter = router({
         });
       }
 
-      const newPrompt = await db.insert(prompts).values({
-        authorId: ctx.user.id,
-        themeId: originalPrompt.themeId,
-        parentId: originalPrompt.id,
-        content: originalPrompt.content,
-        contentHash: originalPrompt.contentHash,
-        tokenCount: originalPrompt.tokenCount,
-        tokenizer: originalPrompt.tokenizer,
-        visibility: input.visibility,
-        version: 1,
-      }).returning();
+      const newPrompt = await db
+        .insert(prompts)
+        .values({
+          authorId: ctx.user.id,
+          themeId: originalPrompt.themeId,
+          parentId: originalPrompt.id,
+          content: originalPrompt.content,
+          contentHash: originalPrompt.contentHash,
+          tokenCount: originalPrompt.tokenCount,
+          tokenizer: originalPrompt.tokenizer,
+          visibility: input.visibility,
+          version: 1,
+        })
+        .returning();
 
       return {
         success: true,
@@ -250,13 +254,6 @@ export const promptsRouter = router({
     }),
 
   listMine: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "User not authenticated",
-      });
-    }
-
     const promptsQuery = db.query.prompts;
     if (!promptsQuery) {
       throw new TRPCError({
@@ -276,13 +273,6 @@ export const promptsRouter = router({
   listMineByTheme: protectedProcedure
     .input(z.object({ themeId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "User not authenticated",
-        });
-      }
-
       const promptsQuery = db.query.prompts;
       if (!promptsQuery) {
         throw new TRPCError({

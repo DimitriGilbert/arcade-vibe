@@ -1,0 +1,100 @@
+# Development Docker Compose
+# Optimized for fast iteration with bind mounts and hot reload
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: arcade-vibe-dev
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/arcade-vibe
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-secret-minimum-32-characters-long}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-abcdef0123456789abcdef0123456789}
+      # AI Provider Keys (optional in dev)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Stripe (optional in dev)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # CDN/S3 (Cloudflare R2)
+      CDN_URL: ${CDN_URL:-}
+      CDN_REGION: ${CDN_REGION:-auto}
+      CDN_ACCESS_KEY_ID: ${CDN_ACCESS_KEY_ID:-}
+      CDN_SECRET_ACCESS_KEY: ${CDN_SECRET_ACCESS_KEY:-}
+      CDN_BUCKET: ${CDN_BUCKET:-games}
+    volumes:
+      # Bind mount entire repo for hot reload
+      - .:/app
+      # Persist node_modules to avoid overwriting with host
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/api/node_modules
+      - /app/packages/auth/node_modules
+      - /app/packages/db/node_modules
+      - /app/packages/env/node_modules
+      - /app/packages/config/node_modules
+      # Exclude build artifacts
+      - /app/.next
+      - /app/.turbo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arcade-vibe-postgres-dev
+    environment:
+      POSTGRES_DB: arcade-vibe
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d arcade-vibe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: arcade-vibe-redis-dev
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

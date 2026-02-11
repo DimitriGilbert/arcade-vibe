@@ -5,6 +5,10 @@ import { subscriptionPlans } from "@arcade-vibe/db/schema/credits";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 // Lazy-initialize Stripe to avoid build-time errors when STRIPE_SECRET_KEY is not set
 function getStripe(): Stripe {
@@ -22,6 +26,7 @@ function getStripe(): Stripe {
 
 export const stripeRouter = router({
   createCheckoutSession: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
       z.object({
         planId: z.string().uuid().optional(),
