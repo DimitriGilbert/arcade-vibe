@@ -456,10 +456,10 @@ function StatsSection() {
 
   const currentTheme = themes?.find((t) => t.status === "active");
 
-  const { data: games, isLoading: gamesLoading } = useQuery({
+  const { data: gamesResponse, isLoading: gamesLoading } = useQuery({
     queryKey: ["homeGames", currentTheme?.id],
     queryFn: async () => {
-      if (!currentTheme?.id) return [];
+      if (!currentTheme?.id) return null;
       return await trpcClient.games.listByTheme.query({
         themeId: currentTheme.id,
         includeSubmitted: true,
@@ -469,10 +469,12 @@ function StatsSection() {
     enabled: !!currentTheme?.id,
   });
 
-  const isLoading =
-    themesLoading || gamesLoading || (!games && currentTheme?.id);
+  const games = gamesResponse?.games ?? [];
 
-  const gamesCount = games?.length ?? 0;
+  const isLoading =
+    themesLoading || gamesLoading || (!gamesResponse && currentTheme?.id);
+
+  const gamesCount = games.length;
   const uniqueCreators = games
     ? new Set(games.map((g) => g.prompt.authorId)).size
     : 0;

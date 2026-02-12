@@ -83,11 +83,12 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
     queryFn: async (): Promise<Game[]> => {
       try {
         const currentTheme = await trpcClient.themes.getCurrent.query();
-        return await trpcClient.games.listByTheme.query({
+        const result = await trpcClient.games.listByTheme.query({
           themeId: currentTheme.id,
           includeSubmitted: true,
           limit: 200,
         });
+        return result?.games ?? [];
       } catch {
         return [];
       }
@@ -153,11 +154,12 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
 
       try {
         const currentTheme = await trpcClient.themes.getCurrent.query();
-        const allGames = await trpcClient.games.listByTheme.query({
+        const result = await trpcClient.games.listByTheme.query({
           themeId: currentTheme.id,
           includeSubmitted: true,
           limit: 200,
         });
+        const allGames = result?.games ?? [];
 
         return allGames.filter((game) => {
           return game.prompt.user?.id === user.id;

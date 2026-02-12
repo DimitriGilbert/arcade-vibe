@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -16,10 +15,9 @@ interface RatingFormProps {
 
 const ratingSchema = z.object({
   overall: z.number().int().min(1).max(5),
-  gameplay: z.number().int().min(1).max(5).optional(),
-  visuals: z.number().int().min(1).max(5).optional(),
-  creativity: z.number().int().min(1).max(5).optional(),
-  technical: z.number().int().min(1).max(5).optional(),
+  promptQuality: z.number().int().min(1).max(5).optional(),
+  gameQuality: z.number().int().min(1).max(5).optional(),
+  themeRelevance: z.number().int().min(1).max(5).optional(),
   feedback: z.string().optional(),
 });
 
@@ -44,10 +42,10 @@ export function RatingForm({
         },
       },
       {
-        name: "gameplay",
+        name: "promptQuality",
         type: "rating",
-        label: "Gameplay",
-        description: "How fun and engaging is the game?",
+        label: "Prompt Quality",
+        description: "How well did the game match the prompt?",
         ratingConfig: {
           max: 5,
           allowHalf: false,
@@ -55,10 +53,10 @@ export function RatingForm({
         },
       },
       {
-        name: "visuals",
+        name: "gameQuality",
         type: "rating",
-        label: "Visuals",
-        description: "How good do the graphics and animations look?",
+        label: "Game Quality",
+        description: "How fun and well-made is the game?",
         ratingConfig: {
           max: 5,
           allowHalf: false,
@@ -66,21 +64,10 @@ export function RatingForm({
         },
       },
       {
-        name: "creativity",
+        name: "themeRelevance",
         type: "rating",
-        label: "Creativity",
-        description: "How unique and innovative is the game?",
-        ratingConfig: {
-          max: 5,
-          allowHalf: false,
-          showValue: true,
-        },
-      },
-      {
-        name: "technical",
-        type: "rating",
-        label: "Technical Quality",
-        description: "How well-coded and bug-free is the game?",
+        label: "Theme Relevance",
+        description: "How well does the game fit the theme?",
         ratingConfig: {
           max: 5,
           allowHalf: false,
@@ -102,10 +89,9 @@ export function RatingForm({
     formOptions: {
       defaultValues: {
         overall: 5,
-        gameplay: undefined,
-        visuals: undefined,
-        creativity: undefined,
-        technical: undefined,
+        promptQuality: undefined,
+        gameQuality: undefined,
+        themeRelevance: undefined,
         feedback: "",
       },
       onSubmit: async ({ value }) => {
@@ -116,9 +102,9 @@ export function RatingForm({
             rating: value.overall,
             playtime,
             feedback: value.feedback,
-            promptQuality: value.creativity,
-            gameQuality: value.gameplay,
-            themeRelevance: undefined,
+            promptQuality: value.promptQuality,
+            gameQuality: value.gameQuality,
+            themeRelevance: value.themeRelevance,
           });
           toast.success("Rating submitted successfully!");
           onSuccess();

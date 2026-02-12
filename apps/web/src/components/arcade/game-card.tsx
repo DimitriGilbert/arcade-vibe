@@ -1,17 +1,14 @@
+import { useRouter } from "next/navigation";
 import { ArcadeBadge, ArcadeCard, ArcadeButton } from "@/components/arcade";
 import { Play, User, Clock, Star } from "lucide-react";
-import type { AppRouter } from "@arcade-vibe/api/routers/index";
-import type { inferRouterOutputs } from "@trpc/server";
-
-type RouterOutput = inferRouterOutputs<AppRouter>;
-type GameFromApi = RouterOutput["games"]["listByTheme"][number];
+import type { GameFromApi } from "@/lib/trpc-types";
 
 interface GameCardProps {
   game: GameFromApi;
-  onClick: () => void;
 }
 
-export function GameCard({ game, onClick }: GameCardProps) {
+export function GameCard({ game }: GameCardProps) {
+  const router = useRouter();
   // Use tier from tierCost relation
   const tierLabel = game.tierCost?.slug ?? "unknown";
   const prompt = game.prompt as {
@@ -95,7 +92,7 @@ export function GameCard({ game, onClick }: GameCardProps) {
       {/* Footer */}
       <div className="p-4 pt-0">
         <ArcadeButton
-          onClick={onClick}
+          onClick={() => router.push(`/game/${game.id}`)}
           variant="primary"
           className="w-full font-medium"
         >

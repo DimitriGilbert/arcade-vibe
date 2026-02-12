@@ -232,9 +232,9 @@ export type Game = GameByIdOutput;
 
 /**
  * Game entity as returned from listByTheme (array item)
- * @source RouterOutput["games"]["listByTheme"][number]
+ * @source RouterOutput["games"]["listByTheme"]["games"][number]
  */
-export type GameFromApi = GameListByThemeOutput[number];
+export type GameFromApi = NonNullable<GameListByThemeOutput>["games"][number];
 
 /**
  * Game with ranking information for leaderboard display

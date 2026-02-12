@@ -239,22 +239,18 @@ export const gamesRouter = router({
    * List games for a theme
    * Can filter for submitted games only
    * Only includes non-hidden games
+   * Supports cursor-based pagination
    */
   listByTheme: publicProcedure
     .input(
       z.object({
         themeId: z.string().uuid(),
         includeSubmitted: z.boolean().default(true),
-        limit: z.number().int().min(1).max(100).default(50),
+        limit: z.number().int().min(1).max(100).default(20),
+        cursor: z.string().uuid().optional(), // Cursor for pagination (game ID)
       }),
     )
     .query(async ({ input }) => {
-      const cacheKey = `games:theme:${input.themeId}:${input.includeSubmitted}:${input.limit}`;
-      const cached = await cacheGet<typeof result>(cacheKey);
-      if (cached) {
-        return cached;
-      }
-
       const gamesQuery = db.query.games;
       if (!gamesQuery) {
         throw new TRPCError({
@@ -273,10 +269,29 @@ export const gamesRouter = router({
         whereConditions.push(eq(games.isSubmitted, true));
       }
 
+      // If cursor provided, get the cursor game's createdAt for pagination
+      let cursorDate: Date | null = null;
+      if (input.cursor) {
+        const cursorGame = await gamesQuery.findFirst({
+          where: eq(games.id, input.cursor),
+          columns: { createdAt: true },
+        });
+        if (cursorGame) {
+          cursorDate = cursorGame.createdAt;
+        }
+      }
+
+      // Add cursor condition if we have one
+      if (cursorDate) {
+        const { lt } = await import("drizzle-orm");
+        whereConditions.push(lt(games.createdAt, cursorDate));
+      }
+
+      // Fetch one extra to determine if there are more results
       const result = await gamesQuery.findMany({
         where: and(...whereConditions),
         orderBy: [desc(games.createdAt)],
-        limit: input.limit,
+        limit: input.limit + 1,
         with: {
           prompt: {
             with: {
@@ -299,8 +314,18 @@ export const gamesRouter = router({
         },
       });
 
-      await cacheSet(cacheKey, result, 60); // Cache for 1 minute
-      return result;
+      // Check if there are more results
+      const hasMore = result.length > input.limit;
+      const games_result = hasMore ? result.slice(0, input.limit) : result;
+      const nextCursor = hasMore
+        ? games_result[games_result.length - 1]?.id
+        : undefined;
+
+      return {
+        games: games_result,
+        nextCursor,
+        hasMore,
+      };
     }),
 
   /**

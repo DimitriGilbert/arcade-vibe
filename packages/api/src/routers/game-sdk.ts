@@ -10,6 +10,7 @@ import {
   createRateLimitMiddleware,
   rateLimits,
 } from "../middleware/rate-limit";
+import { eq, and } from "drizzle-orm";
 
 /**
  * Extract Bearer token from Authorization header
@@ -90,6 +91,26 @@ export const gameSdkRouter = router({
           userAgent: ctx.req.headers.get("user-agent"),
         });
         // Continue processing but this is flagged for review
+      }
+
+      // After 60 seconds of playtime, create a gameScore record for rating eligibility
+      if (input.playtime >= 60) {
+        const existingScore = await db.query.gameScores.findFirst({
+          where: and(
+            eq(gameScores.userId, session.userId),
+            eq(gameScores.gameId, input.gameId),
+          ),
+        });
+
+        if (!existingScore) {
+          // Create a placeholder score record for rating eligibility
+          await db.insert(gameScores).values({
+            gameId: input.gameId,
+            userId: session.userId,
+            score: 0, // Placeholder, will be updated if user submits actual score
+            completionTime: input.playtime,
+          });
+        }
       }
 
       // Store updated session data in Redis

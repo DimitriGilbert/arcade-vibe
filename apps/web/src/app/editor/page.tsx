@@ -193,7 +193,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
   });
 
-  // Generate content using SSE streaming API
+  // Generate content using tRPC streaming API
   const handleGenerate = useCallback(async () => {
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
@@ -233,11 +233,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     setActiveTab("output"); // Auto-switch to output tab
 
     try {
-      // Fetch theme with system prompt
-      const themeData = await trpcClient.themes.getById.query({
-        id: currentThemeId,
-      });
-
       // Create new prompt first if not exists
       let promptId = existingPrompt?.id ?? selectedPromptId;
       if (!promptId) {
@@ -249,68 +244,20 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         setSelectedPromptId(promptId);
       }
 
-      // Use SSE streaming endpoint
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          promptId,
-          modelKey: selectedModel,
-          themeSystemPrompt:
-            themeData.systemPrompt ||
-            "You are a helpful game generation assistant.",
-          promptContent,
-          provider: modelData.provider,
-        }),
+      // Use tRPC streaming procedure
+      const stream = await trpcClient.generate.streamGeneration.mutate({
+        promptId,
+        modelKey: selectedModel,
       });
 
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        throw new Error(error.error || "Generation failed");
-      }
-
-      if (!response.body) {
-        throw new Error("No response body");
-      }
-
-      // Parse SSE stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6)) as {
-                type: string;
-                code?: string;
-                error?: string;
-              };
-
-              if (data.type === "chunk" && data.code) {
-                setGeneratedCode(data.code);
-              } else if (data.type === "complete") {
-                setIsGenerating(false);
-                toast.success("Game generated successfully!");
-              } else if (data.type === "error") {
-                throw new Error(data.error || "Generation failed");
-              }
-            } catch (parseError) {
-              // Skip invalid JSON lines
-              if (parseError instanceof SyntaxError) continue;
-              throw parseError;
-            }
-          }
+      for await (const chunk of stream) {
+        if (chunk.type === "chunk" && "code" in chunk) {
+          setGeneratedCode(chunk.code);
+        } else if (chunk.type === "complete") {
+          setIsGenerating(false);
+          toast.success("Game generated and saved successfully!");
+          // Redirect to game page
+          window.location.href = `/game/${chunk.gameId}`;
         }
       }
     } catch (error) {
