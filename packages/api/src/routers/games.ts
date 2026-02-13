@@ -13,7 +13,21 @@ import { cacheGet, cacheSet } from "../lib/redis";
 import { redis } from "../lib/redis";
 import z from "zod";
 
-// Arcade Vibe SDK template to be injected into game iframe
+/**
+ * @security SDK_TEMPLATE - Sandboxed iframe HTML template
+ *
+ * This HTML is loaded into a sandboxed iframe for game execution.
+ * The consumer MUST apply sandbox attributes when rendering this template.
+ *
+ * Recommended sandbox attributes:
+ *   sandbox="allow-scripts allow-same-origin"
+ *
+ * - allow-scripts: Required for game functionality and SDK communication
+ * - allow-same-origin: Required for fetch API calls to the backend
+ *
+ * DO NOT add: allow-forms, allow-popups, allow-top-navigation
+ * These are not needed and would increase attack surface.
+ */
 const SDK_TEMPLATE = `<!DOCTYPE html>
 <html>
   <head>
@@ -145,7 +159,6 @@ export const gamesRouter = router({
                 columns: {
                   id: true,
                   name: true,
-                  email: true,
                   image: true,
                 },
               },
@@ -221,7 +234,6 @@ export const gamesRouter = router({
                 columns: {
                   id: true,
                   name: true,
-                  email: true,
                   image: true,
                 },
               },
@@ -299,7 +311,6 @@ export const gamesRouter = router({
                 columns: {
                   id: true,
                   name: true,
-                  email: true,
                   image: true,
                 },
               },

@@ -17,12 +17,10 @@ export function GameCard({ game }: GameCardProps) {
     user: {
       id: string;
       name: string | null;
-      email: string;
       image: string | null;
     };
   };
-  const creatorName =
-    prompt.user?.name || prompt.user?.email?.split("@")[0] || "Unknown";
+  const creatorName = prompt.user?.name || "Unknown";
   const createdAt = new Date(game.createdAt).toLocaleDateString();
 
   return (

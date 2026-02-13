@@ -10,6 +10,7 @@ export const rateLimitConfigSchema = z.object({
     .default(60 * 1000),
   maxRequests: z.number().positive().default(10),
   keyPrefix: z.string().default("ratelimit"),
+  failOpen: z.boolean().default(false),
 });
 
 export type RateLimitConfig = z.infer<typeof rateLimitConfigSchema>;
@@ -50,7 +51,15 @@ export const createRateLimitMiddleware = (config: RateLimitConfig) => {
         throw error;
       }
       console.error("Rate limiting error:", error);
-      return next();
+
+      if (validatedConfig.failOpen) {
+        return next();
+      }
+
+      throw new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "Rate limiting service unavailable. Please try again later.",
+      });
     }
   });
 };
@@ -60,11 +69,18 @@ export const rateLimits = {
     windowMs: 60 * 1000,
     maxRequests: 5,
     keyPrefix: "ratelimit:strict",
+    failOpen: false,
   },
   default: {
     windowMs: 60 * 1000,
     maxRequests: 10,
     keyPrefix: "ratelimit:default",
+    failOpen: false,
   },
-  loose: { windowMs: 60 * 1000, maxRequests: 30, keyPrefix: "ratelimit:loose" },
+  loose: {
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    keyPrefix: "ratelimit:loose",
+    failOpen: true,
+  },
 };

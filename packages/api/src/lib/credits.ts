@@ -151,64 +151,73 @@ export const deductCredits = async (
 
   const now = new Date();
 
-  // Get valid batches ordered by expiry date (FIFO - oldest first)
-  const batches = await db.query.creditBatches.findMany({
-    where: and(
-      eq(creditBatches.userId, userId),
-      gt(creditBatches.remainingAmount, 0),
-      gt(creditBatches.expiresAt, now),
-    ),
-    orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
-  });
-
-  const totalAvailable = batches.reduce((sum, b) => sum + b.remainingAmount, 0);
-
-  if (totalAvailable < amount) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `Insufficient credits. Available: ${totalAvailable}, Required: ${amount}`,
+  // Use transaction for atomic operations
+  await db.transaction(async (tx) => {
+    // Get valid batches ordered by expiry date (FIFO - oldest first)
+    const batches = await tx.query.creditBatches.findMany({
+      where: and(
+        eq(creditBatches.userId, userId),
+        gt(creditBatches.remainingAmount, 0),
+        gt(creditBatches.expiresAt, now),
+      ),
+      orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
     });
-  }
 
-  // Deduct from batches using FIFO
-  let remainingToDeduct = amount;
+    const totalAvailable = batches.reduce((sum, b) => sum + b.remainingAmount, 0);
 
-  for (const batch of batches) {
-    if (remainingToDeduct <= 0) break;
+    if (totalAvailable < amount) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Insufficient credits. Available: ${totalAvailable}, Required: ${amount}`,
+      });
+    }
 
-    const deductFromThisBatch = Math.min(
-      batch.remainingAmount,
-      remainingToDeduct,
-    );
+    // Deduct from batches using FIFO
+    let remainingToDeduct = amount;
 
-    await db
-      .update(creditBatches)
-      .set({
-        remainingAmount: batch.remainingAmount - deductFromThisBatch,
-      })
-      .where(eq(creditBatches.id, batch.id));
+    for (const batch of batches) {
+      if (remainingToDeduct <= 0) break;
 
-    remainingToDeduct -= deductFromThisBatch;
-  }
+      const deductFromThisBatch = Math.min(
+        batch.remainingAmount,
+        remainingToDeduct,
+      );
 
-  // Update user's total credit balance (denormalized for quick access)
-  const newBalance = await getValidCreditBalance(userId);
+      await tx
+        .update(creditBatches)
+        .set({
+          remainingAmount: batch.remainingAmount - deductFromThisBatch,
+        })
+        .where(eq(creditBatches.id, batch.id));
 
-  await db
-    .update(userExtended)
-    .set({
-      credits: newBalance,
-    })
-    .where(eq(userExtended.id, userId));
+      remainingToDeduct -= deductFromThisBatch;
+    }
 
-  // Create transaction record with model info if provided
-  const description = modelKey ? `${reason} (${modelKey})` : reason;
+    // Calculate new balance within transaction
+    const updatedBatches = await tx.query.creditBatches.findMany({
+      where: and(
+        eq(creditBatches.userId, userId),
+        gt(creditBatches.remainingAmount, 0),
+        gt(creditBatches.expiresAt, now),
+      ),
+      columns: { remainingAmount: true },
+    });
+    const newBalance = updatedBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
 
-  await db.insert(creditTransactions).values({
-    userId,
-    amount: -amount, // Negative for deduction
-    type: "deduction",
-    description,
+    await tx
+      .update(userExtended)
+      .set({ credits: newBalance })
+      .where(eq(userExtended.id, userId));
+
+    // Create transaction record with model info if provided
+    const description = modelKey ? `${reason} (${modelKey})` : reason;
+
+    await tx.insert(creditTransactions).values({
+      userId,
+      amount: -amount, // Negative for deduction
+      type: "deduction",
+      description,
+    });
   });
 };
 
@@ -255,38 +264,49 @@ export const addCreditsInternal = async (
   // Calculate expiry date
   const expiresAt = calculateExpiryDate(type);
 
-  // Create credit batch
-  const [batch] = await db
-    .insert(creditBatches)
-    .values({
+  const newBalance = await db.transaction(async (tx) => {
+    // Create credit batch
+    const [batch] = await tx
+      .insert(creditBatches)
+      .values({
+        userId,
+        amount,
+        remainingAmount: amount,
+        sourceType: type,
+        sourceId: sourceId ?? null,
+        expiresAt,
+      })
+      .returning();
+
+    // Calculate new balance within transaction
+    const now = new Date();
+    const allBatches = await tx.query.creditBatches.findMany({
+      where: and(
+        eq(creditBatches.userId, userId),
+        gt(creditBatches.remainingAmount, 0),
+        gt(creditBatches.expiresAt, now),
+      ),
+      columns: { remainingAmount: true },
+    });
+    const balance = allBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
+
+    // Update user's denormalized credit balance
+    await tx
+      .update(userExtended)
+      .set({ credits: balance })
+      .where(eq(userExtended.id, userId));
+
+    // Create transaction record
+    await tx.insert(creditTransactions).values({
       userId,
       amount,
-      remainingAmount: amount,
-      sourceType: type,
-      sourceId: sourceId ?? null,
+      type,
+      description: description ?? reason,
+      batchId: batch?.id,
       expiresAt,
-    })
-    .returning();
+    });
 
-  // Calculate new balance
-  const newBalance = await getValidCreditBalance(userId);
-
-  // Update user's denormalized credit balance
-  await db
-    .update(userExtended)
-    .set({
-      credits: newBalance,
-    })
-    .where(eq(userExtended.id, userId));
-
-  // Create transaction record
-  await db.insert(creditTransactions).values({
-    userId,
-    amount,
-    type,
-    description: description ?? reason,
-    batchId: batch?.id,
-    expiresAt,
+    return balance;
   });
 
   return newBalance;
@@ -308,27 +328,41 @@ export const expireOldCredits = async (): Promise<number> => {
 
   for (const batch of expiredBatches) {
     if (batch.remainingAmount > 0) {
-      // Create expiry transaction
-      await db.insert(creditTransactions).values({
-        userId: batch.userId,
-        amount: -batch.remainingAmount,
-        type: "expiry",
-        description: `Credits expired (source: ${batch.sourceType})`,
-        batchId: batch.id,
+      await db.transaction(async (tx) => {
+        const amountToExpire = batch.remainingAmount;
+
+        // Create expiry transaction
+        await tx.insert(creditTransactions).values({
+          userId: batch.userId,
+          amount: -amountToExpire,
+          type: "expiry",
+          description: `Credits expired (source: ${batch.sourceType})`,
+          batchId: batch.id,
+        });
+
+        // Set remaining to 0
+        await tx
+          .update(creditBatches)
+          .set({ remainingAmount: 0 })
+          .where(eq(creditBatches.id, batch.id));
+
+        // Recalculate user balance within transaction
+        const validBatches = await tx.query.creditBatches.findMany({
+          where: and(
+            eq(creditBatches.userId, batch.userId),
+            gt(creditBatches.remainingAmount, 0),
+            gt(creditBatches.expiresAt, now),
+          ),
+          columns: { remainingAmount: true },
+        });
+        const newBalance = validBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
+
+        // Update user's denormalized balance
+        await tx
+          .update(userExtended)
+          .set({ credits: newBalance })
+          .where(eq(userExtended.id, batch.userId));
       });
-
-      // Set remaining to 0
-      await db
-        .update(creditBatches)
-        .set({ remainingAmount: 0 })
-        .where(eq(creditBatches.id, batch.id));
-
-      // Update user's denormalized balance
-      const newBalance = await getValidCreditBalance(batch.userId);
-      await db
-        .update(userExtended)
-        .set({ credits: newBalance })
-        .where(eq(userExtended.id, batch.userId));
 
       expiredCount += batch.remainingAmount;
     }

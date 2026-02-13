@@ -210,7 +210,7 @@ export default function ArcadePage() {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const creatorName = game.prompt.user.name?.toLowerCase() || "";
-        const creatorEmail = game.prompt.user.email.toLowerCase();
+        const creatorEmail = game.prompt.user.name?.toLowerCase() || "";
         const promptContent = game.prompt.content?.toLowerCase() || "";
         const themeTitle = game.theme?.title?.toLowerCase() || "";
         const modelName = game.modelName?.toLowerCase() || "";

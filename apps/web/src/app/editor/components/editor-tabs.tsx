@@ -45,7 +45,7 @@ export function EditorTabs({
       </ArcadeTabsList>
 
       <ArcadeTabsContent value="editor" className="flex-1 min-h-0 mt-0">
-        <div className="h-full min-h-[400px] border border-[var(--border)] rounded-md overflow-hidden">
+        <div className="h-full border border-[var(--border)] rounded-md overflow-hidden">
           <Editor
             height="100%"
             defaultLanguage="markdown"
@@ -74,7 +74,7 @@ export function EditorTabs({
             fileName="game.html"
           />
         ) : (
-          <div className="h-full min-h-[400px] border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
+          <div className="h-full min-h-0 border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
             <p className="text-[var(--muted-foreground)] text-sm">
               No output yet. Generate a game to see results.
             </p>

@@ -388,7 +388,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     (selectedPromptId ? { id: selectedPromptId, version: 1 } : null);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-background">
+    <div className="relative h-full min-h-0 overflow-hidden">
+      <div className="absolute inset-0 bg-background min-h-screen" />
+      <div className="relative h-full flex flex-col md:flex-row">
       {/* Sidebar */}
       <aside className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
         <EditorSidebar
@@ -436,10 +438,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header with credits and fork button */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-          <div>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
+          {/* <div>
             <h1 className="text-xl font-bold text-[var(--foreground)]">
               {isForking
                 ? "Fork Prompt"
@@ -452,7 +454,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                 {credits.balance} credits available
               </p>
             )}
-          </div>
+          </div> */}
           <div className="flex items-center gap-2">
             {isForking && (
               <ArcadeButton
@@ -497,7 +499,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         </div>
 
         {/* Action Bar */}
-        <div className="p-4 border-t border-[var(--border)] flex gap-2">
+        <div className="p-4 border-t border-[var(--border)] flex gap-2 shrink-0">
           <ArcadeButton
             onClick={handleSave}
             disabled={
@@ -539,7 +541,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           </ArcadeButton>
         </div>
       </main>
-
+      </div>
+      
       {/* Version Comparison Dialog */}
       {showComparison && compareLeft && compareRight && (
         <Dialog open={showComparison} onOpenChange={setShowComparison}>

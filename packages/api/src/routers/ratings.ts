@@ -217,7 +217,7 @@ export const ratingsRouter = router({
       return gameRatings;
     }),
 
-  getByUser: publicProcedure
+  getByUser: protectedProcedure
     .input(
       z.object({
         userId: z.string().optional(),
@@ -232,12 +232,21 @@ export const ratingsRouter = router({
         });
       }
 
-      // If userId not provided and user is authenticated, use current user
-      const targetUserId = input.userId || ctx.user?.id;
+      if (input.userId && input.userId !== ctx.user.id) {
+        const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+        if (!isAdmin) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only view your own ratings",
+          });
+        }
+      }
+
+      const targetUserId = input.userId || ctx.user.id;
 
       if (!targetUserId) {
         throw new TRPCError({
-          code: "UNAUTHORIZED",
+          code: "BAD_REQUEST",
           message: "User ID required",
         });
       }
