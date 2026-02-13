@@ -1,9 +1,28 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { mkdir, writeFile } from "fs/promises";
+import { join } from "path";
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-// Create S3 client once for reuse
+const isCDNConfigured = (): boolean => {
+  return !!(
+    process.env.CDN_URL &&
+    process.env.CDN_ACCESS_KEY_ID &&
+    process.env.CDN_SECRET_ACCESS_KEY
+  );
+};
+
+const uploadToLocalFilesystem = async (
+  gameCode: string,
+  gameId: string,
+): Promise<string> => {
+  const gamesDir = join(process.cwd(), "public", "games", gameId);
+  await mkdir(gamesDir, { recursive: true });
+  await writeFile(join(gamesDir, "index.html"), gameCode, "utf-8");
+  return `/games/${gameId}/index.html`;
+};
+
 const getS3Client = (): S3Client => {
   const region = process.env.CDN_REGION || "auto";
   const endpoint = process.env.CDN_URL;
@@ -23,13 +42,7 @@ const uploadToCDNInternal = async (
   gameId: string,
 ): Promise<string> => {
   const cdnUrl = process.env.CDN_URL;
-  const cdnAccessKeyId = process.env.CDN_ACCESS_KEY_ID;
-  const cdnSecretAccessKey = process.env.CDN_SECRET_ACCESS_KEY;
   const bucket = process.env.CDN_BUCKET || "games";
-
-  if (!cdnUrl || !cdnAccessKeyId || !cdnSecretAccessKey) {
-    throw new Error("CDN configuration is missing");
-  }
 
   const s3Client = getS3Client();
   const key = `${gameId}/index.html`;
@@ -52,6 +65,10 @@ export const uploadToCDN = async (
   gameCode: string,
   gameId: string,
 ): Promise<string> => {
+  if (!isCDNConfigured()) {
+    return uploadToLocalFilesystem(gameCode, gameId);
+  }
+
   const maxAttempts = 3;
   let lastError: Error | null = null;
 
@@ -62,7 +79,6 @@ export const uploadToCDN = async (
       lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt < maxAttempts) {
-        // Exponential backoff: 2^attempt * 1000ms
         const backoffDelay = 2 ** attempt * 1000;
         await sleep(backoffDelay);
       }
