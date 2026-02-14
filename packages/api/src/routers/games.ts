@@ -9,6 +9,10 @@ import { games } from "@arcade-vibe/db/schema/games";
 import { eq, desc, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
+import {
+  generatePortableGameHtml,
+  generatePortableFilename,
+} from "../lib/game-export";
 import { cacheGet, cacheSet } from "../lib/redis";
 import { redis } from "../lib/redis";
 import z from "zod";
@@ -672,6 +676,57 @@ export const gamesRouter = router({
         gameId: game.id,
         sessionToken, // WARNING: Sensitive session token - handle securely
       };
+    }),
+
+  exportPortable: protectedProcedure
+    .input(z.object({ gameId: z.string() }))
+    .query(async ({ input }) => {
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      if (game.status !== "completed" || game.isHidden) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This game is not available for export",
+        });
+      }
+
+      if (!game.gameData) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Game data not available",
+        });
+      }
+
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "https://arcade-vibe.com";
+      const html = generatePortableGameHtml(
+        { id: game.id, name: game.name, gameData: game.gameData },
+        baseUrl,
+      );
+      const filename = generatePortableFilename({
+        id: game.id,
+        name: game.name,
+        gameData: game.gameData,
+      });
+
+      return { html, filename };
     }),
 });
 

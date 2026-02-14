@@ -18,6 +18,8 @@ export const env = createEnv({
     REDIS_URL: z.string().url().optional(),
     NEXT_PUBLIC_API_URL: z.url().optional(),
     NEXT_PUBLIC_APP_URL: z.url().optional(),
+    // Initial credits given to new users on signup (default: 20)
+    INITIAL_CREDITS: z.coerce.number().int().min(0).default(20),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

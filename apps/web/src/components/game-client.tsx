@@ -30,6 +30,7 @@ import {
   Trophy,
   Medal,
   Zap,
+  Download,
 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { RatingForm } from "@/components/game/rating-form";
@@ -38,6 +39,7 @@ import { ReportDialog } from "@/components/game/report-dialog";
 import LoadingState from "@/components/reusable/loading-state";
 import { EmptyState } from "@/components/reusable";
 import StarRatingDisplay from "@/components/reusable/star-rating-display";
+import { authClient } from "@/lib/auth-client";
 
 interface GamePlayPageProps {
   gameId: string;
@@ -51,6 +53,8 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+
+  const { data: session } = authClient.useSession();
 
   const {
     data: game,
@@ -145,6 +149,31 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
       toast.error(error.message || "Failed to submit report");
     },
   });
+
+  const downloadMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.games.exportPortable.query({ gameId });
+    },
+    onSuccess: (data) => {
+      const blob = new Blob([data.html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Game downloaded successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to download game");
+    },
+  });
+
+  const handleDownload = useCallback(() => {
+    downloadMutation.mutate();
+  }, [downloadMutation]);
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
@@ -282,6 +311,17 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
               >
                 <Share2 className="size-4" />
               </button>
+              {session?.user && (
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloadMutation.isPending}
+                  className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors disabled:opacity-50"
+                  title="Download portable version"
+                >
+                  <Download className={`size-4 ${downloadMutation.isPending ? "animate-pulse" : ""}`} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowReportDialog(true)}

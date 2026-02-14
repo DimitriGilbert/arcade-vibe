@@ -17,12 +17,16 @@ import { resolve } from "node:path";
 // Must be done BEFORE any imports that depend on env vars
 config({ path: resolve(import.meta.dirname, "../../../apps/web/.env") });
 
+// Default initial credits (should match env default)
+const DEFAULT_INITIAL_CREDITS = 20;
+
 async function main() {
   // Dynamic imports to ensure dotenv loads first
   const { eq, or } = await import("drizzle-orm");
   const { db } = await import("../src/index");
   const { user } = await import("../src/schema/auth");
   const { userExtended } = await import("../src/schema/users");
+  const { creditBatches } = await import("../src/schema/credits");
 
   const identifier = process.argv[2];
 
@@ -64,14 +68,33 @@ async function main() {
   if (existingExtended.length === 0) {
     // Create user_extended record with admin role
     console.log(`📝 Creating user_extended record with admin role...`);
+
+    const initialCredits = DEFAULT_INITIAL_CREDITS;
+
+    // Create credit batch with 1 year expiry for admin grants
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
     await db.insert(userExtended).values({
       id: targetUser.id,
       role: "admin",
       reputation: 0,
-      credits: 100,
+      credits: initialCredits, // Denormalized balance
       isSuspended: false,
     });
-    console.log(`✅ Created admin user: ${targetUser.email}`);
+
+    // Create initial credit batch
+    await db.insert(creditBatches).values({
+      userId: targetUser.id,
+      amount: initialCredits,
+      remainingAmount: initialCredits,
+      sourceType: "admin_grant",
+      expiresAt,
+    });
+
+    console.log(
+      `✅ Created admin user: ${targetUser.email} with ${initialCredits} credits`,
+    );
   } else {
     // Update existing record to admin role
     const currentRole = existingExtended[0]?.role;
