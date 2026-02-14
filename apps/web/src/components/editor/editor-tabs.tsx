@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Code, Play, History, ExternalLink, ArrowDown } from "lucide-react";
+import {
+  Code,
+  Play,
+  History,
+  ExternalLink,
+  ArrowDown,
+  Image,
+} from "lucide-react";
 import Editor from "@monaco-editor/react";
 import {
   ArcadeTabs,
@@ -12,6 +19,8 @@ import {
 } from "@/components/arcade";
 import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
 import { GenerationsHistory } from "./generations-history";
+import { MediaTabContent } from "./media-tab-content";
+import type { ThemeMediaConfig, GameMedia } from "@/lib/trpc-types";
 
 export interface EditorTabsProps {
   promptContent: string;
@@ -22,6 +31,9 @@ export interface EditorTabsProps {
   onTabChange: (tab: string) => void;
   promptId: string | null;
   generatedGameId?: string | null;
+  themeMediaConfig?: ThemeMediaConfig;
+  showMediaTab?: boolean;
+  onMediaChange?: (media: GameMedia) => void;
 }
 
 // Loading skeleton component for the waiting state
@@ -66,6 +78,9 @@ export function EditorTabs({
   onTabChange,
   promptId,
   generatedGameId,
+  themeMediaConfig,
+  showMediaTab,
+  onMediaChange,
 }: EditorTabsProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -146,6 +161,12 @@ export function EditorTabs({
           <History className="h-4 w-4" />
           History
         </ArcadeTabsTrigger>
+        {showMediaTab && themeMediaConfig && (
+          <ArcadeTabsTrigger value="media">
+            <Image className="h-4 w-4" />
+            Media
+          </ArcadeTabsTrigger>
+        )}
       </ArcadeTabsList>
 
       <ArcadeTabsContent value="editor" className="flex-1 min-h-0 mt-0">
@@ -214,7 +235,7 @@ export function EditorTabs({
           ) : isGenerating ? (
             <GeneratingSkeleton />
           ) : (
-            <div className="h-full min-h-0 border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10 p-6">
+            <div className="h-full min-h-0 border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
               <p className="text-[var(--muted-foreground)] text-sm text-center">
                 No output yet. Generate a game to see results.
               </p>
@@ -226,6 +247,17 @@ export function EditorTabs({
       <ArcadeTabsContent value="history" className="flex-1 min-h-0 mt-0">
         <GenerationsHistory promptId={promptId} />
       </ArcadeTabsContent>
+
+      {showMediaTab && themeMediaConfig && onMediaChange && (
+        <ArcadeTabsContent value="media" className="flex-1 min-h-0 mt-0">
+          <div className="h-full border border-[var(--border)] rounded-md bg-[var(--card)] overflow-hidden">
+            <MediaTabContent
+              themeMediaConfig={themeMediaConfig}
+              onMediaChange={onMediaChange}
+            />
+          </div>
+        </ArcadeTabsContent>
+      )}
     </ArcadeTabs>
   );
 }

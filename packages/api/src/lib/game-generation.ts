@@ -6,6 +6,7 @@ import {
   allowedLibraryPatterns,
   themeAllowedPatterns,
 } from "@arcade-vibe/db/schema/library-patterns";
+import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 import { getProviderModel } from "./ai-providers";
 import { deductCredits, getValidCreditBalance } from "./credits";
 import { decryptApiKey } from "./encryption";
@@ -37,7 +38,10 @@ export interface GenerateGameOptions {
   apiKeyId?: string;
   creditReason?: string;
   requirePublicPrompt?: boolean;
-  name?: string; // User-provided game name, optional
+  name?: string;
+  mediaUrls?: Record<string, string>;
+  reasoningEnabled?: boolean;
+  reasoningMaxTokens?: number;
 }
 
 export interface GenerateGameChunkEvent {
@@ -78,6 +82,7 @@ export interface PromptWithTheme {
   theme: {
     id: string;
     systemPrompt: string;
+    mediaConfig: ThemeMediaConfig | null;
   };
 }
 
@@ -161,7 +166,7 @@ Other available methods:
 ### Code quality
 - Declare all variables with \`const\` or \`let\` — never implicit globals
 - Never call \`scene.add()\`, \`appendChild()\`, or any DOM/scene insertion method on an object that already exists in the scene — only call it once, at creation time
-- Use only inline assets — Canvas API, CSS shapes, SVG, Unicode/emoji. No \`<img>\` tags, no external URLs
+- Use only inline assets — Canvas API, CSS shapes, SVG, Unicode/emoji. External URLs are ONLY allowed if explicitly listed in the "Available Images" section below.
 - Do not use APIs that require browser permissions (camera, microphone, geolocation, notifications)
 - The layout must use responsive sizing (100vw / 100vh or percentages) — no fixed pixel dimensions for the outer container
 
@@ -181,6 +186,39 @@ Return only the raw HTML snippet. No markdown fences, no explanations, no commen
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+function buildMediaPromptSection(
+  mediaConfig: ThemeMediaConfig | null,
+  userMediaUrls: Record<string, string> | undefined,
+): string {
+  if (!mediaConfig?.enabled || mediaConfig.imageSlots.length === 0) {
+    return "";
+  }
+
+  const resolvedSlots = mediaConfig.imageSlots
+    .map((slot) => {
+      const url = userMediaUrls?.[slot.name] ?? slot.defaultUrl;
+      return url ? { name: slot.name, label: slot.label, url } : null;
+    })
+    .filter(
+      (slot): slot is { name: string; label: string; url: string } =>
+        slot !== null,
+    );
+
+  if (resolvedSlots.length === 0) return "";
+
+  const imageList = resolvedSlots
+    .map((s) => `- ${s.label} (${s.name}): ${s.url}`)
+    .join("\n");
+
+  return `## Available Images
+
+You may use these pre-approved image URLs in your game:
+${imageList}
+
+Use them with \`<img src="URL">\` or in CSS/JavaScript as needed.
+Do NOT use any other external image URLs.`;
+}
 
 /**
  * Decrypts a user's API key from storage
@@ -339,7 +377,15 @@ export async function generateGame(
   // 1. Fetch prompt with theme
   const prompt = await db.query.prompts.findFirst({
     where: eq(prompts.id, promptId),
-    with: { theme: true },
+    with: {
+      theme: {
+        columns: {
+          id: true,
+          systemPrompt: true,
+          mediaConfig: true,
+        },
+      },
+    },
   });
 
   if (!prompt) {
@@ -455,10 +501,28 @@ export async function generateGame(
 
   const confirmedGameId: string = gameId;
 
-  const systemPrompt = `${COMMON_SYSTEM_PROMPT}\n\n${prompt.theme.systemPrompt}\n\n${libraryListText}`;
+  const mediaPromptSection = buildMediaPromptSection(
+    prompt.theme.mediaConfig,
+    options.mediaUrls,
+  );
+
+  const systemPrompt = [
+    COMMON_SYSTEM_PROMPT,
+    prompt.theme.systemPrompt,
+    mediaPromptSection,
+    libraryListText,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   const userPrompt = prompt.content;
 
-  const model = await getProviderModel(modelKey, apiKey, selectedProvider);
+  const model = await getProviderModel(
+    modelKey,
+    apiKey,
+    selectedProvider,
+    undefined,
+    { enabled: options.reasoningEnabled ?? true, maxTokens: options.reasoningMaxTokens ?? 2000 },
+  );
 
   const messages = [
     { role: "system" as const, content: systemPrompt },

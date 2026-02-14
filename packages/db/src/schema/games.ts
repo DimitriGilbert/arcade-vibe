@@ -45,6 +45,8 @@ export const games = pgTable(
     sanitizationApplied: boolean("sanitization_applied")
       .default(false)
       .notNull(),
+    strudelCode: text("strudel_code"),
+    mediaUrls: jsonb("media_urls").$type<Record<string, string>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

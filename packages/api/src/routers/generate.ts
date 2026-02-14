@@ -15,7 +15,10 @@ export const generateRouter = router({
         promptId: z.string().uuid(),
         modelKey: z.string().min(1),
         apiKeyId: z.string().uuid().optional(),
-        name: z.string().max(100).optional(), // User-provided game name
+        name: z.string().max(100).optional(),
+        mediaUrls: z.record(z.string(), z.string()).optional(),
+        reasoningEnabled: z.boolean().default(true),
+        reasoningMaxTokens: z.number().min(500).max(10000).default(2000),
       }),
     )
     .mutation(async function* ({ input, ctx }) {
@@ -34,6 +37,9 @@ export const generateRouter = router({
         apiKeyId: input.apiKeyId,
         creditReason: "Game generation",
         name: input.name,
+        mediaUrls: input.mediaUrls,
+        reasoningEnabled: input.reasoningEnabled,
+        reasoningMaxTokens: input.reasoningMaxTokens,
       });
 
       // Stream events from the generator

@@ -2,7 +2,7 @@ import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { z } from "zod";
-import { eq, desc, asc, or, and } from "drizzle-orm";
+import { eq, desc, asc, or, and, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   getTokenCount,
@@ -285,6 +285,7 @@ export const promptsRouter = router({
         where: and(
           eq(prompts.authorId, ctx.user.id),
           eq(prompts.themeId, input.themeId),
+          isNull(prompts.parentId),
         ),
         orderBy: [desc(prompts.updatedAt)],
         columns: {

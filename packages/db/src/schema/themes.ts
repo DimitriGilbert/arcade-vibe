@@ -7,6 +7,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { themeStatusEnum, visibilityEnum } from "./enums";
+import type { ThemeMediaConfig } from "./media-types";
 
 // per PRD lines 1221-1232
 export const themes = pgTable(
@@ -21,6 +22,7 @@ export const themes = pgTable(
     endDate: timestamp("end_date"),
     requirements: jsonb("requirements").notNull(),
     systemPrompt: text("system_prompt").notNull(),
+    mediaConfig: jsonb("media_config").$type<ThemeMediaConfig>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

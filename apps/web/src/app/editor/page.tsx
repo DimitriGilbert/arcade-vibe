@@ -26,6 +26,7 @@ import {
 import { EditorSidebar } from "../../components/editor/editor-sidebar";
 import { VersionSelector } from "../../components/editor/version-selector";
 import { EditorTabs } from "../../components/editor/editor-tabs";
+import type { GameMedia } from "@/lib/trpc-types";
 
 interface EditorPageProps {
   searchParams?: Promise<{
@@ -55,11 +56,19 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     null,
   );
+  const [reasoningEnabled, setReasoningEnabled] = useState(true);
+  const [reasoningMaxTokens, setReasoningMaxTokens] = useState(2000);
 
   // Version comparison state
   const [showComparison, setShowComparison] = useState(false);
   const [compareLeft, setCompareLeft] = useState<PromptVersion | null>(null);
   const [compareRight, setCompareRight] = useState<PromptVersion | null>(null);
+
+  // Media state for generation
+  const [gameMedia, setGameMedia] = useState<GameMedia>({
+    strudelCode: null,
+    mediaUrls: null,
+  });
 
   // Fetch themes using direct tRPC client
   const { data: themes, isLoading: themesLoading } = useQuery({
@@ -69,6 +78,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Use first theme as default (no separate API call)
   const currentTheme = themes?.[0];
+  const themeMediaConfig = currentTheme?.mediaConfig ?? undefined;
+  const showMediaTab = themeMediaConfig?.enabled === true;
 
   const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
     queryKey: ["modelMetadata"],
@@ -270,6 +281,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         modelKey: selectedModel,
         apiKeyId: selectedApiKeyId ?? undefined,
         name: gameName.trim() || undefined,
+        mediaUrls: gameMedia.mediaUrls ?? undefined,
+        reasoningEnabled,
+        reasoningMaxTokens,
       });
 
       for await (const chunk of stream) {
@@ -298,6 +312,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     createPromptMutation,
     selectedPromptId,
     selectedApiKeyId,
+    gameMedia.mediaUrls,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -391,8 +406,11 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   );
 
   const handleNewVersion = useCallback(() => {
-    // Just switch to editor tab for creating new content
     setActiveTab("editor");
+  }, []);
+
+  const handleMediaChange = useCallback((media: GameMedia) => {
+    setGameMedia(media);
   }, []);
 
   if (promptLoading) {
@@ -457,6 +475,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                 apiKeys={apiKeys as ApiKey[] | undefined}
                 selectedApiKeyId={selectedApiKeyId}
                 onSelectApiKey={setSelectedApiKeyId}
+                reasoningEnabled={reasoningEnabled}
+                reasoningMaxTokens={reasoningMaxTokens}
+                onReasoningChange={setReasoningEnabled}
+                onReasoningMaxTokensChange={setReasoningMaxTokens}
               />
             ) : null}
           </EditorSidebar>
@@ -522,6 +544,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               onTabChange={handleTabChange}
               promptId={selectedPromptId}
               generatedGameId={generatedGameId}
+              themeMediaConfig={themeMediaConfig}
+              showMediaTab={showMediaTab}
+              onMediaChange={handleMediaChange}
             />
           </div>
 

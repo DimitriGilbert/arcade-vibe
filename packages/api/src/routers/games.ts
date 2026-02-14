@@ -168,7 +168,18 @@ export const gamesRouter = router({
               },
             },
           },
-          theme: true,
+          theme: {
+            columns: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              visibility: true,
+              startDate: true,
+              endDate: true,
+              mediaConfig: true,
+            },
+          },
         },
       });
 
@@ -511,6 +522,91 @@ export const gamesRouter = router({
         .returning();
 
       // Invalidate caches
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return {
+        success: true,
+        game: updated[0],
+      };
+    }),
+
+  /**
+   * Update game media (strudel code and media URLs)
+   * User must be the prompt author
+   */
+  updateMedia: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        strudelCode: z.string().nullable().optional(),
+        mediaUrls: z.record(z.string(), z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      if (game.prompt.user?.id !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only update media for your own games",
+        });
+      }
+
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date(),
+      };
+
+      if (input.strudelCode !== undefined) {
+        updateData.strudelCode = input.strudelCode;
+      }
+
+      if (input.mediaUrls !== undefined) {
+        updateData.mediaUrls = input.mediaUrls;
+      }
+
+      const updated = await db
+        .update(games)
+        .set(updateData)
+        .where(eq(games.id, input.gameId))
+        .returning();
+
       await cacheDeletePattern(`games:theme:*`);
       await cacheDeletePattern(`games:prompt:*`);
       await cacheDelete(`game:${input.gameId}`);

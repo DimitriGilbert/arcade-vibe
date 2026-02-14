@@ -71,6 +71,13 @@
       "when": 1771074813674,
       "tag": "0009_deep_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771085894530,
+      "tag": "0010_deep_echo",
+      "breakpoints": true
     }
   ]
 }

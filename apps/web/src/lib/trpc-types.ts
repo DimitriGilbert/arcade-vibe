@@ -74,6 +74,10 @@ import type {
   UserRole as UserRoleType,
   Provider as ProviderType,
 } from "@arcade-vibe/db";
+import type {
+  ThemeMediaConfig as ThemeMediaConfigType,
+  ImageSlot as ImageSlotType,
+} from "@arcade-vibe/db/schema/media-types";
 
 // ============================================
 // ENUM TYPES (from @arcade-vibe/db)
@@ -115,6 +119,19 @@ export type UserRole = UserRoleType;
  * @source packages/db/src/schema/enums-types.ts
  */
 export type Provider = ProviderType;
+
+/**
+ * Media configuration for themes
+ * Defines image slots and Strudel audio settings
+ * @source packages/db/src/schema/media-types.ts
+ */
+export type ThemeMediaConfig = ThemeMediaConfigType;
+
+/**
+ * Image slot definition within ThemeMediaConfig
+ * @source packages/db/src/schema/media-types.ts
+ */
+export type ImageSlot = ImageSlotType;
 
 // Aliases for frontend context clarity
 /**
@@ -261,6 +278,15 @@ export type GamePrompt = NonNullable<GameByIdOutput["prompt"]>;
  */
 export type GameTheme = NonNullable<GameByIdOutput["theme"]>;
 
+/**
+ * Game media data (strudel code and media URLs)
+ * @source packages/db/src/schema/games.ts
+ */
+export type GameMedia = {
+  strudelCode: string | null;
+  mediaUrls: Record<string, string> | null;
+};
+
 // --- Prompt Entity Types ---
 
 /**
@@ -296,6 +322,7 @@ export type PromptEntity = PromptByIdOutput;
 export type Theme = ThemeByIdOutput & {
   systemPrompt?: string | null;
   requirements?: Record<string, unknown> | null;
+  mediaConfig?: ThemeMediaConfig | null;
 };
 
 /**
@@ -307,6 +334,7 @@ export type Theme = ThemeByIdOutput & {
 export type ThemeList = ThemeListOutput[number] & {
   systemPrompt?: string | null;
   requirements?: Record<string, unknown> | null;
+  mediaConfig?: ThemeMediaConfig | null;
 };
 
 /**

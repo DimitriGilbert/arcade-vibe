@@ -245,6 +245,19 @@ export default function AdminThemesPage() {
       requirements: z.record(z.string(), z.unknown()),
       systemPrompt: z.string().min(1),
       libraryPatternIds: z.array(z.string().uuid()).optional(),
+      mediaEnabled: z.boolean().default(false),
+      imageSlots: z
+        .array(
+          z.object({
+            name: z.string(),
+            label: z.string(),
+            defaultUrl: z.string().url().optional().or(z.literal("")),
+            maxSize: z.number().optional(),
+          }),
+        )
+        .optional(),
+      enableStrudel: z.boolean().default(false),
+      strudelDefaultCode: z.string().optional(),
     });
 
     const { Form } = useFormedible({
@@ -307,6 +320,92 @@ export default function AdminThemesPage() {
               },
             ]
           : []),
+        {
+          name: "mediaEnabled",
+          type: "switch",
+          label: "Enable Media Configuration",
+          description: "Allow image uploads for this theme",
+          section: {
+            title: "Media Configuration",
+            description: "Configure media settings for this theme",
+          },
+        },
+        {
+          name: "imageSlots",
+          type: "array",
+          label: "Image Slots",
+          conditional: (values: Record<string, unknown>) =>
+            values.mediaEnabled === true,
+          arrayConfig: {
+            itemType: "object",
+            itemLabel: "Image Slot",
+            minItems: 0,
+            maxItems: 20,
+            sortable: true,
+            addButtonLabel: "Add Image Slot",
+            removeButtonLabel: "Remove",
+            defaultValue: {
+              name: "",
+              label: "",
+              defaultUrl: "",
+              maxSize: undefined,
+            },
+            objectConfig: {
+              fields: [
+                {
+                  name: "name",
+                  type: "text",
+                  label: "Slot Name",
+                  placeholder: "e.g., cover_image",
+                  description: "Unique identifier for this image slot",
+                },
+                {
+                  name: "label",
+                  type: "text",
+                  label: "Display Label",
+                  placeholder: "e.g., Cover Image",
+                  description: "User-friendly label for this slot",
+                },
+                {
+                  name: "defaultUrl",
+                  type: "text",
+                  label: "Default URL",
+                  placeholder: "https://example.com/image.png",
+                  description: "Default image URL for this slot (optional)",
+                },
+                {
+                  name: "maxSize",
+                  type: "number",
+                  label: "Max Size (KB)",
+                  placeholder: "e.g., 512",
+                  description: "Maximum file size in kilobytes (optional)",
+                  min: 1,
+                  max: 10240,
+                },
+              ],
+            },
+          },
+        },
+        {
+          name: "enableStrudel",
+          type: "switch",
+          label: "Enable Strudel Audio",
+          description: "Allow live audio coding with Strudel for this theme",
+          conditional: (values: Record<string, unknown>) =>
+            values.mediaEnabled === true,
+        },
+        {
+          name: "strudelDefaultCode",
+          type: "textarea",
+          label: "Strudel Default Code",
+          description: "Default Strudel code for audio generation",
+          conditional: (values: Record<string, unknown>) =>
+            values.mediaEnabled === true && values.enableStrudel === true,
+          textareaConfig: {
+            rows: 6,
+            showWordCount: false,
+          },
+        },
       ],
       formOptions: {
         defaultValues: editingTheme
@@ -325,6 +424,10 @@ export default function AdminThemesPage() {
               requirements: editingTheme.requirements || {},
               systemPrompt: editingTheme.systemPrompt || "",
               libraryPatternIds: [],
+              mediaEnabled: false,
+              imageSlots: [],
+              enableStrudel: false,
+              strudelDefaultCode: "",
             }
           : {
               title: "",
@@ -336,6 +439,10 @@ export default function AdminThemesPage() {
               requirements: {},
               systemPrompt: "",
               libraryPatternIds: [],
+              mediaEnabled: false,
+              imageSlots: [],
+              enableStrudel: false,
+              strudelDefaultCode: "",
             },
         onSubmit: async ({ value }) => {
           if (value.id) {

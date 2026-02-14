@@ -227,12 +227,12 @@ export function StreamingCodeViewer({
         <div className="inline-block min-w-full p-4">
           {isShikiReady && highlightedCode ? (
             <div
-              className="p-4 pl-6"
+              className=""
               // Shiki generates trusted, safe HTML for syntax highlighting
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
           ) : (
-            <div className="p-4 pl-6 text-[var(--foreground)]/60">
+            <div className="text-[var(--foreground)]/60">
               {code.split("\n").map((line, index) => (
                 <div
                   key={`${index}-${line.slice(0, 10)}`}

@@ -128,7 +128,7 @@ export function EditorSidebar({
           </AccordionTrigger>
           <AccordionContent>
             <div className="px-4 pb-3">
-              <div className="overflow-y-auto max-h-48 -mx-1 px-1">
+              <div className="overflow-y-auto max-h-[50vh] -mx-1 px-1">
                 {promptsLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="size-4 animate-spin text-[var(--muted-foreground)]" />
@@ -158,7 +158,7 @@ export function EditorSidebar({
                   </div>
                 )}
               </div>
-              <div className="pt-3 mt-auto">
+              <div className="pt-3">
                 <ArcadeButton
                   variant="outline"
                   size="sm"
@@ -174,7 +174,10 @@ export function EditorSidebar({
         </AccordionItem>
 
         {/* Model Section */}
-        <AccordionItem value="model">
+        <AccordionItem
+          value="model"
+          className="border-b border-[var(--border)]"
+        >
           <AccordionTrigger className="px-4 hover:no-underline">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
               Model

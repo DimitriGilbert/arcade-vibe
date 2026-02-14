@@ -4,6 +4,7 @@ export * from "./enums";
 export * from "./users";
 export * from "./credits";
 export * from "./models";
+export * from "./media-types";
 export * from "./themes";
 export * from "./prompts";
 export * from "./games";

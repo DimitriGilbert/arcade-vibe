@@ -2,6 +2,7 @@ import { router, publicProcedure, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { themes } from "@arcade-vibe/db/schema/themes";
 import { themeAllowedPatterns } from "@arcade-vibe/db/schema/library-patterns";
+import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 import { z } from "zod";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -22,6 +23,7 @@ export const themesRouter = router({
       endDate: theme.endDate,
       createdAt: theme.createdAt,
       updatedAt: theme.updatedAt,
+      mediaConfig: theme.mediaConfig,
     }));
   }),
 
@@ -120,6 +122,18 @@ export const themesRouter = router({
         endDate: z.string().or(z.date()).nullable(),
         requirements: z.record(z.string(), z.unknown()),
         systemPrompt: z.string().min(1),
+        mediaConfig: z.object({
+          enabled: z.boolean().optional(),
+          imageSlots: z.array(z.object({
+            name: z.string(),
+            label: z.string(),
+            defaultUrl: z.string().optional(),
+            maxSizeBytes: z.number().optional(),
+            allowedMimeTypes: z.array(z.string()).optional(),
+          })).optional(),
+          enableStrudel: z.boolean().optional(),
+          strudelDefaultCode: z.string().nullable().optional(),
+        }).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -137,6 +151,7 @@ export const themesRouter = router({
           endDate,
           requirements: input.requirements,
           systemPrompt: input.systemPrompt,
+          mediaConfig: input.mediaConfig as ThemeMediaConfig | undefined,
         })
         .returning();
 
@@ -158,6 +173,18 @@ export const themesRouter = router({
         endDate: z.string().or(z.date()).nullable().optional(),
         requirements: z.record(z.string(), z.unknown()).optional(),
         systemPrompt: z.string().min(1).optional(),
+        mediaConfig: z.object({
+          enabled: z.boolean().optional(),
+          imageSlots: z.array(z.object({
+            name: z.string(),
+            label: z.string(),
+            defaultUrl: z.string().optional(),
+            maxSizeBytes: z.number().optional(),
+            allowedMimeTypes: z.array(z.string()).optional(),
+          })).optional(),
+          enableStrudel: z.boolean().optional(),
+          strudelDefaultCode: z.string().nullable().optional(),
+        }).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -176,6 +203,7 @@ export const themesRouter = router({
       }
       if (updates.requirements !== undefined) updateData.requirements = updates.requirements;
       if (updates.systemPrompt !== undefined) updateData.systemPrompt = updates.systemPrompt;
+      if (updates.mediaConfig !== undefined) updateData.mediaConfig = updates.mediaConfig as ThemeMediaConfig | undefined;
 
       const result = await db
         .update(themes)

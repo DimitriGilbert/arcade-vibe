@@ -19,6 +19,8 @@ export const promptRunsRouter = router({
         promptId: z.string().uuid(),
         modelKey: z.string().min(1),
         apiKeyId: z.string().uuid().optional(),
+        sourceGameId: z.string().uuid().optional(),
+        mediaUrls: z.record(z.string(), z.string()).optional(),
       }),
     )
     .mutation(async function* ({ input, ctx }) {
@@ -51,6 +53,18 @@ export const promptRunsRouter = router({
         });
       }
 
+      let resolvedMediaUrls: Record<string, string> | undefined = input.mediaUrls;
+
+      if (!resolvedMediaUrls && input.sourceGameId) {
+        const sourceGame = await db.query.games.findFirst({
+          where: eq(games.id, input.sourceGameId),
+          columns: { mediaUrls: true },
+        });
+        if (sourceGame?.mediaUrls) {
+          resolvedMediaUrls = sourceGame.mediaUrls;
+        }
+      }
+
       // Use shared generation logic with public prompt requirement
       const result = await generateGame({
         promptId: input.promptId,
@@ -59,6 +73,7 @@ export const promptRunsRouter = router({
         apiKeyId: input.apiKeyId,
         creditReason: "Community prompt run",
         requirePublicPrompt: true,
+        mediaUrls: resolvedMediaUrls,
       });
 
       // Stream events from the generator

@@ -63,6 +63,10 @@ export interface ModelSelectorProps {
   apiKeys?: ApiKey[];
   selectedApiKeyId: string | null;
   onSelectApiKey: (apiKeyId: string | null) => void;
+  reasoningEnabled: boolean;
+  reasoningMaxTokens: number;
+  onReasoningChange: (enabled: boolean) => void;
+  onReasoningMaxTokensChange: (maxTokens: number) => void;
   disabled?: boolean;
 }
 
@@ -71,6 +75,8 @@ const modelSelectionSchema = z.object({
   providerFilter: z.array(z.string()).optional(),
   selectedModel: z.string().min(1, "Please select a model"),
   selectedApiKeyId: z.string().optional(),
+  reasoningEnabled: z.boolean().default(true),
+  reasoningMaxTokens: z.number().min(500).max(10000).default(2000),
 });
 
 type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
@@ -82,6 +88,10 @@ export function ModelSelector({
   apiKeys = [],
   selectedApiKeyId,
   onSelectApiKey,
+  reasoningEnabled,
+  reasoningMaxTokens,
+  onReasoningChange,
+  onReasoningMaxTokensChange,
   disabled = false,
 }: ModelSelectorProps) {
   const [showFilters, setShowFilters] = useState(false);
@@ -202,6 +212,21 @@ export function ModelSelector({
           placeholder: "Use platform credits",
         },
       },
+      {
+        name: "reasoningEnabled",
+        type: "switch",
+        label: "Extended Thinking",
+        description: "Enable reasoning/thinking for supported models",
+      },
+      {
+        name: "reasoningMaxTokens",
+        type: "number",
+        label: "Max Reasoning Tokens",
+        conditional: (values) => values.reasoningEnabled === true,
+        min: 500,
+        max: 10000,
+        description: "Maximum tokens for reasoning (500-10000)",
+      },
     ],
     formOptions: {
       defaultValues: {
@@ -209,10 +234,14 @@ export function ModelSelector({
         providerFilter: [],
         selectedModel: selectedModel ?? "",
         selectedApiKeyId: selectedApiKeyId ?? "",
+        reasoningEnabled: reasoningEnabled,
+        reasoningMaxTokens: reasoningMaxTokens,
       },
       onSubmit: async ({ value }) => {
         onSelectModel(value.selectedModel);
         onSelectApiKey(value.selectedApiKeyId || null);
+        onReasoningChange(value.reasoningEnabled);
+        onReasoningMaxTokensChange(value.reasoningMaxTokens);
       },
     },
   });
