@@ -11,122 +11,93 @@ import {
 } from "@/components/arcade";
 import { LoadingState } from "@/components/reusable";
 import { EmptyState } from "@/components/reusable";
+import { trpcClient } from "@/utils/trpc";
+import type { AdminAction } from "@/lib/trpc-types";
 
 type SortField = "createdAt" | "actionType" | "targetType" | "adminName";
 type SortOrder = "asc" | "desc";
+
+const ACTION_TYPES = [
+  "hide_game",
+  "suspend_user",
+  "update_scoring_weights",
+  "activate_model",
+  "deactivate_model",
+  "update_model_pricing",
+  "add_model",
+  "delete_model",
+  "add_plan",
+  "update_plan",
+  "activate_plan",
+  "deactivate_plan",
+  "create_tier_cost",
+  "update_tier_cost",
+  "delete_tier_cost",
+  "create_library_pattern",
+  "update_library_pattern",
+  "delete_library_pattern",
+  "resolve_report",
+  "resolve_appeal",
+];
+
+const TARGET_TYPES = ["theme", "user", "game", "plan", "model", "report"];
 
 export default function AdminAuditPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [adminFilter, setAdminFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  // Fetch admin actions (using mock data since endpoint doesn't exist yet)
-  const { data: actions, isLoading } = useQuery({
-    queryKey: ["admin-audit", page],
+  const { data: actionsData, isLoading } = useQuery({
+    queryKey: ["admin-audit", page, actionFilter, typeFilter],
     queryFn: async () => {
-      // Mock data for now - in production this would call actual endpoint
-      return [
-        {
-          id: "1",
-          adminId: "admin-1",
-          adminName: "Alice Admin",
-          actionType: "create_theme",
-          targetType: "theme",
-          targetId: "theme-1",
-          reason: "Created new theme: Space Adventure",
-          metadata: null,
-          createdAt: "2025-02-01T10:00:00Z",
-        },
-        {
-          id: "2",
-          adminId: "admin-2",
-          adminName: "Bob Admin",
-          actionType: "suspend_user",
-          targetType: "user",
-          targetId: "user-1",
-          reason: "Violation of community guidelines",
-          metadata: '{"duration": "30d"}',
-          createdAt: "2025-02-02T14:30:00Z",
-        },
-        {
-          id: "3",
-          adminId: "admin-1",
-          adminName: "Alice Admin",
-          actionType: "resolve_report",
-          targetType: "game",
-          targetId: "game-1",
-          reason: "Removed inappropriate content",
-          metadata: '{"resolutionAction": "approved"}',
-          createdAt: "2025-02-03T09:15:00Z",
-        },
-        {
-          id: "4",
-          adminId: "admin-1",
-          adminName: "Alice Admin",
-          actionType: "update_plan",
-          targetType: "plan",
-          targetId: "plan-1",
-          reason: "Updated pricing",
-          metadata: '{"oldPrice": 999, "newPrice": 1499}',
-          createdAt: "2025-02-04T16:45:00Z",
-        },
-        {
-          id: "5",
-          adminId: "admin-2",
-          adminName: "Bob Admin",
-          actionType: "activate_model",
-          targetType: "model",
-          targetId: "model-1",
-          reason: "Enabled new AI model",
-          metadata: null,
-          createdAt: "2025-02-05T11:20:00Z",
-        },
-      ] as AuditAction[];
+      const result = await trpcClient.admin.stats.getActions.query({
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        actionType: actionFilter === "all" ? undefined : actionFilter,
+        targetType: typeFilter === "all" ? undefined : typeFilter,
+      });
+      return result;
     },
   });
 
-  // Filter and sort actions
-  const filteredActions = (actions || [])
-    .filter((action) => {
-      const matchesSearch =
-        !searchQuery.trim() ||
-        action.actionType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        action.targetType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        action.reason?.toLowerCase().includes(searchQuery.toLowerCase());
+  const actions = actionsData?.actions ?? [];
+  const total = actionsData?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
 
-      const matchesAdmin =
-        adminFilter === "all" || action.adminName === adminFilter;
-      const matchesAction =
-        actionFilter === "all" || action.actionType === actionFilter;
-      const matchesType =
-        typeFilter === "all" || action.targetType === typeFilter;
+  const filteredActions = actions.filter((action: AdminAction) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      action.actionType.toLowerCase().includes(query) ||
+      action.targetType.toLowerCase().includes(query) ||
+      (action.reason?.toLowerCase().includes(query) ?? false) ||
+      action.adminName.toLowerCase().includes(query)
+    );
+  });
 
-      return matchesSearch && matchesAdmin && matchesAction && matchesType;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      switch (sortField) {
-        case "createdAt":
-          comparison =
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
-        case "actionType":
-          comparison = a.actionType.localeCompare(b.actionType);
-          break;
-        case "targetType":
-          comparison = a.targetType.localeCompare(b.targetType);
-          break;
-        case "adminName":
-          comparison = a.adminName.localeCompare(b.adminName);
-          break;
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+  const sortedActions = [...filteredActions].sort((a, b) => {
+    let comparison = 0;
+    switch (sortField) {
+      case "createdAt":
+        comparison =
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        break;
+      case "actionType":
+        comparison = a.actionType.localeCompare(b.actionType);
+        break;
+      case "targetType":
+        comparison = a.targetType.localeCompare(b.targetType);
+        break;
+      case "adminName":
+        comparison = a.adminName.localeCompare(b.adminName);
+        break;
+    }
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -152,7 +123,6 @@ export default function AdminAuditPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-[var(--foreground)]">
           Audit Log
@@ -162,7 +132,6 @@ export default function AdminAuditPage() {
         </p>
       </div>
 
-      {/* Filters */}
       <ArcadeCard>
         <div className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -176,44 +145,39 @@ export default function AdminAuditPage() {
               />
             </div>
             <select
-              value={adminFilter}
-              onChange={(e) => setAdminFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-[var(--background)]"
-            >
-              <option value="all">All Admins</option>
-              <option value="Alice Admin">Alice Admin</option>
-              <option value="Bob Admin">Bob Admin</option>
-            </select>
-            <select
               value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
+              onChange={(e) => {
+                setActionFilter(e.target.value);
+                setPage(1);
+              }}
               className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Actions</option>
-              <option value="create_theme">Create Theme</option>
-              <option value="suspend_user">Suspend User</option>
-              <option value="resolve_report">Resolve Report</option>
-              <option value="update_plan">Update Plan</option>
-              <option value="activate_model">Activate Model</option>
+              {ACTION_TYPES.map((action) => (
+                <option key={action} value={action}>
+                  {action.replace(/_/g, " ")}
+                </option>
+              ))}
             </select>
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPage(1);
+              }}
               className="px-3 py-2 border rounded-md bg-[var(--background)]"
             >
               <option value="all">All Types</option>
-              <option value="theme">Theme</option>
-              <option value="user">User</option>
-              <option value="game">Game</option>
-              <option value="plan">Plan</option>
-              <option value="model">Model</option>
-              <option value="report">Report</option>
+              {TARGET_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       </ArcadeCard>
 
-      {/* Audit Log Table */}
       <ArcadeCard>
         <div className="p-6">
           <div className="overflow-x-auto">
@@ -243,7 +207,7 @@ export default function AdminAuditPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredActions.length === 0 ? (
+                {sortedActions.length === 0 ? (
                   <tr>
                     <EmptyState
                       message="No audit entries found"
@@ -252,7 +216,7 @@ export default function AdminAuditPage() {
                     />
                   </tr>
                 ) : (
-                  filteredActions.map((action) => (
+                  sortedActions.map((action: AdminAction) => (
                     <tr
                       key={action.id}
                       className="border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors"
@@ -297,7 +261,6 @@ export default function AdminAuditPage() {
             </table>
           </div>
 
-          {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
             <ArcadeButton
               variant="outline"
@@ -307,12 +270,12 @@ export default function AdminAuditPage() {
               Previous
             </ArcadeButton>
             <span className="text-sm text-[var(--muted-foreground)]">
-              Page {page}
+              Page {page} of {totalPages} ({total} entries)
             </span>
             <ArcadeButton
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
-              disabled={!actions || actions.length < pageSize}
+              disabled={page >= totalPages}
             >
               Next
             </ArcadeButton>
@@ -322,15 +285,3 @@ export default function AdminAuditPage() {
     </div>
   );
 }
-
-type AuditAction = {
-  id: string;
-  adminId: string;
-  adminName: string;
-  actionType: string;
-  targetType: string;
-  targetId: string | null;
-  reason: string | null;
-  metadata: string | null;
-  createdAt: string;
-};

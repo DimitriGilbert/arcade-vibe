@@ -1,6 +1,6 @@
 import { router, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
-import { modelConfig } from "@arcade-vibe/db/schema/models";
+import { modelConfig, modelProviders } from "@arcade-vibe/db/schema/models";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { z } from "zod";
@@ -179,60 +179,72 @@ async function seedModelsFromOpenRouter() {
 
   const recentModels = models.filter((model) => model.created >= sixMonthsAgo);
 
-  // Fetch all tier costs
   const allTierCosts = await db.query.tierCosts.findMany();
   const tierCostMap = new Map(allTierCosts.map((tc) => [tc.slug, tc.id]));
 
-  // Calculate tier assignments using percentile-based distribution
   const tierAssignments = calculateTierAssignments(recentModels, allTierCosts);
-
-  const modelsToInsert = recentModels
-    .map((model) => {
-      const provider = getProviderFromId(model.id);
-      const tierSlug = tierAssignments.get(model.id) ?? "normal";
-      const tierCostId = tierCostMap.get(tierSlug);
-      const promptPrice = parseFloat(model.pricing.prompt || "0");
-      const completionPrice = parseFloat(model.pricing.completion || "0");
-      const totalPrice = (promptPrice + completionPrice) * 1000;
-
-      if (!tierCostId) {
-        console.warn(
-          `Tier cost not found for slug: ${tierSlug}, skipping model ${model.id}`,
-        );
-        return null;
-      }
-
-      return {
-        provider: provider as
-          | "openai"
-          | "anthropic"
-          | "google"
-          | "openrouter"
-          | "deepseek"
-          | "glm"
-          | "glm-coding-plan"
-          | "moonshot"
-          | "custom",
-        modelName: model.id,
-        tierCostId,
-        costPer1kTokens: totalPrice.toFixed(6),
-        maxTokens: model.context_length,
-        supportsImages: model.architecture.input_modalities.includes("image"),
-        isActive: true,
-      };
-    })
-    .filter((m): m is NonNullable<typeof m> => m !== null);
 
   const existingModels = await db.query.modelConfig.findMany();
   if (existingModels.length > 0) {
     await db.delete(modelConfig);
   }
 
-  const insertedModels = await db
-    .insert(modelConfig)
-    .values(modelsToInsert)
-    .returning();
-  return insertedModels.length;
+  let insertedCount = 0;
+
+  for (const model of recentModels) {
+    const primaryProvider = getProviderFromId(model.id);
+    const tierSlug = tierAssignments.get(model.id) ?? "normal";
+    const tierCostId = tierCostMap.get(tierSlug);
+    const promptPrice = parseFloat(model.pricing.prompt || "0");
+    const completionPrice = parseFloat(model.pricing.completion || "0");
+    const totalPrice = (promptPrice + completionPrice) * 1000;
+
+    if (!tierCostId) {
+      console.warn(
+        `Tier cost not found for slug: ${tierSlug}, skipping model ${model.id}`,
+      );
+      continue;
+    }
+
+    const providers: string[] = [];
+    if (primaryProvider !== "openrouter") {
+      providers.push(primaryProvider);
+    }
+    providers.push("openrouter");
+
+    const [newModel] = await db
+      .insert(modelConfig)
+      .values({
+        modelName: model.id,
+        tierCostId,
+        costPer1kTokens: totalPrice.toFixed(6),
+        maxTokens: model.context_length,
+        supportsImages: model.architecture.input_modalities.includes("image"),
+        isActive: true,
+      })
+      .returning();
+
+    if (newModel) {
+      await db.insert(modelProviders).values(
+        providers.map((provider) => ({
+          modelConfigId: newModel.id,
+          provider: provider as
+            | "openai"
+            | "anthropic"
+            | "google"
+            | "openrouter"
+            | "deepseek"
+            | "glm"
+            | "glm-coding-plan"
+            | "moonshot"
+            | "custom",
+        })),
+      );
+      insertedCount++;
+    }
+  }
+
+  return insertedCount;
 }
 
 export const modelConfigRouter = router({
@@ -241,11 +253,13 @@ export const modelConfigRouter = router({
       orderBy: [desc(modelConfig.createdAt)],
       with: {
         tierCost: true,
+        providers: true,
       },
     });
 
     return models.map((model) => ({
       ...model,
+      providers: model.providers.map((p) => p.provider),
       tier: model.tierCost?.slug ?? "unknown",
       tierName: model.tierCost?.name ?? "Unknown",
     }));
@@ -337,17 +351,19 @@ export const modelConfigRouter = router({
   addModel: adminProcedure
     .input(
       z.object({
-        provider: z.enum([
-          "openai",
-          "anthropic",
-          "google",
-          "openrouter",
-          "deepseek",
-          "glm",
-          "glm-coding-plan",
-          "moonshot",
-          "custom",
-        ]),
+        providers: z.array(
+          z.enum([
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "deepseek",
+            "glm",
+            "glm-coding-plan",
+            "moonshot",
+            "custom",
+          ]),
+        ),
         modelName: z.string().min(1).max(100),
         tierCostId: z.string().uuid(),
         costPer1kTokens: z.string().min(1),
@@ -368,7 +384,6 @@ export const modelConfigRouter = router({
         });
       }
 
-      // Verify tier cost exists
       const tierCost = await db.query.tierCosts.findFirst({
         where: eq(tierCosts.id, input.tierCostId),
       });
@@ -380,10 +395,9 @@ export const modelConfigRouter = router({
         });
       }
 
-      const newModel = await db
+      const [newModel] = await db
         .insert(modelConfig)
         .values({
-          provider: input.provider,
           modelName: input.modelName,
           tierCostId: input.tierCostId,
           costPer1kTokens: input.costPer1kTokens,
@@ -393,14 +407,23 @@ export const modelConfigRouter = router({
         })
         .returning();
 
+      if (newModel && input.providers.length > 0) {
+        await db.insert(modelProviders).values(
+          input.providers.map((provider) => ({
+            modelConfigId: newModel.id,
+            provider,
+          })),
+        );
+      }
+
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
         actionType: "add_model",
         targetType: "model",
-        targetId: newModel[0]?.id,
+        targetId: newModel?.id,
         reason: `Added new model: ${input.modelName}`,
         metadata: JSON.stringify({
-          provider: input.provider,
+          providers: input.providers,
           modelName: input.modelName,
           tierCostId: input.tierCostId,
           tierSlug: tierCost.slug,
@@ -410,8 +433,8 @@ export const modelConfigRouter = router({
 
       return {
         success: true,
-        modelId: newModel[0]?.id,
-        model: newModel[0],
+        modelId: newModel?.id,
+        model: newModel,
       };
     }),
 
@@ -456,6 +479,7 @@ export const modelConfigRouter = router({
         where: eq(modelConfig.id, input.id),
         with: {
           tierCost: true,
+          providers: true,
         },
       });
 
@@ -475,7 +499,7 @@ export const modelConfigRouter = router({
         targetId: input.id,
         reason: `Deleted model: ${model.modelName}`,
         metadata: JSON.stringify({
-          provider: model.provider,
+          providers: model.providers.map((p) => p.provider),
           modelName: model.modelName,
           tierCostId: model.tierCostId,
           tierSlug: model.tierCost?.slug,

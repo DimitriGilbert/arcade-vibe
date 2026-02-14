@@ -9,9 +9,21 @@ import { modelConfig } from "@arcade-vibe/db/schema/models";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
+type Provider =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "openrouter"
+  | "deepseek"
+  | "glm"
+  | "glm-coding-plan"
+  | "moonshot"
+  | "custom";
+
 export async function getProviderModel(
   modelName: string,
   apiKey: string,
+  provider: Provider,
   customEndpoint?: string,
 ): Promise<LanguageModel> {
   const config = await db.query.modelConfig.findFirst({
@@ -25,7 +37,7 @@ export async function getProviderModel(
     });
   }
 
-  switch (config.provider) {
+  switch (provider) {
     case "openai":
       return createOpenAI({
         apiKey,
@@ -67,6 +79,13 @@ export async function getProviderModel(
         baseURL: customEndpoint || "https://api.moonshot.cn/v1",
       })(modelName);
 
+    case "glm-coding-plan":
+      return createOpenAICompatible({
+        name: "glm-coding-plan",
+        apiKey,
+        baseURL: customEndpoint || "https://open.bigmodel.cn/api/paas/v4",
+      })(modelName);
+
     case "custom":
       if (!customEndpoint) {
         throw new TRPCError({
@@ -83,7 +102,7 @@ export async function getProviderModel(
     default:
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: `Unknown provider: ${config.provider}`,
+        message: `Unknown provider: ${provider}`,
       });
   }
 }

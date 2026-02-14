@@ -218,6 +218,9 @@ export type AdminInput = RouterInput["admin"];
 export type AdminLibraryPatternsListOutput =
   AdminOutput["libraryPatterns"]["list"];
 
+export type AdminStatsGetStatsOutput = AdminOutput["stats"]["getStats"];
+export type AdminStatsGetActionsOutput = AdminOutput["stats"]["getActions"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -424,3 +427,7 @@ export type CreditTransactionsInfo = CreditsGetTransactionsOutput;
  * @source RouterOutput["admin"]["libraryPatterns"]["list"][number]
  */
 export type LibraryPattern = AdminLibraryPatternsListOutput[number];
+
+export type AdminStats = AdminStatsGetStatsOutput;
+
+export type AdminAction = AdminStatsGetActionsOutput["actions"][number];

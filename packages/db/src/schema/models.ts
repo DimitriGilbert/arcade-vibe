@@ -12,7 +12,6 @@ import { providerEnum } from "./enums";
 import { user } from "./auth";
 import { tierCosts } from "./credits";
 
-// per PRD lines 1192-1202
 export const apiKeys = pgTable(
   "api_keys",
   {
@@ -33,12 +32,10 @@ export const apiKeys = pgTable(
   ],
 );
 
-// per PRD lines 1205-1218
 export const modelConfig = pgTable(
   "model_config",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    provider: providerEnum("provider").notNull(),
     modelName: text("model_name").notNull(),
     tierCostId: uuid("tier_cost_id")
       .notNull()
@@ -54,10 +51,26 @@ export const modelConfig = pgTable(
       .notNull(),
   },
   (table) => [
-    unique("model_config_provider_modelName_key").on(
-      table.provider,
-      table.modelName,
-    ),
+    unique("model_config_modelName_key").on(table.modelName),
     index("idx_model_config_active").on(table.isActive, table.tierCostId),
+  ],
+);
+
+export const modelProviders = pgTable(
+  "model_providers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    modelConfigId: uuid("model_config_id")
+      .notNull()
+      .references(() => modelConfig.id, { onDelete: "cascade" }),
+    provider: providerEnum("provider").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    unique("model_providers_modelConfigId_provider_key").on(
+      table.modelConfigId,
+      table.provider,
+    ),
+    index("model_providers_provider_idx").on(table.provider),
   ],
 );

@@ -34,8 +34,37 @@ import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 
-type SortField = "provider" | "modelName" | "tier" | "cost";
+type ProviderValue = "openai" | "anthropic" | "google" | "openrouter" | "deepseek" | "glm" | "glm-coding-plan" | "moonshot" | "custom";
+
+type Model = {
+  id: string;
+  providers: string[];
+  modelName: string;
+  tierCostId: string;
+  tier: string;
+  tierName: string;
+  costPer1kTokens: string;
+  maxTokens: number;
+  supportsImages: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type SortField = "providers" | "modelName" | "tier" | "cost";
 type SortOrder = "asc" | "desc";
+
+const PROVIDER_OPTIONS = [
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+  { value: "google", label: "Google" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "deepseek", label: "DeepSeek" },
+  { value: "glm", label: "GLM" },
+  { value: "glm-coding-plan", label: "GLM Coding Plan" },
+  { value: "moonshot", label: "Moonshot" },
+  { value: "custom", label: "Custom" },
+];
 
 export default function AdminModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,7 +75,6 @@ export default function AdminModelsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTierCostId, setBulkTierCostId] = useState<string>("");
 
-  // Fetch all models
   const {
     data: models,
     isLoading,
@@ -58,7 +86,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Toggle model active mutation
   const toggleModelMutation = useMutation({
     mutationFn: async (input: { id: string; isActive: boolean }) => {
       return await trpcClient.admin.models.toggleModelActive.mutate(input);
@@ -72,7 +99,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Update pricing mutation
   const updatePricingMutation = useMutation({
     mutationFn: async (input: { id: string; costPer1kTokens: string }) => {
       return await trpcClient.admin.models.updateModelPricing.mutate(input);
@@ -87,19 +113,9 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Add new model mutation
   const addModelMutation = useMutation({
     mutationFn: async (input: {
-      provider:
-        | "openai"
-        | "anthropic"
-        | "google"
-        | "openrouter"
-        | "deepseek"
-        | "glm"
-        | "glm-coding-plan"
-        | "moonshot"
-        | "custom";
+      providers: ProviderValue[];
       modelName: string;
       tierCostId: string;
       costPer1kTokens: string;
@@ -119,7 +135,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Seed models from OpenRouter mutation
   const seedModelsMutation = useMutation({
     mutationFn: async () => {
       return await trpcClient.admin.models.seedModels.mutate();
@@ -135,7 +150,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Delete model mutation
   const deleteModelMutation = useMutation({
     mutationFn: async (input: { id: string }) => {
       return await trpcClient.admin.models.deleteModel.mutate(input);
@@ -149,7 +163,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Bulk delete models mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (input: { ids: string[] }) => {
       return await trpcClient.admin.models.bulkDeleteModels.mutate(input);
@@ -164,7 +177,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Bulk toggle active mutation
   const bulkToggleMutation = useMutation({
     mutationFn: async (input: { ids: string[]; isActive: boolean }) => {
       return await trpcClient.admin.models.bulkToggleModelsActive.mutate(input);
@@ -181,7 +193,6 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Bulk update tier mutation
   const bulkUpdateTierMutation = useMutation({
     mutationFn: async (input: { ids: string[]; tierCostId: string }) => {
       return await trpcClient.admin.models.bulkUpdateModelsTier.mutate(input);
@@ -198,28 +209,25 @@ export default function AdminModelsPage() {
     },
   });
 
-  // Filter and sort models
   const filteredModels = useMemo(() => {
     if (!models) return [];
 
     let result = [...models];
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (model) =>
           model.modelName.toLowerCase().includes(query) ||
-          model.provider.toLowerCase().includes(query),
+          model.providers.some((p) => p.toLowerCase().includes(query)),
       );
     }
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortField) {
-        case "provider": {
-          comparison = a.provider.localeCompare(b.provider);
+        case "providers": {
+          comparison = a.providers[0]?.localeCompare(b.providers[0] ?? "") ?? 0;
           break;
         }
         case "modelName": {
@@ -260,7 +268,6 @@ export default function AdminModelsPage() {
     }
   };
 
-  // Selection handlers
   const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === filteredModels.length) {
       setSelectedIds(new Set());
@@ -319,17 +326,7 @@ export default function AdminModelsPage() {
   }) => {
     const schema = z.object({
       id: z.string().uuid().optional(),
-      provider: z.enum([
-        "openai",
-        "anthropic",
-        "google",
-        "openrouter",
-        "deepseek",
-        "glm",
-        "glm-coding-plan",
-        "moonshot",
-        "custom",
-      ]),
+      providers: z.array(z.enum(["openai", "anthropic", "google", "openrouter", "deepseek", "glm", "glm-coding-plan", "moonshot", "custom"])),
       modelName: z.string().min(1).max(100),
       tierCostId: z.string().uuid(),
       costPer1kTokens: z.string().min(1),
@@ -343,20 +340,10 @@ export default function AdminModelsPage() {
       schema,
       fields: [
         {
-          name: "provider",
-          type: "select",
-          label: "Provider",
-          options: [
-            { value: "openai", label: "OpenAI" },
-            { value: "anthropic", label: "Anthropic" },
-            { value: "google", label: "Google" },
-            { value: "openrouter", label: "OpenRouter" },
-            { value: "deepseek", label: "DeepSeek" },
-            { value: "glm", label: "GLM" },
-            { value: "glm-coding-plan", label: "GLM Coding Plan" },
-            { value: "moonshot", label: "Moonshot" },
-            { value: "custom", label: "Custom" },
-          ],
+          name: "providers",
+          type: "multiselect",
+          label: "Providers",
+          options: PROVIDER_OPTIONS,
         },
         { name: "modelName", type: "text", label: "Model Name" },
         { name: "tierCostId", type: "text", label: "Tier Cost ID (UUID)" },
@@ -368,7 +355,7 @@ export default function AdminModelsPage() {
       formOptions: {
         defaultValues: isAddMode
           ? {
-              provider: "openai",
+              providers: ["openrouter"] as ProviderValue[],
               modelName: "",
               tierCostId: "",
               costPer1kTokens: "0.01",
@@ -379,16 +366,7 @@ export default function AdminModelsPage() {
           : model
             ? {
                 id: model.id,
-                provider: model.provider as
-                  | "openai"
-                  | "anthropic"
-                  | "google"
-                  | "openrouter"
-                  | "deepseek"
-                  | "glm"
-                  | "glm-coding-plan"
-                  | "moonshot"
-                  | "custom",
+                providers: model.providers as ProviderValue[],
                 modelName: model.modelName,
                 tierCostId: model.tierCostId,
                 costPer1kTokens: model.costPer1kTokens,
@@ -400,16 +378,7 @@ export default function AdminModelsPage() {
         onSubmit: async ({ value }) => {
           if (isAddMode) {
             await addModelMutation.mutateAsync({
-              provider: value.provider as
-                | "openai"
-                | "anthropic"
-                | "google"
-                | "openrouter"
-                | "deepseek"
-                | "glm"
-                | "glm-coding-plan"
-                | "moonshot"
-                | "custom",
+              providers: value.providers as ProviderValue[],
               modelName: value.modelName,
               tierCostId: value.tierCostId,
               costPer1kTokens: value.costPer1kTokens,
@@ -447,7 +416,6 @@ export default function AdminModelsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[var(--foreground)]">
@@ -477,7 +445,6 @@ export default function AdminModelsPage() {
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
         <ArcadeCard className="bg-[var(--accent)]/10 border-[var(--accent)]">
           <div className="p-4">
@@ -552,7 +519,6 @@ export default function AdminModelsPage() {
         </ArcadeCard>
       )}
 
-      {/* Search and Filters */}
       <ArcadeCard>
         <div className="p-6">
           <div className="flex items-center gap-4">
@@ -569,7 +535,6 @@ export default function AdminModelsPage() {
         </div>
       </ArcadeCard>
 
-      {/* Models Table */}
       <ArcadeCard>
         <div className="p-6">
           <div className="overflow-x-auto">
@@ -587,7 +552,7 @@ export default function AdminModelsPage() {
                     />
                   </th>
                   {[
-                    { field: "provider" as SortField, label: "Provider" },
+                    { field: "providers" as SortField, label: "Providers" },
                     { field: "modelName" as SortField, label: "Model Name" },
                     { field: "tier" as SortField, label: "Tier" },
                     { field: "cost" as SortField, label: "Cost/1k" },
@@ -638,11 +603,16 @@ export default function AdminModelsPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <ArcadeBadge
-                          text={model.provider}
-                          variant="default"
-                          className="capitalize"
-                        />
+                        <div className="flex flex-wrap gap-1">
+                          {model.providers.map((provider) => (
+                            <ArcadeBadge
+                              key={provider}
+                              text={provider}
+                              variant="default"
+                              className="capitalize"
+                            />
+                          ))}
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {model.modelName}
@@ -726,7 +696,6 @@ export default function AdminModelsPage() {
         </div>
       </ArcadeCard>
 
-      {/* Edit Model Dialog */}
       <Dialog
         open={!!editingModel}
         onOpenChange={(open) => !open && setEditingModel(null)}
@@ -742,7 +711,6 @@ export default function AdminModelsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Model Dialog */}
       <Dialog open={addingModel} onOpenChange={setAddingModel}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -757,18 +725,3 @@ export default function AdminModelsPage() {
     </div>
   );
 }
-
-type Model = {
-  id: string;
-  provider: string;
-  modelName: string;
-  tierCostId: string;
-  tier: string;
-  tierName: string;
-  costPer1kTokens: string;
-  maxTokens: number;
-  supportsImages: boolean;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-};

@@ -8,7 +8,7 @@ import {
   userSubscriptions,
   tierCosts,
 } from "./credits";
-import { apiKeys, modelConfig } from "./models";
+import { apiKeys, modelConfig, modelProviders } from "./models";
 import { themes } from "./themes";
 import { prompts } from "./prompts";
 import { games, gameScores } from "./games";
@@ -281,10 +281,18 @@ export const moderationAppealsRelations = relations(
   }),
 );
 
-export const modelConfigRelations = relations(modelConfig, ({ one }) => ({
+export const modelConfigRelations = relations(modelConfig, ({ one, many }) => ({
   tierCost: one(tierCosts, {
     fields: [modelConfig.tierCostId],
     references: [tierCosts.id],
+  }),
+  providers: many(modelProviders),
+}));
+
+export const modelProvidersRelations = relations(modelProviders, ({ one }) => ({
+  model: one(modelConfig, {
+    fields: [modelProviders.modelConfigId],
+    references: [modelConfig.id],
   }),
 }));
 

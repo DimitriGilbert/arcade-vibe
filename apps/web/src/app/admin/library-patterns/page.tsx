@@ -12,6 +12,7 @@ import {
   XCircle,
   Code,
   Shield,
+  Upload,
 } from "lucide-react";
 import {
   ArcadeCard,
@@ -50,6 +51,13 @@ export default function AdminLibraryPatternsPage() {
   }>({
     open: false,
     pattern: null,
+  });
+  const [importDialog, setImportDialog] = useState<{
+    open: boolean;
+    jsonInput: string;
+  }>({
+    open: false,
+    jsonInput: "",
   });
 
   const {
@@ -133,6 +141,85 @@ export default function AdminLibraryPatternsPage() {
     },
   });
 
+  const importMutation = useMutation({
+    mutationFn: async (patterns: Array<{
+      name: string;
+      description: string;
+      urlPattern: string;
+      category:
+        | "game_engine"
+        | "physics"
+        | "audio"
+        | "graphics"
+        | "utility"
+        | "analytics"
+        | "other";
+      isGlobal: boolean;
+    }>) => {
+      const results = await Promise.allSettled(
+        patterns.map((pattern) =>
+          trpcClient.admin.libraryPatterns.create.mutate(pattern)
+        )
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { succeeded, failed };
+    },
+    onSuccess: ({ succeeded, failed }) => {
+      if (failed === 0) {
+        toast.success(`Successfully imported ${succeeded} patterns!`);
+      } else {
+        toast.warning(`Imported ${succeeded} patterns, ${failed} failed`);
+      }
+      refetch();
+      setImportDialog({ open: false, jsonInput: "" });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to import patterns");
+    },
+  });
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(importDialog.jsonInput);
+      const patternsArray = Array.isArray(parsed) ? parsed : [parsed];
+      
+      const importSchema = z.array(
+        z.object({
+          name: z.string().min(1),
+          description: z.string().optional().default(""),
+          urlPatterns: z.array(z.string().min(1)).optional(),
+          urlPattern: z.string().min(1).optional(),
+          category: z.enum([
+            "game_engine",
+            "physics",
+            "audio",
+            "graphics",
+            "utility",
+            "analytics",
+            "other",
+          ]).optional().default("other"),
+          isGlobal: z.boolean().optional().default(false),
+        })
+      );
+
+      const validated = importSchema.parse(patternsArray).map((p) => ({
+        name: p.name,
+        description: p.description,
+        urlPattern: p.urlPatterns ? p.urlPatterns.join("\n") : p.urlPattern ?? "",
+        category: p.category,
+        isGlobal: p.isGlobal,
+      }));
+      importMutation.mutate(validated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(`Invalid JSON format: ${error.issues[0]?.message}`);
+      } else {
+        toast.error("Invalid JSON. Please check your input.");
+      }
+    }
+  };
+
   const filteredPatterns = useMemo(() => {
     if (!patterns) return [];
 
@@ -180,7 +267,7 @@ export default function AdminLibraryPatternsPage() {
     const schema = z.object({
       id: z.string().uuid(),
       name: z.string().min(1),
-      description: z.string().min(1),
+      description: z.string(),
       urlPattern: z.string().min(1),
       category: z.enum([
         "game_engine",
@@ -217,10 +304,10 @@ export default function AdminLibraryPatternsPage() {
         {
           name: "urlPattern",
           type: "textarea",
-          label: "URL Pattern (Regex)",
-          placeholder: `^https://cdn\\.jsdelivr\\.net/npm/phaser@.*\\.js$`,
+          label: "URL Patterns (Regex) - one per line",
+          placeholder: `^https://cdn\\.jsdelivr\\.net/npm/phaser@.*\\.js$\n^https://unpkg\\.com/phaser@.*\\.js$`,
           textareaConfig: {
-            rows: 2,
+            rows: 5,
           },
         },
         {
@@ -332,6 +419,10 @@ export default function AdminLibraryPatternsPage() {
           <Plus className="mr-2 h-4 w-4" />
           Add Pattern
         </ArcadeButton>
+        <ArcadeButton onClick={() => setImportDialog({ open: true, jsonInput: "" })} variant="outline">
+          <Upload className="mr-2 h-4 w-4" />
+          Import JSON
+        </ArcadeButton>
       </div>
 
       <div className="flex items-center gap-4">
@@ -418,9 +509,13 @@ export default function AdminLibraryPatternsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <code className="rounded bg-muted px-2 py-1 text-xs">
-                        {pattern.urlPattern}
-                      </code>
+                      <div className="flex flex-col gap-1 max-w-xs">
+                        {pattern.urlPattern.split("\n").filter(Boolean).map((p) => (
+                          <code key={p} className="rounded bg-muted px-2 py-0.5 text-xs truncate">
+                            {p}
+                          </code>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {pattern.isGlobal ? (
@@ -530,6 +625,71 @@ export default function AdminLibraryPatternsPage() {
               }
             >
               Delete
+            </ArcadeButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={importDialog.open}
+        onOpenChange={(open) =>
+          !open && setImportDialog({ open: false, jsonInput: "" })
+        }
+      >
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Library Patterns</DialogTitle>
+            <DialogDescription>
+              Paste a JSON array of patterns to import. Each pattern needs a name and urlPattern.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <textarea
+              className="w-full h-64 p-3 text-sm font-mono rounded-md border border-input bg-background resize-none"
+              placeholder={`[
+  {
+    "name": "Phaser",
+    "description": "HTML5 game framework",
+    "urlPatterns": [
+      "^https://cdn\\.jsdelivr\\.net/npm/phaser@.*\\.js$",
+      "^https://unpkg\\.com/phaser@.*\\.js$"
+    ],
+    "category": "game_engine",
+    "isGlobal": true
+  }
+]`}
+              value={importDialog.jsonInput}
+              onChange={(e) =>
+                setImportDialog((prev) => ({ ...prev, jsonInput: e.target.value }))
+              }
+            />
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium mb-1">Required fields:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li><code>name</code> - Pattern name (string)</li>
+                <li><code>urlPatterns</code> - Array of regex patterns (string[]), or <code>urlPattern</code> for single pattern</li>
+              </ul>
+              <p className="font-medium mt-2 mb-1">Optional fields:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li><code>description</code> - Description (string, default: "")</li>
+                <li><code>category</code> - One of: game_engine, physics, audio, graphics, utility, analytics, other (default: "other")</li>
+                <li><code>isGlobal</code> - Available to all themes (boolean, default: false)</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <ArcadeButton
+              variant="outline"
+              onClick={() => setImportDialog({ open: false, jsonInput: "" })}
+            >
+              Cancel
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
+              onClick={handleImport}
+              disabled={!importDialog.jsonInput.trim() || importMutation.isPending}
+            >
+              {importMutation.isPending ? "Importing..." : "Import"}
             </ArcadeButton>
           </DialogFooter>
         </DialogContent>

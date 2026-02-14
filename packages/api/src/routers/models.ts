@@ -6,29 +6,20 @@ import { z } from "zod";
 import { desc, eq, asc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
-/**
- * Public Models Router
- *
- * Provides read-only access to active model configurations
- * Used by the prompt editor to display available models
- */
 export const modelsRouter = router({
-  /**
-   * List all active models
-   * Returns models with their tier, provider, and other metadata
-   */
   listActive: publicProcedure.query(async () => {
     const activeModels = await db.query.modelConfig.findMany({
       where: eq(modelConfig.isActive, true),
       orderBy: [desc(modelConfig.createdAt)],
       with: {
         tierCost: true,
+        providers: true,
       },
     });
 
     return activeModels.map((model) => ({
       id: model.id,
-      provider: model.provider,
+      providers: model.providers.map((p) => p.provider),
       modelName: model.modelName,
       tier: model.tierCost?.slug ?? "unknown",
       tierName: model.tierCost?.name ?? "Unknown",
@@ -37,17 +28,14 @@ export const modelsRouter = router({
     }));
   }),
 
-  /**
-   * Get model metadata for the model selector
-   * Returns models, tier costs, providers, and tiers for filtering
-   */
   getModelMetadata: publicProcedure.query(async () => {
     const [activeModels, allTierCosts] = await Promise.all([
       db.query.modelConfig.findMany({
         where: eq(modelConfig.isActive, true),
         orderBy: [desc(modelConfig.createdAt)],
         with: {
-          tierCost: true, // Load the related tier cost
+          tierCost: true,
+          providers: true,
         },
       }),
       db.query.tierCosts.findMany({
@@ -56,16 +44,22 @@ export const modelsRouter = router({
       }),
     ]);
 
-    // Build tier costs map for backward compatibility
     const tierCostsMap: Record<string, number> = {};
     for (const tc of allTierCosts) {
       tierCostsMap[tc.slug] = tc.creditCost;
     }
 
+    const allProviders = new Set<string>();
+    for (const model of activeModels) {
+      for (const p of model.providers) {
+        allProviders.add(p.provider);
+      }
+    }
+
     return {
       models: activeModels.map((model) => ({
         id: model.id,
-        provider: model.provider,
+        providers: model.providers.map((p) => p.provider),
         modelName: model.modelName,
         tier: model.tierCost?.slug ?? "unknown",
         tierName: model.tierCost?.name ?? "Unknown",
@@ -83,14 +77,11 @@ export const modelsRouter = router({
         displayOrder: tc.displayOrder,
         colorClass: tc.colorClass,
       })),
-      providers: [...new Set(activeModels.map((m) => m.provider))].sort(),
+      providers: [...allProviders].sort(),
       tiers: allTierCosts.map((tc) => tc.slug),
     };
   }),
 
-  /**
-   * Get a specific model by name
-   */
   getByName: publicProcedure
     .input(
       z.object({
@@ -102,6 +93,7 @@ export const modelsRouter = router({
         where: eq(modelConfig.modelName, input.modelName),
         with: {
           tierCost: true,
+          providers: true,
         },
       });
 
@@ -114,7 +106,7 @@ export const modelsRouter = router({
 
       return {
         id: model.id,
-        provider: model.provider,
+        providers: model.providers.map((p) => p.provider),
         modelName: model.modelName,
         tier: model.tierCost?.slug ?? "unknown",
         tierName: model.tierCost?.name ?? "Unknown",

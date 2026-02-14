@@ -64,6 +64,12 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     queryFn: () => trpcClient.themes.list.query(),
   });
 
+  // Fetch current theme for default selection
+  const { data: currentTheme } = useQuery({
+    queryKey: ["currentTheme"],
+    queryFn: () => trpcClient.themes.getCurrent.query(),
+  });
+
   const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
     queryKey: ["modelMetadata"],
     queryFn: async (): Promise<ModelMetadata> => {
@@ -135,6 +141,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       setSelectedVersionId(existingPrompt.id);
     }
   }, [existingPrompt, promptContent]);
+
+  // Auto-select current theme on initial load
+  useEffect(() => {
+    if (currentTheme && !selectedTheme && !existingPrompt) {
+      setSelectedTheme(currentTheme.id);
+    }
+  }, [currentTheme, selectedTheme, existingPrompt]);
 
   // Create prompt mutation
   const createPromptMutation = useMutation({

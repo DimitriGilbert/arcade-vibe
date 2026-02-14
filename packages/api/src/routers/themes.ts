@@ -34,23 +34,41 @@ export const themesRouter = router({
       ),
     });
 
-    if (!currentTheme) {
+    if (currentTheme) {
+      return {
+        id: currentTheme.id,
+        title: currentTheme.title,
+        description: currentTheme.description,
+        status: currentTheme.status,
+        visibility: currentTheme.visibility,
+        startDate: currentTheme.startDate,
+        endDate: currentTheme.endDate,
+        createdAt: currentTheme.createdAt,
+        updatedAt: currentTheme.updatedAt,
+      };
+    }
+
+    const freeTheme = await db.query.themes.findFirst({
+      where: eq(themes.title, "Free Play"),
+    });
+
+    if (!freeTheme) {
       throw new TRPCError({
         code: "NOT_FOUND",
-        message: "No active theme found",
+        message: "No active theme found and Free Play theme not seeded",
       });
     }
 
     return {
-      id: currentTheme.id,
-      title: currentTheme.title,
-      description: currentTheme.description,
-      status: currentTheme.status,
-      visibility: currentTheme.visibility,
-      startDate: currentTheme.startDate,
-      endDate: currentTheme.endDate,
-      createdAt: currentTheme.createdAt,
-      updatedAt: currentTheme.updatedAt,
+      id: freeTheme.id,
+      title: freeTheme.title,
+      description: freeTheme.description,
+      status: freeTheme.status,
+      visibility: freeTheme.visibility,
+      startDate: freeTheme.startDate,
+      endDate: freeTheme.endDate,
+      createdAt: freeTheme.createdAt,
+      updatedAt: freeTheme.updatedAt,
     };
   }),
 

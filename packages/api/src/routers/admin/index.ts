@@ -4,6 +4,7 @@ import { directActionsRouter } from "./direct";
 import { plansRouter } from "./plans";
 import { libraryPatternsRouter } from "./library-patterns";
 import { tierCostsRouter } from "./tier-costs";
+import { statsRouter } from "./stats";
 
 /**
  * Admin Router
@@ -14,6 +15,7 @@ import { tierCostsRouter } from "./tier-costs";
  * - plans: Subscription plan management (get, update, toggle active)
  * - libraryPatterns: Allowed library pattern management (create, update, delete, add to/remove from themes)
  * - tierCosts: Tier credit cost management (get, update, reset to defaults)
+ * - stats: Platform statistics and audit log (getStats, getActions)
  */
 export const adminRouter = router({
   models: modelConfigRouter,
@@ -21,4 +23,5 @@ export const adminRouter = router({
   plans: plansRouter,
   libraryPatterns: libraryPatternsRouter,
   tierCosts: tierCostsRouter,
+  stats: statsRouter,
 });

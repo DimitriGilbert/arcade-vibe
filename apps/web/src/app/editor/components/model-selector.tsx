@@ -6,10 +6,9 @@ import { ArcadeBadge } from "@/components/arcade";
 import { ChevronDown, ChevronRight, Filter } from "lucide-react";
 import { z } from "zod";
 
-// ModelConfig uses string tier - actual values come from database
 export interface ModelConfig {
   id: string;
-  provider: string;
+  providers: string[];
   modelName: string;
   tier: string;
   tierName: string;
@@ -17,7 +16,6 @@ export interface ModelConfig {
   supportsImages: boolean;
 }
 
-// TierCost from database
 export interface TierCost {
   id: string;
   slug: string;
@@ -29,10 +27,9 @@ export interface TierCost {
   colorClass: string | null;
 }
 
-// Convert API response to ModelConfig - no hardcoded tier validation
 export function toModelConfig(data: {
   id: string;
-  provider: string;
+  providers: string[];
   modelName: string;
   tier: string;
   tierName: string;
@@ -44,8 +41,8 @@ export function toModelConfig(data: {
 
 export interface ModelMetadata {
   models: ModelConfig[];
-  tierCosts: Record<string, number>; // slug -> creditCost (backward compat)
-  tierCostsArray: TierCost[]; // full data
+  tierCosts: Record<string, number>;
+  tierCostsArray: TierCost[];
   providers: string[];
   tiers: string[];
 }
@@ -103,7 +100,7 @@ export function ModelSelector({
 
       if (values.providerFilter && values.providerFilter.length > 0) {
         filtered = filtered.filter((m) =>
-          values.providerFilter!.includes(m.provider),
+          m.providers.some((p) => values.providerFilter!.includes(p)),
         );
       }
 
@@ -218,7 +215,7 @@ export function ModelSelector({
       {/* Selected model info */}
       {selectedModelData && (
         <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
-          <span>Provider: {selectedModelData.provider}</span>
+          <span>Providers: {selectedModelData.providers.join(", ")}</span>
           <span>
             Max: {selectedModelData.maxTokens.toLocaleString()} tokens
           </span>

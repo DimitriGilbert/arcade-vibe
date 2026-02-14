@@ -82,7 +82,7 @@ export const libraryPatternsRouter = router({
     .input(
       z.object({
         name: z.string().min(1).max(100),
-        description: z.string().min(1).max(500),
+        description: z.string().max(500).default(""),
         urlPattern: z.string().min(1),
         category: z.enum([
           "game_engine",
@@ -98,13 +98,13 @@ export const libraryPatternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const existingPattern = await db.query.allowedLibraryPatterns.findFirst({
-        where: eq(allowedLibraryPatterns.urlPattern, input.urlPattern),
+        where: eq(allowedLibraryPatterns.name, input.name),
       });
 
       if (existingPattern) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Library pattern with this URL already exists",
+          message: "Library pattern with this name already exists",
         });
       }
 
@@ -143,7 +143,7 @@ export const libraryPatternsRouter = router({
       z.object({
         id: z.string().uuid(),
         name: z.string().min(1).max(100).optional(),
-        description: z.string().min(1).max(500).optional(),
+        description: z.string().max(500).optional(),
         urlPattern: z.string().min(1).optional(),
         category: z.enum([
           "game_engine",
@@ -385,16 +385,19 @@ export const libraryPatternsRouter = router({
       });
 
       for (const pattern of activePatterns) {
-        try {
-          const regex = new RegExp(pattern.urlPattern);
-          if (regex.test(input.url)) {
-            return {
-              allowed: true,
-              pattern: pattern,
-            };
+        const patterns = pattern.urlPattern.split("\n").filter(Boolean);
+        for (const patternStr of patterns) {
+          try {
+            const regex = new RegExp(patternStr);
+            if (regex.test(input.url)) {
+              return {
+                allowed: true,
+                pattern: pattern,
+              };
+            }
+          } catch {
+            continue;
           }
-        } catch {
-          continue;
         }
       }
 
