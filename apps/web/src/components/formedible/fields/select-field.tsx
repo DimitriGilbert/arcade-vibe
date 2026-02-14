@@ -42,6 +42,14 @@ export const SelectField: React.FC<SelectFieldSpecificProps> = ({
     hasErrors ? "border-destructive" : ""
   );
 
+  const selectedOption = options.find((o) => {
+    const oValue = typeof o === 'string' ? o : o.value;
+    return oValue === value;
+  });
+  const selectedLabel = selectedOption
+    ? (typeof selectedOption === 'string' ? selectedOption : selectedOption.label)
+    : null;
+
   return (
     <FieldWrapper
       fieldApi={fieldApi}
@@ -61,15 +69,17 @@ export const SelectField: React.FC<SelectFieldSpecificProps> = ({
           onBlur={onBlur}
           className={computedInputClassName}
         >
-          <SelectValue placeholder={placeholder || "Select an option"} />
+          <SelectValue placeholder={placeholder || "Select an option"}>
+            {selectedLabel}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {options.map((option, index) => {
-            const optionValue = typeof option === 'string' ? option : option.value;
-            const optionLabel = typeof option === 'string' ? option : option.label;
+          {options.map((option) => {
+            const optVal = typeof option === 'string' ? option : option.value;
+            const optLbl = typeof option === 'string' ? option : option.label;
             return (
-              <SelectItem key={optionValue + index} value={optionValue}>
-                {optionLabel}
+              <SelectItem key={optVal} value={optVal}>
+                {optLbl}
               </SelectItem>
             );
           })}

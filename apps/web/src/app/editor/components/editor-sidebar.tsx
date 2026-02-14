@@ -31,6 +31,10 @@ interface EditorSidebarProps {
 	children: ReactNode;
 }
 
+function getThemeName(themes: Array<Theme> | undefined, themeId: string): string {
+	return themes?.find((t) => t.id === themeId)?.title ?? "Select a theme";
+}
+
 export function EditorSidebar({
 	selectedTheme,
 	onSelectTheme,
@@ -64,7 +68,9 @@ export function EditorSidebar({
 								}
 							}}>
 								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select a theme" />
+									<SelectValue placeholder="Select a theme">
+										{selectedTheme ? getThemeName(themes, selectedTheme) : "Select a theme"}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									{themesLoading ? (

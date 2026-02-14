@@ -11,12 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArcadeButton } from "@/components/arcade";
-import { Loader2, Save, Play, Copy } from "lucide-react";
+import { Loader2, Save, Play, Copy, ExternalLink } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import {
   ModelSelector,
   type ModelMetadata,
-  getCreditCostByTier,
+  type ApiKey,
   toModelConfig,
 } from "./components/model-selector";
 import {
@@ -43,8 +43,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const [promptContent, setPromptContent] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
+  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
+  const [generatedGameId, setGeneratedGameId] = useState<string | null>(null);
 
   // New state for sidebar layout
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
@@ -64,23 +66,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     queryFn: () => trpcClient.themes.list.query(),
   });
 
-  // Fetch current theme for default selection
-  const { data: currentTheme } = useQuery({
-    queryKey: ["currentTheme"],
-    queryFn: () => trpcClient.themes.getCurrent.query(),
-  });
+  // Use first theme as default (no separate API call)
+  const currentTheme = themes?.[0];
 
   const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
     queryKey: ["modelMetadata"],
-    queryFn: async (): Promise<ModelMetadata> => {
-      const result = await trpcClient.models.getModelMetadata.query();
-      return {
-        models: result.models.map(toModelConfig),
-        tierCosts: result.tierCosts,
-        tierCostsArray: result.tierCostsArray,
-        providers: result.providers,
-        tiers: result.tiers,
-      };
+    queryFn: async (): Promise<ModelMetadata | null> => {
+      try {
+        const result = await trpcClient.models.getModelMetadata.query();
+        return {
+          models: result.models.map(toModelConfig),
+          tierCosts: result.tierCosts,
+          tierCostsArray: result.tierCostsArray,
+          providers: result.providers,
+          tiers: result.tiers,
+        };
+      } catch {
+        return null;
+      }
     },
   });
 
@@ -101,22 +104,29 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     enabled: !!(resolvedSearchParams?.promptId || resolvedSearchParams?.forkId),
   });
 
-  // Fetch prompts by theme for sidebar
+  // Fetch prompts for sidebar - all prompts or filtered by theme
   const { data: myPrompts, isLoading: promptsLoading } = useQuery({
     queryKey: ["prompts-by-theme", selectedTheme],
     queryFn: async () => {
-      if (!selectedTheme) return [];
-      return await trpcClient.prompts.listMineByTheme.query({
-        themeId: selectedTheme,
-      });
+      if (selectedTheme) {
+        return await trpcClient.prompts.listMineByTheme.query({
+          themeId: selectedTheme,
+        });
+      }
+      return await trpcClient.prompts.listMine.query();
     },
-    enabled: !!selectedTheme,
   });
 
   // Fetch user credits
   const { data: credits } = useQuery({
     queryKey: ["credits"],
     queryFn: () => trpcClient.credits.getBalance.query(),
+  });
+
+  // Fetch user API keys for BYOK
+  const { data: apiKeys } = useQuery({
+    queryKey: ["apiKeys"],
+    queryFn: () => trpcClient.apiKeys.listKeys.query(),
   });
 
   // Fetch prompt versions for history
@@ -162,7 +172,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
     onSuccess: (data) => {
       toast.success("Prompt created successfully!");
-      window.location.href = `/prompts/${data.promptId}`;
+      if (data.promptId) {
+        setSelectedPromptId(data.promptId);
+        setSelectedVersionId(data.promptId);
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to create prompt");
@@ -179,9 +192,12 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       });
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Prompt updated successfully!");
-      window.location.reload();
+      if (data.promptId) {
+        setSelectedPromptId(data.promptId);
+        setSelectedVersionId(data.promptId);
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update prompt");
@@ -223,17 +239,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       return;
     }
 
-    const creditCost = getCreditCostByTier(
-      modelData.tier,
-      modelMetadata?.tierCosts ?? {},
-    );
-    if (credits && credits.balance < creditCost) {
-      toast.error(
-        `Insufficient credits. Need ${creditCost}, have ${credits.balance}`,
-      );
-      return;
-    }
-
     // Get theme ID
     const currentThemeId = existingPrompt?.themeId || selectedTheme;
     if (!currentThemeId) {
@@ -243,6 +248,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
     setIsGenerating(true);
     setGeneratedCode("");
+    setGeneratedGameId(null);
     setActiveTab("output"); // Auto-switch to output tab
 
     try {
@@ -261,16 +267,16 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       const stream = await trpcClient.generate.streamGeneration.mutate({
         promptId,
         modelKey: selectedModel,
+        apiKeyId: selectedApiKeyId ?? undefined,
       });
 
       for await (const chunk of stream) {
         if (chunk.type === "chunk" && "code" in chunk) {
           setGeneratedCode(chunk.code);
-        } else if (chunk.type === "complete") {
+        } else if (chunk.type === "complete" && "gameId" in chunk) {
           setIsGenerating(false);
+          setGeneratedGameId(chunk.gameId);
           toast.success("Game generated and saved successfully!");
-          // Redirect to game page
-          window.location.href = `/game/${chunk.gameId}`;
         }
       }
     } catch (error) {
@@ -286,10 +292,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     selectedTheme,
     selectedModel,
     models,
-    credits,
     createPromptMutation,
     selectedPromptId,
-    modelMetadata?.tierCosts,
+    selectedApiKeyId,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -356,6 +361,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     setSelectedVersionId(null);
     setActiveTab("editor");
     setGeneratedCode("");
+    setGeneratedGameId(null);
   }, []);
 
   const handleTabChange = useCallback((tab: string) => {
@@ -404,57 +410,60 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     <div className="relative h-full min-h-0 overflow-hidden">
       <div className="absolute inset-0 bg-background min-h-screen" />
       <div className="relative h-full flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
-        <EditorSidebar
-          selectedTheme={selectedTheme}
-          onSelectTheme={setSelectedTheme}
-          themes={themes?.map((t: { id: string; title: string }) => ({
-            id: t.id,
-            title: t.title,
-          }))}
-          themesLoading={themesLoading}
-          prompts={myPrompts?.map(
-            (p: {
-              id: string;
-              content: string;
-              version: number;
-              updatedAt: string;
-            }) => ({
-              id: p.id,
-              content: p.content,
-              version: p.version,
-              updatedAt: p.updatedAt,
-            }),
-          )}
-          promptsLoading={promptsLoading}
-          selectedPromptId={selectedPromptId}
-          onSelectPrompt={handleSelectPrompt}
-          onNewPrompt={handleNewPrompt}
-        >
-          {modelsLoading ? (
-            <div className="flex items-center justify-center h-20">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
-            </div>
-          ) : modelMetadata ? (
-            <ModelSelector
-              modelMetadata={modelMetadata}
-              selectedModel={selectedModel}
-              onSelectModel={(modelName) => {
-                if (modelName) {
-                  setSelectedModel(modelName);
-                }
-              }}
-            />
-          ) : null}
-        </EditorSidebar>
-      </aside>
+        {/* Sidebar */}
+        <aside className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
+          <EditorSidebar
+            selectedTheme={selectedTheme}
+            onSelectTheme={setSelectedTheme}
+            themes={themes?.map((t: { id: string; title: string }) => ({
+              id: t.id,
+              title: t.title,
+            }))}
+            themesLoading={themesLoading}
+            prompts={myPrompts?.map(
+              (p: {
+                id: string;
+                content: string;
+                version: number;
+                updatedAt: string;
+              }) => ({
+                id: p.id,
+                content: p.content,
+                version: p.version,
+                updatedAt: p.updatedAt,
+              }),
+            )}
+            promptsLoading={promptsLoading}
+            selectedPromptId={selectedPromptId}
+            onSelectPrompt={handleSelectPrompt}
+            onNewPrompt={handleNewPrompt}
+          >
+            {modelsLoading ? (
+              <div className="flex items-center justify-center h-20">
+                <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+              </div>
+            ) : modelMetadata ? (
+              <ModelSelector
+                modelMetadata={modelMetadata}
+                selectedModel={selectedModel}
+                onSelectModel={(modelName) => {
+                  if (modelName) {
+                    setSelectedModel(modelName);
+                  }
+                }}
+                apiKeys={apiKeys as ApiKey[] | undefined}
+                selectedApiKeyId={selectedApiKeyId}
+                onSelectApiKey={setSelectedApiKeyId}
+              />
+            ) : null}
+          </EditorSidebar>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header with credits and fork button */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-          {/* <div>
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Header with credits and fork button */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
+            {/* <div>
             <h1 className="text-xl font-bold text-[var(--foreground)]">
               {isForking
                 ? "Fork Prompt"
@@ -468,94 +477,105 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               </p>
             )}
           </div> */}
-          <div className="flex items-center gap-2">
-            {isForking && (
+            <div className="flex items-center gap-2">
+              {isForking && (
+                <ArcadeButton
+                  variant="outline"
+                  onClick={handleFork}
+                  disabled={forkPromptMutation.isPending}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {forkPromptMutation.isPending ? "Forking..." : "Fork"}
+                </ArcadeButton>
+              )}
+            </div>
+          </div>
+
+          {/* Version Selector - only when editing existing prompt */}
+          {currentPrompt && versions && versions.length > 0 && (
+            <VersionSelector
+              versions={versions.map(
+                (v: { id: string; version: number; createdAt: string }) => ({
+                  id: v.id,
+                  version: v.version,
+                  createdAt: v.createdAt,
+                }),
+              )}
+              currentVersion={currentPrompt.version}
+              selectedVersionId={selectedVersionId}
+              onSelectVersion={handleSelectVersion}
+              onNewVersion={handleNewVersion}
+            />
+          )}
+
+          {/* Tabs */}
+          <div className="flex-1 flex flex-col min-h-0 p-4">
+            <EditorTabs
+              promptContent={promptContent}
+              onPromptChange={setPromptContent}
+              generatedCode={generatedCode}
+              isGenerating={isGenerating}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              promptId={selectedPromptId}
+              generatedGameId={generatedGameId}
+            />
+          </div>
+
+          {/* Action Bar */}
+          <div className="p-4 border-t border-[var(--border)] flex gap-2 shrink-0">
+            <ArcadeButton
+              onClick={handleSave}
+              disabled={
+                !promptContent.trim() ||
+                createPromptMutation.isPending ||
+                updatePromptMutation.isPending
+              }
+              className="flex-1"
+            >
+              {createPromptMutation.isPending ||
+              updatePromptMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isEditing ? "Update" : "Save"}
+                </>
+              )}
+            </ArcadeButton>
+            <ArcadeButton
+              onClick={handleGenerate}
+              disabled={isGenerating || !promptContent.trim()}
+              className="flex-1"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Generate
+                </>
+              )}
+            </ArcadeButton>
+            {generatedGameId && !isGenerating && (
               <ArcadeButton
-                variant="outline"
-                onClick={handleFork}
-                disabled={forkPromptMutation.isPending}
+                variant="glow"
+                onClick={() => window.open(`/game/${generatedGameId}`, "_blank")}
               >
-                <Copy className="h-4 w-4 mr-2" />
-                {forkPromptMutation.isPending ? "Forking..." : "Fork"}
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Play Game
               </ArcadeButton>
             )}
           </div>
-        </div>
-
-        {/* Version Selector - only when editing existing prompt */}
-        {currentPrompt && versions && versions.length > 0 && (
-          <VersionSelector
-            versions={versions.map(
-              (v: { id: string; version: number; createdAt: string }) => ({
-                id: v.id,
-                version: v.version,
-                createdAt: v.createdAt,
-              }),
-            )}
-            currentVersion={currentPrompt.version}
-            selectedVersionId={selectedVersionId}
-            onSelectVersion={handleSelectVersion}
-            onNewVersion={handleNewVersion}
-          />
-        )}
-
-        {/* Tabs */}
-        <div className="flex-1 flex flex-col min-h-0 p-4">
-          <EditorTabs
-            promptContent={promptContent}
-            onPromptChange={setPromptContent}
-            generatedCode={generatedCode}
-            isGenerating={isGenerating}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
-        </div>
-
-        {/* Action Bar */}
-        <div className="p-4 border-t border-[var(--border)] flex gap-2 shrink-0">
-          <ArcadeButton
-            onClick={handleSave}
-            disabled={
-              !promptContent.trim() ||
-              createPromptMutation.isPending ||
-              updatePromptMutation.isPending
-            }
-            className="flex-1"
-          >
-            {createPromptMutation.isPending ||
-            updatePromptMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                {isEditing ? "Update" : "Save"}
-              </>
-            )}
-          </ArcadeButton>
-          <ArcadeButton
-            onClick={handleGenerate}
-            disabled={isGenerating || !promptContent.trim()}
-            className="flex-1"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Generate
-              </>
-            )}
-          </ArcadeButton>
-        </div>
-      </main>
+        </main>
       </div>
-      
+
       {/* Version Comparison Dialog */}
       {showComparison && compareLeft && compareRight && (
         <Dialog open={showComparison} onOpenChange={setShowComparison}>

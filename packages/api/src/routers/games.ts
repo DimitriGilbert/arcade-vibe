@@ -54,7 +54,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
           if (!isSessionActive) return;
           const playtime = Math.floor((Date.now() - sessionStart) / 1000);
 
-          fetch(\`\${API_ENDPOINT}/game-sdk/heartbeat\`, {
+          fetch(\`\${API_ENDPOINT}/api/game-sdk/heartbeat\`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -80,7 +80,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
 
             const playtime = Math.floor((Date.now() - sessionStart) / 1000);
 
-            fetch(\`\${API_ENDPOINT}/game-sdk/score\`, {
+            fetch(\`\${API_ENDPOINT}/api/game-sdk/score\`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -112,7 +112,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
 
           const playtime = Math.floor((Date.now() - sessionStart) / 1000);
           navigator.sendBeacon(
-            \`\${API_ENDPOINT}/game-sdk/end-session\`,
+            \`\${API_ENDPOINT}/api/game-sdk/end-session\`,
             JSON.stringify({
               gameId: GAME_ID,
               token: SESSION_TOKEN,

@@ -2,6 +2,7 @@ import { router, adminProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { games } from "@arcade-vibe/db/schema/games";
 import { userExtended } from "@arcade-vibe/db/schema/users";
+import { user } from "@arcade-vibe/db/schema/auth";
 import { adminActions, scoringWeights } from "@arcade-vibe/db/schema/platform";
 import { moderationReports } from "@arcade-vibe/db/schema/moderation";
 import { z } from "zod";
@@ -9,6 +10,10 @@ import { eq, and, asc, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { redis } from "@arcade-vibe/api/lib/redis";
 import { calculateGameScore } from "@arcade-vibe/api/lib/scoring";
+import {
+  getValidCreditBalance,
+  addCreditsInternal,
+} from "@arcade-vibe/api/lib/credits";
 
 /**
  * Recalculate scores for all games in a theme
@@ -81,6 +86,88 @@ export const directActionsRouter = router({
         reputation: u.reputation,
         createdAt: u.user?.createdAt ?? null,
       }));
+    }),
+
+  /**
+   * Update User
+   *
+   * Admin updates a user's profile information.
+   * - Can update: name, role, credits
+   * - Logs action to adminActions
+   */
+  updateUser: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        name: z.string().min(1).max(100).optional(),
+        role: z.enum(["admin", "moderator", "participant", "viewer"]).optional(),
+        credits: z.number().int().min(0).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const targetUser = await db.query.userExtended.findFirst({
+        where: eq(userExtended.id, input.userId),
+        with: {
+          user: {
+            columns: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (input.role !== undefined) {
+        await db
+          .update(userExtended)
+          .set({ role: input.role })
+          .where(eq(userExtended.id, input.userId));
+      }
+
+      if (input.credits !== undefined) {
+        const currentBalance = await getValidCreditBalance(input.userId);
+        const difference = input.credits - currentBalance;
+
+        if (difference > 0) {
+          await addCreditsInternal(
+            input.userId,
+            difference,
+            "Admin credit grant",
+            "admin_grant",
+          );
+        } else if (difference < 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot reduce credits below current balance",
+          });
+        }
+      }
+
+      if (input.name !== undefined) {
+        await db
+          .update(user)
+          .set({ name: input.name })
+          .where(eq(user.id, input.userId));
+      }
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "update_user",
+        targetType: "user",
+        targetId: input.userId,
+        reason: `Updated user profile: ${JSON.stringify({ name: input.name, role: input.role, credits: input.credits })}`,
+      });
+
+      return {
+        success: true,
+        userId: input.userId,
+      };
     }),
 
   /**
@@ -165,7 +252,7 @@ export const directActionsRouter = router({
   suspendUser: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().min(1),
         reason: z.string().min(10).max(500),
         duration: z.enum(["7d", "30d", "permanent"]),
       }),

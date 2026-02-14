@@ -7,13 +7,14 @@ import {
   themeAllowedPatterns,
 } from "@arcade-vibe/db/schema/library-patterns";
 import { getProviderModel } from "./ai-providers";
-import { deductCredits, getUserCredits } from "./credits";
+import { deductCredits, getValidCreditBalance } from "./credits";
 import { decryptApiKey } from "./encryption";
 import { highlightCode } from "./highlighter";
 import { uploadToCDN } from "./cdn";
 import {
   sanitizeGameCode,
   buildLibraryListForSystemPrompt,
+  extractCodeFromMarkdown,
 } from "./script-sanitizer";
 import { streamText } from "ai";
 import { z } from "zod";
@@ -83,73 +84,46 @@ export interface PromptWithTheme {
 // Common System Prompt (injected for ALL themes)
 // ============================================================================
 
-// const COMMON_SYSTEM_PROMPT = `## Output Format (CRITICAL)
+// const COMMON_SYSTEM_PROMPT = `## Output Format
 
 // Your code will be injected inside the <body> tag of an existing HTML page. The Arcade Vibe SDK is already loaded in the page header.
 
-// ### DO NOT Generate:
-// - <!DOCTYPE html> declaration
-// - <html>, <head>, or <body> tags
-// - Another window.ArcadeVibe definition (it already exists)
+// ### Do NOT generate:
+// - <!DOCTYPE html>, <html>, <head>, or <body> tags
+// - Another window.ArcadeVibe definition
 
-// ### DO Generate:
-// - HTML elements for your game (canvases, divs, buttons, etc.)
-// - <style> tags for CSS styling
-// - <script> tags for JavaScript game logic
+// ### Do generate:
+// - <style> tags, HTML elements, <script> tags — nothing else
 
-// ### Example Correct Output:
-// \`\`\`html
-// <style>
-//   #game { width: 100%; height: 100%; background: #000; }
-//   .score { position: absolute; top: 10px; left: 10px; color: #fff; }
-// </style>
-// <canvas id="game"></canvas>
-// <div class="score">Score: <span id="score">0</span></div>
-// <script>
-//   const canvas = document.getElementById('game');
-//   const ctx = canvas.getContext('2d');
-//   let score = 0;
+// ## Arcade Vibe SDK
 
-//   // Your game logic here...
+// Call \`ArcadeVibe.reportScore(score)\` with a positive integer whenever the player reaches a game over or completes a level. Do not implement your own score reporting via postMessage or fetch.
 
-//   function gameOver() {
-//     ArcadeVibe.reportScore(score);
-//   }
-// </script>
-// \`\`\`
+// Other available methods:
+// - \`ArcadeVibe.getPlaytime()\` — current session duration in seconds
+// - \`ArcadeVibe.isReady()\` — returns true if SDK is initialized
 
-// ## Arcade Vibe SDK Integration
+// ## Robustness Rules
 
-// Your game runs in an iframe with the Arcade Vibe SDK pre-loaded. You MUST use it for score tracking.
+// These are non-negotiable:
+// - Wrap all JS in a \`DOMContentLoaded\` listener to avoid race conditions
+// - Use \`requestAnimationFrame\` for the game loop — never \`setInterval\` for rendering
+// - Declare all variables with \`const\` or \`let\`, no implicit globals
+// - The outer layout must use responsive sizing (100vw / 100vh or percentages) — no fixed pixel dimensions
 
-// ### Available API:
-// - \`ArcadeVibe.reportScore(score)\` - Submit a score to the leaderboard. Call this when:
-//   - Player completes a level
-//   - Player loses all lives (game over)
-//   - Player achieves a new high score
+// ## Output Rules
 
-//   The score must be a positive integer.
+// Return only the raw HTML snippet. No markdown fences, no explanations, no comments addressed to the reader.
 
-// - \`ArcadeVibe.getPlaytime()\` - Get current session playtime in seconds
+// ## Every Game Must Have
 
-// - \`ArcadeVibe.isReady()\` - Check if SDK is properly initialized (returns boolean)
+// 1. **Score** — visible at all times, updated in real time
+// 2. **Lives or health** — the player can fail and reach a game over state
+// 3. **Progressive difficulty** — the game gets meaningfully harder over time (speed, frequency, complexity)
+// 4. **A complete game loop** — Start screen → Gameplay → Game Over → Restart, all accessible without a page reload
+// 5. **Instructions** — one or two lines on the start screen explaining how to play
+// `;
 
-// ### Integration Example:
-// \`\`\`javascript
-// // When player gets game over
-// function gameOver() {
-//   ArcadeVibe.reportScore(finalScore);
-//   showGameOverScreen();
-// }
-
-// // When player completes a level
-// function levelComplete() {
-//   ArcadeVibe.reportScore(currentScore);
-//   loadNextLevel();
-// }
-// \`\`\`
-
-// DO NOT implement your own score tracking via postMessage or fetch. The SDK handles all communication securely.`;
 const COMMON_SYSTEM_PROMPT = `## Output Format
 
 Your code will be injected inside the <body> tag of an existing HTML page. The Arcade Vibe SDK is already loaded in the page header.
@@ -163,19 +137,32 @@ Your code will be injected inside the <body> tag of an existing HTML page. The A
 
 ## Arcade Vibe SDK
 
-Call \`ArcadeVibe.reportScore(score)\` with a positive integer whenever the player reaches a game over or completes a level. Do not implement your own score reporting via postMessage or fetch.
+Call \`ArcadeVibe.reportScore(score)\` with a positive integer at every game over.
+Do not implement your own score reporting via postMessage or fetch.
 
 Other available methods:
-- \`ArcadeVibe.getPlaytime()\` — current session duration in seconds
+- \`ArcadeVibe.getPlaytime()\` — session duration in seconds
 - \`ArcadeVibe.isReady()\` — returns true if SDK is initialized
 
-## Robustness Rules
+## Robustness Rules — These are non-negotiable
 
-These are non-negotiable:
-- Wrap all JS in a \`DOMContentLoaded\` listener to avoid race conditions
-- Use \`requestAnimationFrame\` for the game loop — never \`setInterval\` for rendering
-- Declare all variables with \`const\` or \`let\`, no implicit globals
-- The outer layout must use responsive sizing (100vw / 100vh or percentages) — no fixed pixel dimensions
+### Initialization order (CRITICAL)
+- ALL static HTML (canvases, UI elements, overlays, buttons) must be written directly as HTML markup — NOT created via JavaScript at runtime
+- JavaScript may only read or modify elements that already exist in the markup above it
+- NEVER query DOM elements (getElementById, querySelector, etc.) before they are defined in the HTML
+- Wrap ALL JavaScript in: \`document.addEventListener('DOMContentLoaded', () => { ... })\`
+- This is the correct form — do NOT write \`DOMContentLoaded = function\` or any other variant
+
+### Game loop
+- Use \`requestAnimationFrame\` for the game loop — NEVER \`setInterval\` for rendering
+- Cap delta time: \`const delta = Math.min((now - last) / 1000, 0.05)\` to prevent spiral-of-death on tab refocus
+
+### Code quality
+- Declare all variables with \`const\` or \`let\` — never implicit globals
+- Never call \`scene.add()\`, \`appendChild()\`, or any DOM/scene insertion method on an object that already exists in the scene — only call it once, at creation time
+- Use only inline assets — Canvas API, CSS shapes, SVG, Unicode/emoji. No \`<img>\` tags, no external URLs
+- Do not use APIs that require browser permissions (camera, microphone, geolocation, notifications)
+- The layout must use responsive sizing (100vw / 100vh or percentages) — no fixed pixel dimensions for the outer container
 
 ## Output Rules
 
@@ -188,7 +175,8 @@ Return only the raw HTML snippet. No markdown fences, no explanations, no commen
 3. **Progressive difficulty** — the game gets meaningfully harder over time (speed, frequency, complexity)
 4. **A complete game loop** — Start screen → Gameplay → Game Over → Restart, all accessible without a page reload
 5. **Instructions** — one or two lines on the start screen explaining how to play
-`;
+ `;
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -246,7 +234,9 @@ const PLATFORM_PROVIDERS_WITH_KEYS: Provider[] = [
   "moonshot",
 ];
 
-const getPlatformKey = (provider: Provider): { apiKey: string; provider: Provider } => {
+const getPlatformKey = (
+  provider: Provider,
+): { apiKey: string; provider: Provider } => {
   const envKeyMap: Record<Provider, string> = {
     openai: "OPENAI_API_KEY",
     anthropic: "ANTHROPIC_API_KEY",
@@ -401,7 +391,8 @@ export async function generateGame(
 
   if (!apiKeyId) {
     const creditCost = tierCost.creditCost;
-    const userCredits = await getUserCredits(userId);
+    const userCredits = await getValidCreditBalance(userId);
+    console.log("[DEBUG] Credit check:", { userId, userCredits, creditCost });
 
     if (userCredits < creditCost) {
       throw new TRPCError({
@@ -500,7 +491,8 @@ export async function generateGame(
       // 8. Upload to CDN
       let assetUrl: string;
       try {
-        assetUrl = await uploadToCDN(fullCode, confirmedGameId);
+        const extractedCode = extractCodeFromMarkdown(fullCode);
+        assetUrl = await uploadToCDN(extractedCode, confirmedGameId);
       } catch (error) {
         // Update game status to failed
         await db
@@ -524,15 +516,12 @@ export async function generateGame(
       const totalTokens = usage.totalTokens ?? 0;
 
       // 9. Sanitize the generated code
-      const sanitizationResult = sanitizeGameCode(fullCode, allAllowedPatterns);
+      const extractedCode = extractCodeFromMarkdown(fullCode);
+      const sanitizationResult = sanitizeGameCode(extractedCode, allAllowedPatterns);
 
-      // Log warning if scripts were blocked
-      if (
-        sanitizationResult.blockedUrls.length > 0 ||
-        sanitizationResult.blockedInlineScripts > 0
-      ) {
+      if (sanitizationResult.blockedUrls.length > 0) {
         console.warn(
-          `Blocked ${sanitizationResult.blockedUrls.length} external URLs and ${sanitizationResult.blockedInlineScripts} inline scripts`,
+          `Blocked ${sanitizationResult.blockedUrls.length} external script URLs`,
         );
       }
 
@@ -546,9 +535,7 @@ export async function generateGame(
           generatedAt: new Date(),
           status: "completed",
           blockedScriptUrls: sanitizationResult.blockedUrls,
-          sanitizationApplied:
-            sanitizationResult.blockedUrls.length > 0 ||
-            sanitizationResult.blockedInlineScripts > 0,
+          sanitizationApplied: sanitizationResult.blockedUrls.length > 0,
         })
         .where(eq(games.id, confirmedGameId));
 

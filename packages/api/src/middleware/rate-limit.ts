@@ -64,18 +64,20 @@ export const createRateLimitMiddleware = (config: RateLimitConfig) => {
   });
 };
 
+const isDev = process.env.NODE_ENV !== "production";
+
 export const rateLimits = {
   strict: {
     windowMs: 60 * 1000,
     maxRequests: 5,
     keyPrefix: "ratelimit:strict",
-    failOpen: false,
+    failOpen: isDev,
   },
   default: {
     windowMs: 60 * 1000,
     maxRequests: 10,
     keyPrefix: "ratelimit:default",
-    failOpen: false,
+    failOpen: isDev,
   },
   loose: {
     windowMs: 60 * 1000,

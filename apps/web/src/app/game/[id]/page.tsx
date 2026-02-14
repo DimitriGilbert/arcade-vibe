@@ -3,15 +3,15 @@ import GamePlayPage from "@/components/game-client";
 import { trpcClient } from "@/utils/trpc";
 
 interface GamePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: GamePageProps): Promise<Metadata> {
-  const gameId = params.id;
+  const { id: gameId } = await params;
 
   try {
     const game = await trpcClient.games.getById.query({ id: gameId });
@@ -38,6 +38,7 @@ export async function generateMetadata({
   }
 }
 
-export default function GamePage({ params }: GamePageProps) {
-  return <GamePlayPage params={params} />;
+export default async function GamePage({ params }: GamePageProps) {
+  const { id } = await params;
+  return <GamePlayPage gameId={id} />;
 }

@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { redis } from "./redis";
+import { redis, isRedisAvailable } from "./redis";
 
 export interface GameSession {
   sessionId: string;
@@ -25,22 +25,22 @@ export async function createGameSessionToken(
   const sessionId = crypto.randomUUID();
   const startedAt = Date.now();
 
-  // Store session data in Redis
-  const sessionData = {
-    userId,
-    gameId,
-    startedAt,
-    lastPlaytime: 0,
-    lastHeartbeat: Date.now(),
-  };
+  if (isRedisAvailable()) {
+    const sessionData = {
+      userId,
+      gameId,
+      startedAt,
+      lastPlaytime: 0,
+      lastHeartbeat: Date.now(),
+    };
 
-  await redis.setex(
-    `game_session:${sessionId}`,
-    SESSION_TTL_SECONDS,
-    JSON.stringify(sessionData),
-  );
+    await redis.setex(
+      `game_session:${sessionId}`,
+      SESSION_TTL_SECONDS,
+      JSON.stringify(sessionData),
+    );
+  }
 
-  // Create and sign JWT token
   const tokenPayload: GameSession = {
     sessionId,
     userId,
@@ -55,17 +55,15 @@ export async function verifyGameSessionToken(
   token: string,
 ): Promise<GameSession | null> {
   try {
-    // Verify JWT token
     const decoded = jwt.verify(token, getJwtSecret()) as unknown as GameSession;
 
-    // Check if session still exists in Redis
-    const sessionData = await redis.get(`game_session:${decoded.sessionId}`);
-
-    if (!sessionData) {
-      return null;
+    if (isRedisAvailable()) {
+      const sessionData = await redis.get(`game_session:${decoded.sessionId}`);
+      if (!sessionData) {
+        return null;
+      }
     }
 
-    // Return session information
     return decoded;
   } catch {
     return null;

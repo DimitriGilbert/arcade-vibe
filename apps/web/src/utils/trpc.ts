@@ -1,7 +1,10 @@
 import type { AppRouter } from "@arcade-vibe/api/routers/index";
 
 import { QueryCache, QueryClient } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import {
+  createTRPCClient,
+  httpBatchStreamLink,
+} from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { toast } from "sonner";
 
@@ -20,7 +23,7 @@ export const queryClient = new QueryClient({
 
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    httpBatchLink({
+    httpBatchStreamLink({
       url: "/api/trpc",
       fetch(url, options) {
         return fetch(url, {

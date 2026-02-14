@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { Game } from "@/lib/trpc-types";
 import { cn } from "@/lib/utils";
+import { Gamepad2 } from "lucide-react";
 
 export interface GameThumbnailCardProps {
   game: Game;
-  imageUrl?: string | null;
   title?: string;
   description?: string;
   meta?: {
@@ -53,7 +53,6 @@ const statusBadgeVariants: Record<string, BadgeVariant> = {
 
 function GameThumbnailCard({
   game,
-  imageUrl,
   title,
   description,
   meta,
@@ -61,7 +60,6 @@ function GameThumbnailCard({
   footerAction,
   onClick,
 }: GameThumbnailCardProps) {
-  const displayImageUrl = imageUrl ?? game.imageUrl;
   const displayTitle = title;
   const displayDescription = description ?? game.prompt?.content;
   const displayMeta = {
@@ -87,17 +85,9 @@ function GameThumbnailCard({
       onClick={onClick}
     >
       <div className="relative aspect-video overflow-hidden bg-primary">
-        {displayImageUrl ? (
-          <img
-            src={displayImageUrl}
-            alt={displayTitle ?? "Game thumbnail"}
-            className="size-full object-cover transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <div className="size-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center">
-            <div className="text-primary/40 text-4xl font-bold">🎮</div>
-          </div>
-        )}
+        <div className="size-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center">
+          <Gamepad2 className="h-12 w-12 text-primary/40" />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
         <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5">
           {displayMeta.tier && tierBadgeStyle && (

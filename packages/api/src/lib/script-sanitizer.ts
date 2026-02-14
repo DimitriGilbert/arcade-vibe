@@ -2,8 +2,7 @@ import { allowedLibraryPatterns } from "@arcade-vibe/db/schema/library-patterns"
 
 type AllowedLibraryPattern = typeof allowedLibraryPatterns.$inferSelect;
 
-const SCRIPT_TAG_REGEX =
-  /<script\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
+const SCRIPT_TAG_REGEX = /<script\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
 const INLINE_SCRIPT_REGEX = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
 
 export interface SanitizationResult {
@@ -11,6 +10,16 @@ export interface SanitizationResult {
   blockedUrls: string[];
   blockedInlineScripts: number;
   allowedUrls: string[];
+}
+
+export function extractCodeFromMarkdown(text: string): string {
+  const codeBlockRegex = /```(?:html|htm)?\s*\n?([\s\S]*?)\n?```/g;
+  const matches = [...text.matchAll(codeBlockRegex)];
+
+  if (matches.length > 0 && matches[0]?.[1]) {
+    return matches[0][1].trim();
+  }
+  return text.trim();
 }
 
 export function extractScriptUrls(html: string): string[] {
@@ -37,13 +46,17 @@ export function isUrlAllowed(
   patterns: AllowedLibraryPattern[],
 ): boolean {
   for (const pattern of patterns) {
-    try {
-      const regex = new RegExp(pattern.urlPattern);
-      if (regex.test(url)) {
-        return true;
+    // Split by newlines - database stores multiple patterns per row
+    const patternLines = pattern.urlPattern.split("\n").filter(Boolean);
+    for (const patternStr of patternLines) {
+      try {
+        const regex = new RegExp(patternStr);
+        if (regex.test(url)) {
+          return true;
+        }
+      } catch {
+        continue;
       }
-    } catch {
-      continue;
     }
   }
   return false;
@@ -68,18 +81,7 @@ export function sanitizeGameCode(
     });
   };
 
-  const sanitizeInlineScripts = (input: string): string => {
-    let count = 0;
-    const result = input.replace(INLINE_SCRIPT_REGEX, () => {
-      count++;
-      return "<!-- BLOCKED INLINE SCRIPT -->";
-    });
-    blockedInlineScripts = count;
-    return result;
-  };
-
   let sanitized = sanitizeScriptTags(html);
-  sanitized = sanitizeInlineScripts(sanitized);
 
   return {
     sanitizedHtml: sanitized,
@@ -122,10 +124,7 @@ export function validateRegexPattern(pattern: string): {
   }
 }
 
-export function testUrlPattern(
-  url: string,
-  pattern: string,
-): boolean {
+export function testUrlPattern(url: string, pattern: string): boolean {
   try {
     const regex = new RegExp(pattern);
     return regex.test(url);

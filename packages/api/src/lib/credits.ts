@@ -163,7 +163,10 @@ export const deductCredits = async (
       orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
     });
 
-    const totalAvailable = batches.reduce((sum, b) => sum + b.remainingAmount, 0);
+    const totalAvailable = batches.reduce(
+      (sum, b) => sum + b.remainingAmount,
+      0,
+    );
 
     if (totalAvailable < amount) {
       throw new TRPCError({
@@ -202,7 +205,10 @@ export const deductCredits = async (
       ),
       columns: { remainingAmount: true },
     });
-    const newBalance = updatedBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
+    const newBalance = updatedBatches.reduce(
+      (sum, b) => sum + b.remainingAmount,
+      0,
+    );
 
     await tx
       .update(userExtended)
@@ -219,16 +225,6 @@ export const deductCredits = async (
       description,
     });
   });
-};
-
-// Get user credit balance (helper - returns denormalized balance)
-export const getUserCredits = async (userId: string): Promise<number> => {
-  const user = await db.query.userExtended.findFirst({
-    where: eq(userExtended.id, userId),
-    columns: { credits: true },
-  });
-
-  return user?.credits ?? 0;
 };
 
 // Add credits to user's balance with batch tracking
@@ -355,7 +351,10 @@ export const expireOldCredits = async (): Promise<number> => {
           ),
           columns: { remainingAmount: true },
         });
-        const newBalance = validBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
+        const newBalance = validBatches.reduce(
+          (sum, b) => sum + b.remainingAmount,
+          0,
+        );
 
         // Update user's denormalized balance
         await tx

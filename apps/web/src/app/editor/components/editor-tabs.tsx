@@ -1,14 +1,16 @@
 "use client";
 
-import { Code, Play } from "lucide-react";
+import { Code, Play, History, ExternalLink } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import {
   ArcadeTabs,
   ArcadeTabsList,
   ArcadeTabsTrigger,
   ArcadeTabsContent,
+  ArcadeButton,
 } from "@/components/arcade";
 import { StreamingCodeViewer } from "@/components/streaming-code-viewer";
+import { GenerationsHistory } from "./generations-history";
 
 export interface EditorTabsProps {
   promptContent: string;
@@ -17,6 +19,8 @@ export interface EditorTabsProps {
   isGenerating: boolean;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  promptId: string | null;
+  generatedGameId?: string | null;
 }
 
 export function EditorTabs({
@@ -26,6 +30,8 @@ export function EditorTabs({
   isGenerating,
   activeTab,
   onTabChange,
+  promptId,
+  generatedGameId,
 }: EditorTabsProps) {
   return (
     <ArcadeTabs
@@ -41,6 +47,10 @@ export function EditorTabs({
         <ArcadeTabsTrigger value="output">
           <Play className="h-4 w-4" />
           Output
+        </ArcadeTabsTrigger>
+        <ArcadeTabsTrigger value="history">
+          <History className="h-4 w-4" />
+          History
         </ArcadeTabsTrigger>
       </ArcadeTabsList>
 
@@ -67,12 +77,28 @@ export function EditorTabs({
 
       <ArcadeTabsContent value="output" className="flex-1 min-h-0 mt-0">
         {generatedCode ? (
-          <StreamingCodeViewer
-            code={generatedCode}
-            language="html"
-            isStreaming={isGenerating}
-            fileName="game.html"
-          />
+          <div className="h-full flex flex-col gap-2">
+            <div className="flex-1 min-h-0">
+              <StreamingCodeViewer
+                code={generatedCode}
+                language="html"
+                isStreaming={isGenerating}
+                fileName="game.html"
+              />
+            </div>
+            {generatedGameId && !isGenerating && (
+              <div className="shrink-0 flex justify-end">
+                <ArcadeButton
+                  variant="glow"
+                  size="sm"
+                  onClick={() => window.open(`/game/${generatedGameId}`, "_blank")}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Play Game
+                </ArcadeButton>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="h-full min-h-0 border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
             <p className="text-[var(--muted-foreground)] text-sm">
@@ -80,6 +106,10 @@ export function EditorTabs({
             </p>
           </div>
         )}
+      </ArcadeTabsContent>
+
+      <ArcadeTabsContent value="history" className="flex-1 min-h-0 mt-0">
+        <GenerationsHistory promptId={promptId} />
       </ArcadeTabsContent>
     </ArcadeTabs>
   );

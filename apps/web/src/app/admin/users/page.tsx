@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
   Search,
   ArrowUpDown,
   Shield,
   AlertTriangle,
+  Settings,
 } from "lucide-react";
 import {
   ArcadeCard,
@@ -46,8 +47,16 @@ export default function AdminUsersPage() {
     open: false,
     user: null,
   });
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean;
+    user: User | null;
+  }>({
+    open: false,
+    user: null,
+  });
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const queryClient = useQueryClient();
 
   // Fetch users
   const { data: users, isLoading } = useQuery({
@@ -79,6 +88,26 @@ export default function AdminUsersPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to suspend user");
+    },
+  });
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async (input: {
+      userId: string;
+      name?: string;
+      role?: "admin" | "moderator" | "participant" | "viewer";
+      credits?: number;
+    }) => {
+      return await trpcClient.admin.direct.updateUser.mutate(input);
+    },
+    onSuccess: () => {
+      toast.success("User updated successfully!");
+      setEditDialog({ open: false, user: null });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update user");
     },
   });
 
@@ -167,6 +196,52 @@ export default function AdminUsersPage() {
     return <Form className="space-y-4" />;
   };
 
+  const UserEditForm = () => {
+    const schema = z.object({
+      name: z.string().min(1).max(100),
+      role: z.enum(["admin", "moderator", "participant", "viewer"]),
+      credits: z.number().int().min(0),
+    });
+
+    const { Form } = useFormedible({
+      schema,
+      fields: [
+        { name: "name", type: "text", label: "Name" },
+        {
+          name: "role",
+          type: "select",
+          label: "Role",
+          options: [
+            { value: "admin", label: "Admin" },
+            { value: "moderator", label: "Moderator" },
+            { value: "participant", label: "Participant" },
+            { value: "viewer", label: "Viewer" },
+          ],
+        },
+        { name: "credits", type: "number", label: "Credits", min: 0 },
+      ],
+      formOptions: {
+        defaultValues: {
+          name: editDialog.user?.name ?? "",
+          role: editDialog.user?.role as "admin" | "moderator" | "participant" | "viewer",
+          credits: editDialog.user?.credits ?? 0,
+        },
+        onSubmit: async ({ value }) => {
+          if (editDialog.user) {
+            await updateUserMutation.mutateAsync({
+              userId: editDialog.user.id,
+              name: value.name,
+              role: value.role,
+              credits: value.credits,
+            });
+          }
+        },
+      },
+    });
+
+    return <Form className="space-y-4" />;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -218,7 +293,6 @@ export default function AdminUsersPage() {
                 <tr className="border-b border-[var(--border)]">
                   {[
                     { field: "name" as SortField, label: "Name" },
-                    { field: "email" as SortField, label: "Email" },
                     { field: "role" as SortField, label: "Role" },
                     { field: "credits" as SortField, label: "Credits" },
                   ].map((column) => (
@@ -246,7 +320,7 @@ export default function AdminUsersPage() {
                   <tr>
                     <EmptyState
                       variant="table"
-                      colSpan={6}
+                      colSpan={5}
                       message="No users found"
                     />
                   </tr>
@@ -297,15 +371,23 @@ export default function AdminUsersPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <ArcadeButton
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSuspendDialog({ open: true, user })}
-                          disabled={user.isSuspended || user.role === "admin"}
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                          Suspend
-                        </ArcadeButton>
+                        <div className="flex items-center justify-end gap-2">
+                          <ArcadeButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditDialog({ open: true, user })}
+                          >
+                            <Settings className="h-4 w-4" />
+                          </ArcadeButton>
+                          <ArcadeButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSuspendDialog({ open: true, user })}
+                            disabled={user.isSuspended || user.role === "admin"}
+                          >
+                            <AlertTriangle className="h-4 w-4" />
+                          </ArcadeButton>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -381,6 +463,23 @@ export default function AdminUsersPage() {
               )}
             </ArcadeButton>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog
+        open={editDialog.open}
+        onOpenChange={(open) => !open && setEditDialog({ open: false, user: null })}
+      >
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user profile for{" "}
+              <span className="font-medium">{editDialog.user?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {editDialog.user && <UserEditForm />}
         </DialogContent>
       </Dialog>
     </div>

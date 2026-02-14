@@ -40,21 +40,13 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
             type="button"
             className="w-full flex items-center gap-3 p-3 rounded-lg bg-[var(--muted)]/50 hover:bg-[var(--muted)] transition-colors cursor-pointer text-left"
             onClick={() => {
-              const target = `/play?gameId=${game.id}`;
+              const target = `/game/${game.id}`;
               window.location.href = target;
             }}
           >
-            {game.imageUrl ? (
-              <img
-                src={game.imageUrl}
-                alt={game.prompt.content.slice(0, 30)}
-                className="w-16 h-12 object-cover rounded"
-              />
-            ) : (
-              <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center">
-                <Gamepad2 className="h-6 w-6 text-[var(--primary-foreground)]" />
-              </div>
-            )}
+            <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center">
+              <Gamepad2 className="h-6 w-6 text-[var(--primary-foreground)]" />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate text-[var(--foreground)]">
                 {game.prompt.content.slice(0, 50)}...

@@ -1,8 +1,12 @@
 import { router, adminProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
-import { allowedLibraryPatterns, themeAllowedPatterns } from "@arcade-vibe/db/schema/library-patterns";
+import {
+  allowedLibraryPatterns,
+  themeAllowedPatterns,
+} from "@arcade-vibe/db/schema/library-patterns";
 import { themes } from "@arcade-vibe/db/schema/themes";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
+import { isUrlAllowed } from "@arcade-vibe/api/lib/script-sanitizer";
 import { z } from "zod";
 import { eq, desc, and, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -45,9 +49,7 @@ export const libraryPatternsRouter = router({
       const patterns = await db.query.allowedLibraryPatterns.findMany({
         where: and(
           eq(allowedLibraryPatterns.status, "active"),
-          or(
-            eq(allowedLibraryPatterns.isGlobal, true),
-          ),
+          or(eq(allowedLibraryPatterns.isGlobal, true)),
         ),
       });
 
@@ -58,15 +60,13 @@ export const libraryPatternsRouter = router({
         },
       });
 
-      const themePatternIds = new Set(
-        themePatterns.map((tp) => tp.patternId),
-      );
+      const themePatternIds = new Set(themePatterns.map((tp) => tp.patternId));
 
-      const additionalPatterns = await db.query.allowedLibraryPatterns.findMany({
-        where: and(
-          eq(allowedLibraryPatterns.status, "active"),
-        ),
-      });
+      const additionalPatterns = await db.query.allowedLibraryPatterns.findMany(
+        {
+          where: and(eq(allowedLibraryPatterns.status, "active")),
+        },
+      );
 
       const filteredAdditionalPatterns = additionalPatterns.filter((p) =>
         themePatternIds.has(p.id),
@@ -108,15 +108,18 @@ export const libraryPatternsRouter = router({
         });
       }
 
-      const newPattern = await db.insert(allowedLibraryPatterns).values({
-        name: input.name,
-        description: input.description,
-        urlPattern: input.urlPattern,
-        category: input.category,
-        isGlobal: input.isGlobal,
-        status: "active",
-        createdById: ctx.user.id,
-      }).returning();
+      const newPattern = await db
+        .insert(allowedLibraryPatterns)
+        .values({
+          name: input.name,
+          description: input.description,
+          urlPattern: input.urlPattern,
+          category: input.category,
+          isGlobal: input.isGlobal,
+          status: "active",
+          createdById: ctx.user.id,
+        })
+        .returning();
 
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
@@ -145,15 +148,17 @@ export const libraryPatternsRouter = router({
         name: z.string().min(1).max(100).optional(),
         description: z.string().max(500).optional(),
         urlPattern: z.string().min(1).optional(),
-        category: z.enum([
-          "game_engine",
-          "physics",
-          "audio",
-          "graphics",
-          "utility",
-          "analytics",
-          "other",
-        ]).optional(),
+        category: z
+          .enum([
+            "game_engine",
+            "physics",
+            "audio",
+            "graphics",
+            "utility",
+            "analytics",
+            "other",
+          ])
+          .optional(),
         isGlobal: z.boolean().optional(),
         status: z.enum(["active", "disabled"]).optional(),
       }),
@@ -172,8 +177,10 @@ export const libraryPatternsRouter = router({
 
       const updateData: Record<string, unknown> = {};
       if (input.name !== undefined) updateData.name = input.name;
-      if (input.description !== undefined) updateData.description = input.description;
-      if (input.urlPattern !== undefined) updateData.urlPattern = input.urlPattern;
+      if (input.description !== undefined)
+        updateData.description = input.description;
+      if (input.urlPattern !== undefined)
+        updateData.urlPattern = input.urlPattern;
       if (input.category !== undefined) updateData.category = input.category;
       if (input.isGlobal !== undefined) updateData.isGlobal = input.isGlobal;
       if (input.status !== undefined) updateData.status = input.status;
@@ -220,7 +227,9 @@ export const libraryPatternsRouter = router({
         });
       }
 
-      await db.delete(allowedLibraryPatterns).where(eq(allowedLibraryPatterns.id, input.id));
+      await db
+        .delete(allowedLibraryPatterns)
+        .where(eq(allowedLibraryPatterns.id, input.id));
 
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
@@ -277,12 +286,14 @@ export const libraryPatternsRouter = router({
         });
       }
 
-      const existingAssociation = await db.query.themeAllowedPatterns.findFirst({
-        where: and(
-          eq(themeAllowedPatterns.themeId, input.themeId),
-          eq(themeAllowedPatterns.patternId, input.patternId),
-        ),
-      });
+      const existingAssociation = await db.query.themeAllowedPatterns.findFirst(
+        {
+          where: and(
+            eq(themeAllowedPatterns.themeId, input.themeId),
+            eq(themeAllowedPatterns.patternId, input.patternId),
+          ),
+        },
+      );
 
       if (existingAssociation) {
         throw new TRPCError({
@@ -324,12 +335,14 @@ export const libraryPatternsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existingAssociation = await db.query.themeAllowedPatterns.findFirst({
-        where: and(
-          eq(themeAllowedPatterns.themeId, input.themeId),
-          eq(themeAllowedPatterns.patternId, input.patternId),
-        ),
-      });
+      const existingAssociation = await db.query.themeAllowedPatterns.findFirst(
+        {
+          where: and(
+            eq(themeAllowedPatterns.themeId, input.themeId),
+            eq(themeAllowedPatterns.patternId, input.patternId),
+          ),
+        },
+      );
 
       if (!existingAssociation) {
         throw new TRPCError({
@@ -348,10 +361,12 @@ export const libraryPatternsRouter = router({
 
       await db
         .delete(themeAllowedPatterns)
-        .where(and(
-          eq(themeAllowedPatterns.themeId, input.themeId),
-          eq(themeAllowedPatterns.patternId, input.patternId),
-        ));
+        .where(
+          and(
+            eq(themeAllowedPatterns.themeId, input.themeId),
+            eq(themeAllowedPatterns.patternId, input.patternId),
+          ),
+        );
 
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
@@ -384,25 +399,11 @@ export const libraryPatternsRouter = router({
         where: eq(allowedLibraryPatterns.status, "active"),
       });
 
-      for (const pattern of activePatterns) {
-        const patterns = pattern.urlPattern.split("\n").filter(Boolean);
-        for (const patternStr of patterns) {
-          try {
-            const regex = new RegExp(patternStr);
-            if (regex.test(input.url)) {
-              return {
-                allowed: true,
-                pattern: pattern,
-              };
-            }
-          } catch {
-            continue;
-          }
-        }
-      }
+      // Use the shared isUrlAllowed function
+      const allowed = isUrlAllowed(input.url, activePatterns);
 
       return {
-        allowed: false,
+        allowed,
       };
     }),
 });

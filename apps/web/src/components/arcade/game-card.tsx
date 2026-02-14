@@ -1,6 +1,6 @@
 import { useRouter } from "next/navigation";
 import { ArcadeBadge, ArcadeCard, ArcadeButton } from "@/components/arcade";
-import { Play, User, Clock, Star } from "lucide-react";
+import { Play, User, Clock, Star, Gamepad2 } from "lucide-react";
 import type { GameFromApi } from "@/lib/trpc-types";
 
 interface GameCardProps {
@@ -27,22 +27,14 @@ export function GameCard({ game }: GameCardProps) {
     <ArcadeCard className="group overflow-hidden transition-all duration-300">
       {/* Game Thumbnail / Placeholder */}
       <div className="relative aspect-video bg-[var(--muted)] flex items-center justify-center overflow-hidden">
-        {game.imageUrl ? (
-          <img
-            src={game.imageUrl}
-            alt={game.theme?.title || "Game"}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 mx-auto bg-[var(--primary)] rounded-2xl flex items-center justify-center shadow-lg">
-              <Play className="h-8 w-8 text-[var(--primary-foreground)] ml-1" />
-            </div>
-            <p className="text-xs text-[var(--muted-foreground)] font-medium">
-              AI Generated Game
-            </p>
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 mx-auto bg-[var(--primary)] rounded-2xl flex items-center justify-center shadow-lg">
+            <Gamepad2 className="h-8 w-8 text-[var(--primary-foreground)]" />
           </div>
-        )}
+          <p className="text-xs text-[var(--muted-foreground)] font-medium">
+            AI Generated Game
+          </p>
+        </div>
 
         {/* Difficulty Badge */}
         <div className="absolute top-3 right-3 shadow-lg">

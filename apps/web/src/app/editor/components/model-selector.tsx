@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useFormedible } from "@/hooks/use-formedible";
 import { ArcadeBadge } from "@/components/arcade";
-import { ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { ChevronDown, ChevronRight, Filter, Key } from "lucide-react";
 import { z } from "zod";
 
 export interface ModelConfig {
@@ -25,6 +25,15 @@ export interface TierCost {
   scoreMultiplier: number;
   displayOrder: number;
   colorClass: string | null;
+}
+
+export interface ApiKey {
+  id: string;
+  provider: string;
+  name: string;
+  isActive: boolean;
+  createdAt: Date;
+  lastUsedAt: Date | null;
 }
 
 export function toModelConfig(data: {
@@ -51,14 +60,17 @@ export interface ModelSelectorProps {
   modelMetadata: ModelMetadata;
   selectedModel: string;
   onSelectModel: (modelName: string | null) => void;
+  apiKeys?: ApiKey[];
+  selectedApiKeyId: string | null;
+  onSelectApiKey: (apiKeyId: string | null) => void;
   disabled?: boolean;
 }
 
-// Schema for the model selection form
 const modelSelectionSchema = z.object({
   tierFilter: z.array(z.string()).optional(),
   providerFilter: z.array(z.string()).optional(),
   selectedModel: z.string().min(1, "Please select a model"),
+  selectedApiKeyId: z.string().optional(),
 });
 
 type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
@@ -67,11 +79,13 @@ export function ModelSelector({
   modelMetadata,
   selectedModel,
   onSelectModel,
+  apiKeys = [],
+  selectedApiKeyId,
+  onSelectApiKey,
   disabled = false,
 }: ModelSelectorProps) {
   const [showFilters, setShowFilters] = useState(false);
 
-  // Tier options with credit costs from database - NO HARDCODED VALUES
   const tierOptions = useMemo(() => {
     return modelMetadata.tiers
       .filter((tier) => modelMetadata.tierCosts[tier] !== undefined)
@@ -81,7 +95,6 @@ export function ModelSelector({
       }));
   }, [modelMetadata]);
 
-  // Provider options derived from models
   const providerOptions = useMemo(() => {
     return modelMetadata.providers.map((p) => ({
       value: p,
@@ -89,7 +102,20 @@ export function ModelSelector({
     }));
   }, [modelMetadata]);
 
-  // Filtered model options based on selected filters
+  const apiKeyOptions = useMemo(() => {
+    const noneOption = { value: "", label: "Use platform credits" };
+    if (!apiKeys || apiKeys.length === 0) {
+      return [noneOption];
+    }
+    const keyOptions = apiKeys
+      .filter((k) => k.isActive)
+      .map((k) => ({
+        value: k.id,
+        label: `${k.name} (${k.provider})`,
+      }));
+    return [noneOption, ...keyOptions];
+  }, [apiKeys]);
+
   const getFilteredModels = useCallback(
     (values: ModelSelectionValues) => {
       let filtered = modelMetadata.models;
@@ -116,7 +142,6 @@ export function ModelSelector({
     [modelMetadata],
   );
 
-  // Find selected model data for display
   const selectedModelData = useMemo(() => {
     return modelMetadata.models.find((m) => m.modelName === selectedModel);
   }, [modelMetadata.models, selectedModel]);
@@ -126,10 +151,13 @@ export function ModelSelector({
     return modelMetadata.tierCosts[selectedModelData.tier] ?? 0;
   }, [selectedModelData, modelMetadata.tierCosts]);
 
+  const isByok = useMemo(() => {
+    return selectedApiKeyId !== null && selectedApiKeyId !== "";
+  }, [selectedApiKeyId]);
+
   const { Form } = useFormedible<ModelSelectionValues>({
     schema: modelSelectionSchema,
     fields: [
-      // Collapsible filter section
       {
         name: "tierFilter",
         type: "multiSelect",
@@ -152,7 +180,6 @@ export function ModelSelector({
           searchable: true,
         },
       },
-      // Model selection - always visible
       {
         name: "selectedModel",
         type: "combobox",
@@ -166,15 +193,26 @@ export function ModelSelector({
           allowClear: true,
         },
       },
+      {
+        name: "selectedApiKeyId",
+        type: "select",
+        label: "API Key (BYOK)",
+        options: apiKeyOptions,
+        selectConfig: {
+          placeholder: "Use platform credits",
+        },
+      },
     ],
     formOptions: {
       defaultValues: {
         tierFilter: [],
         providerFilter: [],
         selectedModel: selectedModel ?? "",
+        selectedApiKeyId: selectedApiKeyId ?? "",
       },
       onSubmit: async ({ value }) => {
         onSelectModel(value.selectedModel);
+        onSelectApiKey(value.selectedApiKeyId || null);
       },
     },
   });
@@ -183,12 +221,15 @@ export function ModelSelector({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Model</span>
-        {creditCost > 0 && (
-          <ArcadeBadge text={`${creditCost} credits`} variant="default" />
+        {isByok ? (
+          <ArcadeBadge text="BYOK" variant="neon" />
+        ) : selectedModel ? (
+          <ArcadeBadge text={`${creditCost} credits`} variant="neon" />
+        ) : (
+          <ArcadeBadge text="Select model" variant="neon" />
         )}
       </div>
 
-      {/* Collapsible Filters Toggle */}
       <button
         type="button"
         onClick={() => setShowFilters(!showFilters)}
@@ -209,10 +250,8 @@ export function ModelSelector({
         )}
       </button>
 
-      {/* Form with filters and model selection */}
       <Form className="space-y-4" />
 
-      {/* Selected model info */}
       {selectedModelData && (
         <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
           <span>Providers: {selectedModelData.providers.join(", ")}</span>
@@ -221,11 +260,17 @@ export function ModelSelector({
           </span>
         </div>
       )}
+
+      {apiKeys.length === 0 && (
+        <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+          <Key className="h-3 w-3" />
+          <span>Add API keys in Settings for BYOK</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// Get credit cost from database tier costs - NO HARDCODED DEFAULTS
 export function getCreditCostByTier(
   tier: string,
   tierCosts: Record<string, number>,
