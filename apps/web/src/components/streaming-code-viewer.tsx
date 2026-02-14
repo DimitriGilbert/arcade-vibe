@@ -54,7 +54,9 @@ export function StreamingCodeViewer({
   fileName,
   maxLines = 1000,
 }: StreamingCodeViewerProps) {
-  const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
+  const [theme, setTheme] = useState<"github-dark" | "github-light">(
+    "github-dark",
+  );
   const [highlightedCode, setHighlightedCode] = useState<string>("");
   const [isShikiReady, setIsShikiReady] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -127,14 +129,20 @@ export function StreamingCodeViewer({
 
   // Toggle theme
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "github-dark" ? "github-light" : "github-dark"));
+    setTheme((prev) =>
+      prev === "github-dark" ? "github-light" : "github-dark",
+    );
   }, []);
 
   // Calculate line count for scrolling limit
   const lineCount = code.split("\n").length;
-  const displayCode = lineCount > maxLines ? code.split("\n").slice(0, maxLines).join("\n") : code;
+  const displayCode =
+    lineCount > maxLines
+      ? code.split("\n").slice(0, maxLines).join("\n")
+      : code;
 
-  const progressClass = progress >= 100 ? "w-full" : progress === 0 ? "w-0" : "w-1/2";
+  const progressClass =
+    progress >= 100 ? "w-full" : progress === 0 ? "w-0" : "w-1/2";
 
   return (
     <div
@@ -159,9 +167,13 @@ export function StreamingCodeViewer({
           {isStreaming && progress < 100 && (
             <div className="flex items-center gap-2">
               <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
-                <div className={`h-full bg-[var(--primary)] transition-all duration-300 ${progressClass}`} />
+                <div
+                  className={`h-full bg-[var(--primary)] transition-all duration-300 ${progressClass}`}
+                />
               </div>
-              <span className="text-xs text-[var(--muted-foreground)]">Generating...</span>
+              <span className="text-xs text-[var(--muted-foreground)]">
+                Generating...
+              </span>
             </div>
           )}
 
@@ -211,18 +223,21 @@ export function StreamingCodeViewer({
       </div>
 
       {/* Code content */}
-      <div className="streaming-code-viewer__scroll overflow-x-auto overflow-y-auto max-h-[600px]">
-        <div className="inline-block min-w-full">
+      <div className="streaming-code-viewer__scroll overflow-x-auto overflow-y-auto max-h-[600px] overscroll-contain">
+        <div className="inline-block min-w-full p-4">
           {isShikiReady && highlightedCode ? (
             <div
-              className="p-4"
+              className="p-4 pl-6"
               // Shiki generates trusted, safe HTML for syntax highlighting
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
           ) : (
-            <div className="p-4 text-[var(--foreground)]/60">
+            <div className="p-4 pl-6 text-[var(--foreground)]/60">
               {code.split("\n").map((line, index) => (
-                <div key={`${index}-${line.slice(0, 10)}`} className="whitespace-pre">
+                <div
+                  key={`${index}-${line.slice(0, 10)}`}
+                  className="whitespace-pre"
+                >
                   {line || "\u00A0"}
                 </div>
               ))}

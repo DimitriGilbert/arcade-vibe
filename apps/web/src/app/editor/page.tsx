@@ -18,14 +18,14 @@ import {
   type ModelMetadata,
   type ApiKey,
   toModelConfig,
-} from "./components/model-selector";
+} from "../../components/editor/model-selector";
 import {
   VersionComparison,
   type PromptVersion,
-} from "./components/version-history";
-import { EditorSidebar } from "./components/editor-sidebar";
-import { VersionSelector } from "./components/version-selector";
-import { EditorTabs } from "./components/editor-tabs";
+} from "../../components/editor/version-history";
+import { EditorSidebar } from "../../components/editor/editor-sidebar";
+import { VersionSelector } from "../../components/editor/version-selector";
+import { EditorTabs } from "../../components/editor/editor-tabs";
 
 interface EditorPageProps {
   searchParams?: Promise<{
@@ -566,7 +566,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             {generatedGameId && !isGenerating && (
               <ArcadeButton
                 variant="glow"
-                onClick={() => window.open(`/game/${generatedGameId}`, "_blank")}
+                onClick={() =>
+                  window.open(`/game/${generatedGameId}`, "_blank")
+                }
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Play Game
