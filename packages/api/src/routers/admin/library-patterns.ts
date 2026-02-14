@@ -6,7 +6,6 @@ import {
 } from "@arcade-vibe/db/schema/library-patterns";
 import { themes } from "@arcade-vibe/db/schema/themes";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
-import { isUrlAllowed } from "@arcade-vibe/api/lib/script-sanitizer";
 import { z } from "zod";
 import { eq, desc, and, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -385,25 +384,6 @@ export const libraryPatternsRouter = router({
         success: true,
         themeId: input.themeId,
         patternId: input.patternId,
-      };
-    }),
-
-  validateUrl: publicProcedure
-    .input(
-      z.object({
-        url: z.string().url(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const activePatterns = await db.query.allowedLibraryPatterns.findMany({
-        where: eq(allowedLibraryPatterns.status, "active"),
-      });
-
-      // Use the shared isUrlAllowed function
-      const allowed = isUrlAllowed(input.url, activePatterns);
-
-      return {
-        allowed,
       };
     }),
 });
