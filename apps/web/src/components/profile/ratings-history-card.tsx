@@ -56,7 +56,7 @@ export function RatingsHistoryCard({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm text-[var(--foreground)]">
-                Game ID: {rating.gameId}
+                {rating.game?.name || `Game ${rating.gameId.slice(0, 8)}`}
               </p>
               {rating.feedback && (
                 <p className="text-sm text-[var(--muted-foreground)] mt-1">

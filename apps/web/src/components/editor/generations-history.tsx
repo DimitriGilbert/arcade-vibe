@@ -27,7 +27,11 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
 }
 
 export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
-  const { data: games, isLoading, error } = useQuery({
+  const {
+    data: games,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["games-by-prompt", promptId],
     queryFn: async () => {
       if (!promptId) return [];
@@ -92,7 +96,8 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
       <ul className="divide-y divide-[var(--border)]">
         {games.map((game: Game) => {
           const canSubmit = game.status === "completed" && !game.submittedAt;
-          const isSubmitting = submitMutation.isPending && submitMutation.variables === game.id;
+          const isSubmitting =
+            submitMutation.isPending && submitMutation.variables === game.id;
 
           return (
             <li
@@ -102,7 +107,7 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm text-[var(--foreground)] truncate">
-                    {game.modelName ?? "Unknown model"}
+                    {(game.name || game.modelName) ?? "Unknown model"}
                   </span>
                   <span className="text-xs text-[var(--muted-foreground)]">
                     {formatDate(game.createdAt)}

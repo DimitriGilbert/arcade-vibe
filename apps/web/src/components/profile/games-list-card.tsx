@@ -49,7 +49,7 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate text-[var(--foreground)]">
-                {game.prompt.content.slice(0, 50)}...
+                {game.name || game.theme?.title || "Untitled Game"}
               </p>
               <p className="text-xs text-[var(--muted-foreground)]">
                 {game.theme?.title || "No theme"} •{" "}

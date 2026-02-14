@@ -21,14 +21,22 @@ export async function generateMetadata({
     }
 
     return {
-      title: game.prompt?.content
-        ? `${game.prompt.content.slice(0, 50)}...`
-        : "Game",
-      description:
-        game.prompt?.content || `Play this AI-generated game on Arcade Vibe`,
+      title: game.name
+        ? game.name
+        : game.prompt?.content
+          ? `${game.prompt.content.slice(0, 50)}...`
+          : "Game",
+      description: game.name
+        ? `Play "${game.name}" on Arcade Vibe`
+        : game.prompt?.content || `Play this AI-generated game on Arcade Vibe`,
       openGraph: {
-        title: game.prompt?.content?.slice(0, 100) || "AI-Generated Game",
-        description: game.prompt?.content || "Play this AI-generated game",
+        title:
+          game.name ||
+          game.prompt?.content?.slice(0, 100) ||
+          "AI-Generated Game",
+        description: game.name
+          ? `Play "${game.name}" on Arcade Vibe`
+          : game.prompt?.content || "Play this AI-generated game",
       },
     };
   } catch {

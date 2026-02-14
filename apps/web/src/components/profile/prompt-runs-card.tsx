@@ -48,7 +48,8 @@ export function PromptRunsCard({ promptRuns, isLoading }: PromptRunsCardProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm text-[var(--foreground)]">
-                {game.prompt.content.slice(0, 60)}...
+                {game.name || game.prompt.content.slice(0, 60)}
+                {!game.name && game.prompt.content.length > 60 ? "..." : ""}
               </p>
               <p className="text-xs text-[var(--muted-foreground)] mt-1">
                 {game.theme?.title || "No theme"} •{" "}

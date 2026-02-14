@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { User as UserIcon, AlertCircle, Trophy, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, Trophy, Zap } from "lucide-react";
 import { ArcadeCard } from "@/components/arcade";
-import { StatsCard } from "./components/stats-card";
-import { PromptList } from "./components/prompt-list";
-import { ProfileHeader } from "./components/profile-header";
-import { GamesListCard } from "./components/games-list-card";
-import { RatingsHistoryCard } from "./components/ratings-history-card";
-import { PromptRunsCard } from "./components/prompt-runs-card";
+import { StatsCard } from "@/components/profile/stats-card";
+import { PromptList } from "@/components/profile/prompt-list";
+import { ProfileHeader } from "@/components/profile/profile-header";
+import { GamesListCard } from "@/components/profile/games-list-card";
+import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
+import { PromptRunsCard } from "@/components/profile/prompt-runs-card";
 import { useProfileData } from "@/hooks/use-profile-data";
-import type { UserProfile } from "@/lib/trpc-types";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
-import EmptyPlaceholder from "@/components/reusable/empty-placeholder";
 
 interface ProfilePageProps {
   params: Promise<{

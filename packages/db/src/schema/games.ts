@@ -19,6 +19,7 @@ export const games = pgTable(
   "games",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name"), // User-provided game name, optional
     promptId: uuid("prompt_id")
       .notNull()
       .references(() => prompts.id, { onDelete: "cascade" }),

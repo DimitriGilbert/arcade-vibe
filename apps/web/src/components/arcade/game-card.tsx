@@ -58,7 +58,7 @@ export function GameCard({ game }: GameCardProps) {
         {/* Theme Title */}
         <div className="mb-3">
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-[var(--primary)] transition-colors">
-            {game.theme?.title || "Untitled Game"}
+            {game.name || game.theme?.title || "Untitled Game"}
           </h3>
           <p className="text-sm text-[var(--muted-foreground)] line-clamp-2 mt-1">
             {prompt.content?.slice(0, 100)}

@@ -37,6 +37,7 @@ export interface GenerateGameOptions {
   apiKeyId?: string;
   creditReason?: string;
   requirePublicPrompt?: boolean;
+  name?: string; // User-provided game name, optional
 }
 
 export interface GenerateGameChunkEvent {
@@ -440,6 +441,7 @@ export async function generateGame(
       modelName: modelConfigEntry.modelName,
       tierCostId: tierCost.id,
       status: "generating",
+      name: options.name,
     })
     .returning();
 
@@ -517,7 +519,10 @@ export async function generateGame(
 
       // 9. Sanitize the generated code
       const extractedCode = extractCodeFromMarkdown(fullCode);
-      const sanitizationResult = sanitizeGameCode(extractedCode, allAllowedPatterns);
+      const sanitizationResult = sanitizeGameCode(
+        extractedCode,
+        allAllowedPatterns,
+      );
 
       if (sanitizationResult.blockedUrls.length > 0) {
         console.warn(

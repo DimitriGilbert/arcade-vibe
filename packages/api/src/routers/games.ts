@@ -434,6 +434,90 @@ export const gamesRouter = router({
     }),
 
   /**
+   * Update game details (name)
+   * User must be the prompt author
+   */
+  update: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        name: z.string().max(100).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      // Verify user is the prompt author
+      if (game.prompt.user?.id !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only update games for your own prompts",
+        });
+      }
+
+      // Build update object
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date(),
+      };
+
+      if (input.name !== undefined) {
+        updateData.name = input.name;
+      }
+
+      // Update game
+      const updated = await db
+        .update(games)
+        .set(updateData)
+        .where(eq(games.id, input.gameId))
+        .returning();
+
+      // Invalidate caches
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return {
+        success: true,
+        game: updated[0],
+      };
+    }),
+
+  /**
    * Hide a game (admin/moderator only)
    */
   hide: moderatorProcedure

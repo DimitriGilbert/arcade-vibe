@@ -233,7 +233,8 @@ export const ratingsRouter = router({
       }
 
       if (input.userId && input.userId !== ctx.user.id) {
-        const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+        const isAdmin =
+          ctx.user.role === "admin" || ctx.user.role === "moderator";
         if (!isAdmin) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -257,6 +258,7 @@ export const ratingsRouter = router({
           game: {
             columns: {
               id: true,
+              name: true,
               status: true,
               imageUrl: true,
             },

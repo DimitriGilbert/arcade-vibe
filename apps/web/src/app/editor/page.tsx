@@ -41,6 +41,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Core state
   const [promptContent, setPromptContent] = useState("");
+  const [gameName, setGameName] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(null);
@@ -268,6 +269,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         promptId,
         modelKey: selectedModel,
         apiKeyId: selectedApiKeyId ?? undefined,
+        name: gameName.trim() || undefined,
       });
 
       for await (const chunk of stream) {
@@ -288,6 +290,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     }
   }, [
     promptContent,
+    gameName,
     existingPrompt,
     selectedTheme,
     selectedModel,
@@ -523,57 +526,68 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           </div>
 
           {/* Action Bar */}
-          <div className="p-4 border-t border-[var(--border)] flex gap-2 shrink-0">
-            <ArcadeButton
-              onClick={handleSave}
-              disabled={
-                !promptContent.trim() ||
-                createPromptMutation.isPending ||
-                updatePromptMutation.isPending
-              }
-              className="flex-1"
-            >
-              {createPromptMutation.isPending ||
-              updatePromptMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  {isEditing ? "Update" : "Save"}
-                </>
-              )}
-            </ArcadeButton>
-            <ArcadeButton
-              onClick={handleGenerate}
-              disabled={isGenerating || !promptContent.trim()}
-              className="flex-1"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Generate
-                </>
-              )}
-            </ArcadeButton>
-            {generatedGameId && !isGenerating && (
+          <div className="p-4 border-t border-[var(--border)] space-y-3 shrink-0">
+            {/* Game Name Input */}
+            <input
+              type="text"
+              placeholder="Game name (optional)"
+              value={gameName}
+              onChange={(e) => setGameName(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent placeholder:text-[var(--muted-foreground)]"
+              maxLength={100}
+            />
+            <div className="flex gap-2">
               <ArcadeButton
-                variant="glow"
-                onClick={() =>
-                  window.open(`/game/${generatedGameId}`, "_blank")
+                onClick={handleSave}
+                disabled={
+                  !promptContent.trim() ||
+                  createPromptMutation.isPending ||
+                  updatePromptMutation.isPending
                 }
+                className="flex-1"
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Play Game
+                {createPromptMutation.isPending ||
+                updatePromptMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isEditing ? "Update" : "Save"}
+                  </>
+                )}
               </ArcadeButton>
-            )}
+              <ArcadeButton
+                onClick={handleGenerate}
+                disabled={isGenerating || !promptContent.trim()}
+                className="flex-1"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Generate
+                  </>
+                )}
+              </ArcadeButton>
+              {generatedGameId && !isGenerating && (
+                <ArcadeButton
+                  variant="glow"
+                  onClick={() =>
+                    window.open(`/game/${generatedGameId}`, "_blank")
+                  }
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Play Game
+                </ArcadeButton>
+              )}
+            </div>
           </div>
         </main>
       </div>
