@@ -58,8 +58,9 @@ export async function getProviderModel(
       const openrouter = createOpenRouter({
         apiKey,
         headers: {
-          "HTTP-Referer": process.env.OPENROUTER_APP_NAME ?? "Arcade Vibe",
-          "X-Title": process.env.OPENROUTER_APP_NAME ?? "Arcade Vibe",
+          "HTTP-Referer":
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
+          "X-Title": process.env.OPENROUTER_APP_NAME ?? "Arcade-Vibe",
         },
         ...(reasoningConfig?.enabled && {
           extraBody: {

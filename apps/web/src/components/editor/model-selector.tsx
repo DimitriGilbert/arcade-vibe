@@ -215,7 +215,7 @@ export function ModelSelector({
       {
         name: "reasoningEnabled",
         type: "switch",
-        label: "Extended Thinking",
+        label: "Reasoning",
         description: "Enable reasoning/thinking for supported models",
       },
       {

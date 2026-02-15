@@ -217,20 +217,6 @@ export function EditorTabs({
                   </ArcadeButton>
                 )}
               </div>
-              {generatedGameId && !isGenerating && (
-                <div className="shrink-0 flex justify-end">
-                  <ArcadeButton
-                    variant="glow"
-                    size="sm"
-                    onClick={() =>
-                      window.open(`/game/${generatedGameId}`, "_blank")
-                    }
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Play Game
-                  </ArcadeButton>
-                </div>
-              )}
             </>
           ) : isGenerating ? (
             <GeneratingSkeleton />

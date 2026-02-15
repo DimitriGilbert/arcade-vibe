@@ -20,7 +20,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_URL: z.url().optional(),
     // Initial credits given to new users on signup (default: 20)
     INITIAL_CREDITS: z.coerce.number().int().min(0).default(20),
-    OPENROUTER_APP_NAME: z.string().min(1).default("Arcade Vibe"),
+    OPENROUTER_APP_NAME: z.string().min(1).default("Arcade-Vibe"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

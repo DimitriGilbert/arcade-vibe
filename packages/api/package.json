@@ -11,7 +11,8 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "recalculate-scores": "tsx src/jobs/recalculate-scores.ts"
+    "recalculate-scores": "tsx src/jobs/recalculate-scores.ts",
+    "update-platform-stats": "tsx src/jobs/update-platform-stats.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.37",
