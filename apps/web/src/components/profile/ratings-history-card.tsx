@@ -23,7 +23,7 @@ export function RatingsHistoryCard({
   if (ratings.length === 0) {
     return (
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
-        <EmptyPlaceholder />
+        <EmptyPlaceholder message="No ratings yet" />
       </div>
     );
   }

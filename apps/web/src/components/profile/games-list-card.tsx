@@ -1,3 +1,4 @@
+import { useRouter } from "next/navigation";
 import { ArcadeBadge } from "@/components/arcade";
 import { Gamepad2 } from "lucide-react";
 import type { GameWithRanking } from "@/lib/trpc-types";
@@ -10,6 +11,8 @@ interface GamesListCardProps {
 }
 
 export function GamesListCard({ games, isLoading }: GamesListCardProps) {
+  const router = useRouter();
+
   if (isLoading) {
     return (
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
@@ -21,7 +24,7 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
   if (games.length === 0) {
     return (
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6">
-        <EmptyPlaceholder />
+        <EmptyPlaceholder message="No games created yet" />
       </div>
     );
   }
@@ -38,10 +41,13 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
           <button
             key={game.id}
             type="button"
-            className="w-full flex items-center gap-3 p-3 rounded-lg bg-[var(--muted)]/50 hover:bg-[var(--muted)] transition-colors cursor-pointer text-left"
-            onClick={() => {
-              const target = `/game/${game.id}`;
-              window.location.href = target;
+            className="w-full flex items-center gap-3 p-3 rounded-lg bg-[var(--muted)]/50 hover:bg-[var(--muted)] transition-colors cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
+            onClick={() => router.push(`/game/${game.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push(`/game/${game.id}`);
+              }
             }}
           >
             <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center">

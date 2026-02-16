@@ -4,8 +4,44 @@ import {
   creditBatches,
 } from "@arcade-vibe/db/schema/credits";
 import { userExtended } from "@arcade-vibe/db/schema/users";
-import { eq, and, gt, sql } from "drizzle-orm";
+import { eq, and, gt, sql, lte, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+
+// CB-009: Low balance warning thresholds
+export const LOW_BALANCE_THRESHOLDS = {
+  WARNING: 50,
+  CRITICAL: 20,
+} as const;
+
+// CB-008: Audit log interface for credit changes
+export interface CreditAuditLog {
+  userId: string;
+  action: "add" | "deduct" | "expire" | "adjust";
+  amount: number;
+  balanceAfter: number;
+  source: string;
+  sourceId?: string;
+  reason: string;
+  metadata?: Record<string, unknown>;
+  timestamp: Date;
+}
+
+// CB-008: Audit log storage (in-memory for now, could be persisted to DB)
+const auditLogs: CreditAuditLog[] = [];
+const MAX_AUDIT_LOGS = 10000;
+
+function logAudit(entry: CreditAuditLog): void {
+  auditLogs.push(entry);
+  if (auditLogs.length > MAX_AUDIT_LOGS) {
+    auditLogs.shift();
+  }
+  console.log("[AUDIT]", JSON.stringify(entry));
+}
+
+// CB-008: Get audit logs (for admin use)
+export function getCreditAuditLogs(limit = 100): CreditAuditLog[] {
+  return auditLogs.slice(-limit);
+}
 
 // Credit expiry constants
 export const CREDIT_EXPIRY = {
@@ -224,6 +260,18 @@ export const deductCredits = async (
       type: "deduction",
       description,
     });
+
+    // CB-008: Audit log for deduction
+    logAudit({
+      userId,
+      action: "deduct",
+      amount,
+      balanceAfter: newBalance,
+      source: "generation",
+      reason: description,
+      metadata: modelKey ? { modelKey } : undefined,
+      timestamp: new Date(),
+    });
   });
 };
 
@@ -305,6 +353,18 @@ export const addCreditsInternal = async (
       expiresAt,
     });
 
+    // CB-008: Audit log for credit addition
+    logAudit({
+      userId,
+      action: "add",
+      amount,
+      balanceAfter: balance,
+      source: type,
+      sourceId: sourceId,
+      reason: description ?? reason,
+      timestamp: new Date(),
+    });
+
     return balance;
   };
 
@@ -370,6 +430,18 @@ export const expireOldCredits = async (): Promise<number> => {
           .update(userExtended)
           .set({ credits: newBalance })
           .where(eq(userExtended.id, batch.userId));
+
+        // CB-008: Audit log for credit expiry
+        logAudit({
+          userId: batch.userId,
+          action: "expire",
+          amount: amountToExpire,
+          balanceAfter: newBalance,
+          source: batch.sourceType,
+          sourceId: batch.sourceId ?? undefined,
+          reason: `Credits expired (source: ${batch.sourceType})`,
+          timestamp: new Date(),
+        });
       });
 
       expiredCount += amountToExpire;
@@ -391,4 +463,189 @@ export const syncUserCreditBalance = async (
     .where(eq(userExtended.id, userId));
 
   return actualBalance;
+};
+
+// CB-007: Credit expiry notification types
+export interface CreditExpiryNotification {
+  userId: string;
+  batchId: string;
+  amount: number;
+  expiresAt: Date;
+  daysUntilExpiry: number;
+  notificationType: "warning_7_days" | "warning_3_days" | "warning_1_day" | "final_warning";
+}
+
+// CB-007: Get users with credits expiring soon (for cron job notifications)
+export const getExpiringCreditsForNotification = async (
+  daysThreshold: number,
+): Promise<CreditExpiryNotification[]> => {
+  const now = new Date();
+  const thresholdDate = new Date(now);
+  thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
+
+  const batches = await db.query.creditBatches.findMany({
+    where: and(
+      gt(creditBatches.remainingAmount, 0),
+      gt(creditBatches.expiresAt, now),
+      lte(creditBatches.expiresAt, thresholdDate),
+    ),
+    orderBy: (batches, { asc }) => [asc(batches.expiresAt)],
+  });
+
+  return batches.map((batch) => {
+    const daysUntilExpiry = Math.ceil(
+      (batch.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    let notificationType: CreditExpiryNotification["notificationType"];
+    if (daysUntilExpiry <= 1) {
+      notificationType = "final_warning";
+    } else if (daysUntilExpiry <= 3) {
+      notificationType = "warning_1_day";
+    } else if (daysUntilExpiry <= 5) {
+      notificationType = "warning_3_days";
+    } else {
+      notificationType = "warning_7_days";
+    }
+
+    return {
+      userId: batch.userId,
+      batchId: batch.id,
+      amount: batch.remainingAmount,
+      expiresAt: batch.expiresAt,
+      daysUntilExpiry,
+      notificationType,
+    };
+  });
+};
+
+// CB-007: Send expiry notification (placeholder - integrate with notification system)
+export const sendExpiryNotification = async (
+  notification: CreditExpiryNotification,
+): Promise<void> => {
+  console.log(
+    `[EXPIRY NOTICE] User ${notification.userId}: ${notification.amount} credits expire in ${notification.daysUntilExpiry} days (${notification.notificationType})`,
+  );
+};
+
+// CB-009: Low balance warning result
+export interface LowBalanceWarning {
+  isLow: boolean;
+  level: "none" | "warning" | "critical";
+  balance: number;
+  threshold: number;
+}
+
+// CB-009: Check if user has low credit balance
+export const checkLowBalance = async (
+  userId: string,
+): Promise<LowBalanceWarning> => {
+  const balance = await getValidCreditBalance(userId);
+
+  if (balance <= LOW_BALANCE_THRESHOLDS.CRITICAL) {
+    return {
+      isLow: true,
+      level: "critical",
+      balance,
+      threshold: LOW_BALANCE_THRESHOLDS.CRITICAL,
+    };
+  }
+
+  if (balance <= LOW_BALANCE_THRESHOLDS.WARNING) {
+    return {
+      isLow: true,
+      level: "warning",
+      balance,
+      threshold: LOW_BALANCE_THRESHOLDS.WARNING,
+    };
+  }
+
+  return {
+    isLow: false,
+    level: "none",
+    balance,
+    threshold: LOW_BALANCE_THRESHOLDS.WARNING,
+  };
+};
+
+// CB-020: Credit usage analytics
+export interface CreditUsageAnalytics {
+  userId: string;
+  totalCreditsUsed: number;
+  totalCreditsPurchased: number;
+  totalCreditsExpired: number;
+  usageByType: Record<string, number>;
+  usageByModel: Record<string, number>;
+  averageDailyUsage: number;
+  projectedDaysUntilEmpty: number | null;
+  periodStart: Date;
+  periodEnd: Date;
+}
+
+// CB-020: Get credit usage analytics for a user
+export const getCreditUsageAnalytics = async (
+  userId: string,
+  daysBack = 30,
+): Promise<CreditUsageAnalytics> => {
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setDate(periodStart.getDate() - daysBack);
+  periodStart.setHours(0, 0, 0, 0);
+
+  const transactions = await db.query.creditTransactions.findMany({
+    where: and(
+      eq(creditTransactions.userId, userId),
+      sql`${creditTransactions.createdAt} >= ${periodStart}`,
+    ),
+    orderBy: [desc(creditTransactions.createdAt)],
+  });
+
+  let totalCreditsUsed = 0;
+  let totalCreditsPurchased = 0;
+  let totalCreditsExpired = 0;
+  const usageByType: Record<string, number> = {};
+  const usageByModel: Record<string, number> = {};
+
+  for (const tx of transactions) {
+    if (tx.amount < 0) {
+      const absAmount = Math.abs(tx.amount);
+      totalCreditsUsed += absAmount;
+
+      const type = tx.type;
+      usageByType[type] = (usageByType[type] ?? 0) + absAmount;
+
+      if (tx.description) {
+        const modelMatch = tx.description.match(/\(([^)]+)\)$/);
+        if (modelMatch?.[1]) {
+          const model = modelMatch[1];
+          usageByModel[model] = (usageByModel[model] ?? 0) + absAmount;
+        }
+      }
+    } else if (tx.type === "expiry") {
+      totalCreditsExpired += Math.abs(tx.amount);
+    } else {
+      totalCreditsPurchased += tx.amount;
+    }
+  }
+
+  const averageDailyUsage = totalCreditsUsed / daysBack;
+  const currentBalance = await getValidCreditBalance(userId);
+
+  let projectedDaysUntilEmpty: number | null = null;
+  if (averageDailyUsage > 0) {
+    projectedDaysUntilEmpty = Math.floor(currentBalance / averageDailyUsage);
+  }
+
+  return {
+    userId,
+    totalCreditsUsed,
+    totalCreditsPurchased,
+    totalCreditsExpired,
+    usageByType,
+    usageByModel,
+    averageDailyUsage,
+    projectedDaysUntilEmpty,
+    periodStart,
+    periodEnd: now,
+  };
 };

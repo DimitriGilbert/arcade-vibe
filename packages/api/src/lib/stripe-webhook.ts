@@ -4,6 +4,7 @@ import {
   stripeWebhookEvents,
   subscriptionPlans,
   userSubscriptions,
+  userInvoices,
 } from "@arcade-vibe/db/schema/credits";
 import { eq, and, inArray } from "drizzle-orm";
 import { addCreditsInternal, deductCredits, type CreditSourceType } from "./credits";
@@ -215,6 +216,51 @@ export async function handleInvoicePaid(
       currentPeriodEnd: new Date(periodEnd * 1000),
     })
     .where(eq(userSubscriptions.id, userSubscription.id));
+
+  // CB-016: Store invoice PDF
+  if (invoice.id && userSubscription.userId) {
+    const invoicePdf = invoice.invoice_pdf ?? null;
+    const hostedInvoiceUrl = invoice.hosted_invoice_url ?? null;
+
+    try {
+      await executor.insert(userInvoices).values({
+        userId: userSubscription.userId,
+        subscriptionId: userSubscription.id,
+        stripeInvoiceId: invoice.id,
+        stripeSubscriptionId: subId,
+        amount: invoice.amount_paid ?? 0,
+        currency: invoice.currency ?? "usd",
+        status: invoice.status ?? "paid",
+        invoicePdf,
+        invoiceUrl: hostedInvoiceUrl,
+        hostedInvoiceUrl,
+        paidAt: invoice.status_transitions?.paid_at
+          ? new Date(invoice.status_transitions.paid_at * 1000)
+          : new Date(),
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("duplicate key") ||
+          error.message.includes("23505"))
+      ) {
+        await executor
+          .update(userInvoices)
+          .set({
+            invoicePdf,
+            invoiceUrl: hostedInvoiceUrl,
+            hostedInvoiceUrl,
+            status: invoice.status ?? "paid",
+            paidAt: invoice.status_transitions?.paid_at
+              ? new Date(invoice.status_transitions.paid_at * 1000)
+              : new Date(),
+          })
+          .where(eq(userInvoices.stripeInvoiceId, invoice.id));
+      } else {
+        throw error;
+      }
+    }
+  }
 }
 
 export async function handleSubscriptionUpdated(
@@ -242,6 +288,9 @@ export async function handleSubscriptionUpdated(
   const periodEnd =
     subscription.items?.data?.[0]?.current_period_end ??
     Math.floor(Date.now() / 1000) + 2592000;
+
+  // CB-012: Handle cancel_at_period_end status
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
 
   const newPlanId = subscription.items?.data?.[0]?.price?.metadata?.planId;
   if (newPlanId && newPlanId !== userSubscription.planId) {
@@ -286,6 +335,7 @@ export async function handleSubscriptionUpdated(
         status: subscription.status ?? "active",
         currentPeriodStart: new Date(periodStart * 1000),
         currentPeriodEnd: new Date(periodEnd * 1000),
+        cancelAtPeriodEnd,
       })
       .where(eq(userSubscriptions.id, userSubscription.id));
   } else {
@@ -295,8 +345,16 @@ export async function handleSubscriptionUpdated(
         status: subscription.status ?? "active",
         currentPeriodStart: new Date(periodStart * 1000),
         currentPeriodEnd: new Date(periodEnd * 1000),
+        cancelAtPeriodEnd,
       })
       .where(eq(userSubscriptions.id, userSubscription.id));
+  }
+
+  // CB-012: Log if subscription is set to cancel at period end
+  if (cancelAtPeriodEnd) {
+    console.log(
+      `Subscription ${subscriptionId} for user ${userSubscription.userId} is set to cancel at period end (${new Date(periodEnd * 1000).toISOString()})`,
+    );
   }
 }
 

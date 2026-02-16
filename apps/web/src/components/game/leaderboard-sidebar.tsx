@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
-import { Trophy, Medal, Clock } from "lucide-react";
+import { ArcadeCard, ArcadeBadge, ArcadeButton } from "@/components/arcade";
+import { Trophy, Medal, Clock, RefreshCw } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
 interface LeaderboardSidebarProps {
@@ -16,6 +16,7 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
     data: leaderboard,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["game-leaderboard", gameId],
     queryFn: async () => {
@@ -57,9 +58,18 @@ export function LeaderboardSidebar({ gameId }: LeaderboardSidebarProps) {
           </h3>
         </div>
         <div className="p-4">
-          <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+          <p className="text-sm text-[var(--muted-foreground)] text-center py-4 mb-4">
             Failed to load leaderboard
           </p>
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="w-full"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </ArcadeButton>
         </div>
       </ArcadeCard>
     );

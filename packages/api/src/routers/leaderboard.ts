@@ -1,7 +1,7 @@
 import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
-import { scores } from "@arcade-vibe/db/schema/scores";
-import { eq, desc } from "drizzle-orm";
+import { scores, scoreHistory } from "@arcade-vibe/db/schema/scores";
+import { eq, desc, lt, and } from "drizzle-orm";
 import { redis } from "../lib/redis";
 import z from "zod";
 
@@ -38,23 +38,34 @@ type LeaderboardEntry = {
   };
 };
 
+type PaginatedLeaderboardResult = {
+  entries: LeaderboardEntry[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
 export const leaderboardRouter = router({
   getTop: publicProcedure
     .input(
       z.object({
         themeId: z.string().uuid(),
-        limit: z.number().int().min(1).max(100).default(100),
+        limit: z.number().int().min(1).max(100).default(20),
+        cursor: z.string().uuid().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      const cacheKey = `lb:${input.themeId}`;
+    .query(async ({ input }): Promise<PaginatedLeaderboardResult> => {
+      const cacheKey = `lb:${input.themeId}:${input.cursor ?? "first"}:${input.limit}`;
       const cached = await redis.get(cacheKey);
 
       if (cached) {
-        const parsed = JSON.parse(cached) as { data: LeaderboardEntry[]; timestamp: number };
+        const parsed = JSON.parse(cached) as PaginatedLeaderboardResult & { timestamp: number };
         const cacheAge = (Date.now() - parsed.timestamp) / 1000;
         if (cacheAge < 300) {
-          return parsed.data;
+          return {
+            entries: parsed.entries,
+            nextCursor: parsed.nextCursor,
+            hasMore: parsed.hasMore,
+          };
         }
       }
 
@@ -63,10 +74,15 @@ export const leaderboardRouter = router({
         throw new Error("Database query not available");
       }
 
+      const fetchLimit = input.limit + 1;
+      const whereClause = input.cursor
+        ? and(eq(scores.themeId, input.themeId), lt(scores.id, input.cursor))
+        : eq(scores.themeId, input.themeId);
+
       const result = await scoresQuery.findMany({
-        where: eq(scores.themeId, input.themeId),
-        orderBy: desc(scores.score),
-        limit: input.limit,
+        where: whereClause,
+        orderBy: [desc(scores.score), desc(scores.id)],
+        limit: fetchLimit,
         with: {
           game: {
             with: {
@@ -85,13 +101,48 @@ export const leaderboardRouter = router({
         },
       });
 
+      const hasMore = result.length > input.limit;
+      const entries = hasMore ? result.slice(0, input.limit) : result;
+      const nextCursor = hasMore && entries.length > 0 ? entries[entries.length - 1]?.id ?? null : null;
+
+      const response: PaginatedLeaderboardResult = {
+        entries: entries as LeaderboardEntry[],
+        nextCursor,
+        hasMore,
+      };
+
       const cacheValue = JSON.stringify({
-        data: result,
+        ...response,
         timestamp: Date.now(),
       });
       await redis.setex(cacheKey, 300, cacheValue);
 
-      return result;
+      return response;
+    }),
+
+  getScoreHistory: publicProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(async ({ input }) => {
+      const history = await db.query.scoreHistory.findMany({
+        where: eq(scoreHistory.gameId, input.gameId),
+        orderBy: desc(scoreHistory.calculatedAt),
+        limit: input.limit,
+      });
+
+      return history.map((h) => ({
+        id: h.id,
+        previousScore: h.previousScore,
+        newScore: h.newScore,
+        previousComponents: h.previousComponents ? JSON.parse(h.previousComponents) : null,
+        newComponents: h.newComponents ? JSON.parse(h.newComponents) : null,
+        reason: h.reason,
+        calculatedAt: h.calculatedAt,
+      }));
     }),
 
   subscribe: publicProcedure
@@ -123,18 +174,17 @@ export const leaderboardRouter = router({
               }
             }
 
-            const cacheKey = `lb:${input.themeId}`;
+            const cacheKey = `lb:${input.themeId}:first:20`;
             const cachedWithMeta = await redis.get(cacheKey);
 
             if (cachedWithMeta) {
-              const parsed = JSON.parse(cachedWithMeta) as {
-                data: LeaderboardEntry[];
+              const parsed = JSON.parse(cachedWithMeta) as PaginatedLeaderboardResult & {
                 timestamp: number;
               };
               const cacheAge = (Date.now() - parsed.timestamp) / 1000;
 
               if (cacheAge < 300) {
-                yield parsed.data;
+                yield parsed;
                 consecutiveErrors = 0;
                 continue;
               }
@@ -147,8 +197,8 @@ export const leaderboardRouter = router({
 
             const topGames = await scoresQuery.findMany({
               where: eq(scores.themeId, input.themeId),
-              orderBy: desc(scores.score),
-              limit: 100,
+              orderBy: [desc(scores.score), desc(scores.id)],
+              limit: 20,
               with: {
                 game: {
                   with: {
@@ -167,12 +217,18 @@ export const leaderboardRouter = router({
               },
             });
 
+            const response: PaginatedLeaderboardResult = {
+              entries: topGames as LeaderboardEntry[],
+              nextCursor: null,
+              hasMore: false,
+            };
+
             const cacheValue = JSON.stringify({
-              data: topGames,
+              ...response,
               timestamp: Date.now(),
             });
             await redis.setex(cacheKey, 300, cacheValue);
-            yield topGames;
+            yield response;
             consecutiveErrors = 0;
           }
         } catch (error) {

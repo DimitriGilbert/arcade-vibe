@@ -85,6 +85,20 @@
       "when": 1771251537780,
       "tag": "0011_complete_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771261748655,
+      "tag": "0012_demonic_hex",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771274725866,
+      "tag": "0013_ancient_network",
+      "breakpoints": true
     }
   ]
 }

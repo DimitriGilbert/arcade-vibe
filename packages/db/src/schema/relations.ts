@@ -11,7 +11,7 @@ import {
 import { apiKeys, modelConfig, modelProviders } from "./models";
 import { themes } from "./themes";
 import { prompts } from "./prompts";
-import { games, gameScores } from "./games";
+import { games, gameScores, gameVersions } from "./games";
 import { promptRuns, ratings } from "./ratings";
 import { scores } from "./scores";
 import { platformStats, adminActions, scoringWeights } from "./platform";
@@ -163,6 +163,18 @@ export const gamesRelations = relations(games, ({ one, many }) => ({
   gameScores: many(gameScores),
   promptRuns: many(promptRuns),
   ratings: many(ratings),
+  versions: many(gameVersions),
+}));
+
+export const gameVersionsRelations = relations(gameVersions, ({ one }) => ({
+  game: one(games, {
+    fields: [gameVersions.gameId],
+    references: [games.id],
+  }),
+  changedByUser: one(user, {
+    fields: [gameVersions.changedBy],
+    references: [user.id],
+  }),
 }));
 
 export const gameScoresRelations = relations(gameScores, ({ one }) => ({

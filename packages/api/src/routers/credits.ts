@@ -9,6 +9,8 @@ import {
   addCreditsInternal,
   getCreditBreakdown,
   type CreditSourceType,
+  checkLowBalance,
+  getCreditUsageAnalytics,
 } from "../lib/credits";
 
 export const creditsRouter = router({
@@ -200,5 +202,35 @@ export const creditsRouter = router({
         success: true,
         newBalance,
       };
+    }),
+
+  // CB-009: Check if user has low credit balance
+  checkLowBalance: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not authenticated",
+      });
+    }
+
+    return checkLowBalance(ctx.user.id);
+  }),
+
+  // CB-020: Get credit usage analytics
+  getUsageAnalytics: protectedProcedure
+    .input(
+      z.object({
+        daysBack: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      return getCreditUsageAnalytics(ctx.user.id, input.daysBack);
     }),
 });

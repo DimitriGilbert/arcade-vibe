@@ -1,6 +1,9 @@
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { ArcadeBadge, ArcadeCard, ArcadeButton } from "@/components/arcade";
 import { Play, User, Clock, Star, Gamepad2 } from "lucide-react";
+import { trpcClient } from "@/utils/trpc";
 import type { GameFromApi } from "@/lib/trpc-types";
 
 interface GameCardProps {
@@ -9,7 +12,9 @@ interface GameCardProps {
 
 export function GameCard({ game }: GameCardProps) {
   const router = useRouter();
-  // Use tier from tierCost relation
+  const queryClient = useQueryClient();
+  const [isPrefetching, setIsPrefetching] = useState(false);
+  
   const tierLabel = game.tierCost?.slug ?? "unknown";
   const prompt = game.prompt as {
     id: string;
@@ -23,8 +28,38 @@ export function GameCard({ game }: GameCardProps) {
   const creatorName = prompt.user?.name || "Unknown";
   const createdAt = new Date(game.createdAt).toLocaleDateString();
 
+  const handlePrefetch = useCallback(async () => {
+    if (isPrefetching) return;
+    setIsPrefetching(true);
+    try {
+      await queryClient.prefetchQuery({
+        queryKey: ["game", game.id],
+        queryFn: () => trpcClient.games.getById.query({ id: game.id }),
+      });
+    } catch {
+      // Ignore prefetch errors
+    }
+  }, [game.id, queryClient, isPrefetching]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        router.push(`/game/${game.id}`);
+      }
+    },
+    [game.id, router],
+  );
+
   return (
-    <ArcadeCard className="group overflow-hidden transition-all duration-300">
+    <ArcadeCard
+      className="group overflow-hidden transition-all duration-300 cursor-pointer focus-within:ring-2 focus-within:ring-[var(--primary)] focus-within:ring-offset-2"
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      aria-label={`${game.name || "Untitled Game"} by ${creatorName}`}
+    >
       {/* Game Thumbnail / Placeholder */}
       <div className="relative aspect-video bg-[var(--muted)] flex items-center justify-center overflow-hidden">
         <div className="text-center space-y-2">

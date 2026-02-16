@@ -14,12 +14,14 @@ import { themes } from "./themes";
 import { user } from "./auth";
 import { tierCosts } from "./credits";
 
-// per PRD lines 1260-1278
+export const GAME_NAME_MAX_LENGTH = 100;
+export const GAME_NAME_MIN_LENGTH = 1;
+
 export const games = pgTable(
   "games",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    name: text("name"), // User-provided game name, optional
+    name: text("name"),
     promptId: uuid("prompt_id")
       .notNull()
       .references(() => prompts.id, { onDelete: "cascade" }),
@@ -47,6 +49,7 @@ export const games = pgTable(
       .notNull(),
     strudelCode: text("strudel_code"),
     mediaUrls: jsonb("media_urls").$type<Record<string, string>>(),
+    deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -62,6 +65,32 @@ export const games = pgTable(
       table.status,
     ),
     index("idx_games_status_hidden").on(table.status, table.hiddenAt),
+    index("idx_games_deleted_at").on(table.deletedAt),
+    index("idx_games_status_created").on(table.status, table.createdAt),
+  ],
+);
+
+export const gameVersions = pgTable(
+  "game_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    name: text("name"),
+    gameData: text("game_data"),
+    strudelCode: text("strudel_code"),
+    mediaUrls: jsonb("media_urls").$type<Record<string, string>>(),
+    changedBy: text("changed_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    changeReason: text("change_reason"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("game_versions_gameId_idx").on(table.gameId),
+    index("idx_game_versions_game_version").on(table.gameId, table.version),
   ],
 );
 

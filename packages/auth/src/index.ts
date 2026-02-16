@@ -6,21 +6,54 @@ import { env } from "@arcade-vibe/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 // Credit expiry constants (mirrored from api/lib/credits.ts to avoid circular dependency)
 const CREDIT_EXPIRY_FREE_TRIAL_DAYS = 30;
 
+/**
+ * @security Session Cookie Configuration
+ *
+ * Session cookies are configured with secure defaults:
+ * - httpOnly: true (prevents JavaScript access)
+ * - secure: true in production (HTTPS only)
+ * - sameSite: 'lax' (CSRF protection)
+ * - Session expiry: 7 days (604800 seconds)
+ *
+ * These settings are managed by Better Auth with the following defaults:
+ * - Cookie prefix: "better-auth"
+ * - Session token in "better-auth.session_token"
+ */
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: schema,
   }),
   trustedOrigins: [env.CORS_ORIGIN],
+  /**
+   * @security Password Policy
+   *
+   * Minimum password length: 12 characters
+   * Maximum password length: 128 characters
+   *
+   * Note: Password hashing is handled by Better Auth using bcrypt.
+   * Better Auth uses bcrypt with a cost factor of 10-12 rounds by default,
+   * which provides strong protection against brute-force attacks.
+   *
+   * @see https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/crypto/hash.ts
+   */
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 12,
     maxPasswordLength: 128,
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,
+    },
   },
   /**
    * @security Account Lockout Notice
@@ -100,4 +133,35 @@ export async function getUserRole(
   }
 
   return extended.role;
+}
+
+/**
+ * @security Session Invalidation
+ *
+ * When a user changes their password, all existing sessions should be invalidated
+ * to prevent session hijacking. This function deletes all sessions for a user
+ * except the current session.
+ *
+ * Usage: Call this function from a password change mutation after successful
+ * password update, before the new session is created.
+ *
+ * @param userId - The user ID whose sessions should be invalidated
+ * @param currentSessionToken - The current session token to preserve (optional)
+ */
+export async function invalidateUserSessions(
+  userId: string,
+  currentSessionToken?: string,
+): Promise<void> {
+  const { session } = schema;
+
+  if (currentSessionToken) {
+    await db.delete(session).where(
+      and(
+        eq(session.userId, userId),
+        sql`${session.token} != ${currentSessionToken}`,
+      ),
+    );
+  } else {
+    await db.delete(session).where(eq(session.userId, userId));
+  }
 }

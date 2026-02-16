@@ -303,7 +303,7 @@ function MonthlyChallengeSection() {
     enabled: !!currentTheme?.id,
   });
 
-  const leaderboard = leaderboardData ?? [];
+  const leaderboard = leaderboardData?.entries ?? [];
 
   const themeTitle = currentTheme?.title ?? "No Active Theme";
   const themeDescription =

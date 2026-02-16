@@ -200,17 +200,16 @@ export async function GET(
     .replace("__GAME_CODE__", game.gameData);
 
   const cspDirectives = [
-    "default-src 'self'",
-    "script-src 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https:",
-    "media-src 'self' blob: data:",
+    "default-src *",
+    "script-src * 'unsafe-inline' 'unsafe-eval'",
+    "style-src * 'unsafe-inline'",
+    "img-src * data: blob:",
+    "font-src * data:",
+    "connect-src *",
+    "media-src * blob: data:",
     "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
+    "base-uri *",
+    "form-action *",
   ].join("; ");
 
   return new NextResponse(gameHtml, {
@@ -222,8 +221,6 @@ export async function GET(
       Expires: "0",
       "Content-Security-Policy": cspDirectives,
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "X-XSS-Protection": "1; mode=block",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     },
   });

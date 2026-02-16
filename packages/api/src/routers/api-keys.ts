@@ -119,6 +119,45 @@ export const apiKeysRouter = router({
       };
     }),
 
+  rotateKey: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        newApiKey: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const key = await db.query.apiKeys.findFirst({
+        where: and(eq(apiKeys.id, input.id), eq(apiKeys.userId, ctx.user.id)),
+      });
+
+      if (!key) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "API key not found",
+        });
+      }
+
+      const { encrypted, iv } = encryptApiKey(input.newApiKey);
+      const keyHash = JSON.stringify({ encrypted, iv });
+
+      const updatedKey = await db
+        .update(apiKeys)
+        .set({
+          keyHash,
+          lastUsedAt: null,
+        })
+        .where(eq(apiKeys.id, input.id))
+        .returning();
+
+      return {
+        success: true,
+        keyId: updatedKey[0]?.id,
+        maskedKey: maskApiKey(input.newApiKey),
+      };
+    }),
+
   testKey: protectedProcedure
     .input(
       z.object({

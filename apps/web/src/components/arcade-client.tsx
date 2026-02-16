@@ -105,24 +105,20 @@ export default function ArcadePage() {
     },
   });
 
-  // Get current theme ID for queries
-  const getCurrentThemeId = useCallback(async (): Promise<string | null> => {
+  // Get current theme ID for queries - use the already-loaded themes
+  const getCurrentThemeId = useCallback((): string | null => {
     if (selectedThemeId && selectedThemeId !== "current") {
       return selectedThemeId;
     }
-    try {
-      const currentTheme = await trpcClient.themes.getCurrent.query();
-      return currentTheme.id;
-    } catch {
-      return null;
-    }
-  }, [selectedThemeId]);
+    const activeTheme = themes?.find((t) => t.status === "active");
+    return activeTheme?.id ?? null;
+  }, [selectedThemeId, themes]);
 
   // Fetch initial games for the selected theme
   const { isLoading: gamesLoading, refetch: refetchGames } = useQuery({
     queryKey: ["games-initial", selectedThemeId, themeStatus],
     queryFn: async () => {
-      const themeId = await getCurrentThemeId();
+      const themeId = getCurrentThemeId();
       if (!themeId) {
         setAllGames([]);
         setHasMore(false);
@@ -153,7 +149,7 @@ export default function ArcadePage() {
   const loadMoreGames = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
 
-    const themeId = await getCurrentThemeId();
+    const themeId = getCurrentThemeId();
     if (!themeId) return;
 
     setIsLoadingMore(true);
@@ -179,8 +175,8 @@ export default function ArcadePage() {
   const { data: leaderboardData } = useQuery({
     queryKey: ["leaderboard", selectedThemeId],
     queryFn: async () => {
-      const themeId = await getCurrentThemeId();
-      if (!themeId) return [];
+      const themeId = getCurrentThemeId();
+      if (!themeId) return { entries: [], nextCursor: null, hasMore: false };
       return await trpcClient.leaderboard.getTop.query({
         themeId,
         limit: 100,
@@ -189,17 +185,19 @@ export default function ArcadePage() {
     enabled: !!themes,
   });
 
+  const leaderboard = leaderboardData?.entries ?? [];
+
   // Create score map from leaderboard data
   const scoreMap = useMemo(() => {
-    if (!leaderboardData) return new Map<string, number>();
+    if (!leaderboard.length) return new Map<string, number>();
     const map = new Map<string, number>();
-    leaderboardData.forEach((entry) => {
+    leaderboard.forEach((entry) => {
       if (entry.game?.id) {
         map.set(entry.game.id, Number(entry.finalScore));
       }
     });
     return map;
-  }, [leaderboardData]);
+  }, [leaderboard]);
 
   // Filter games based on search query and filter options
   const filteredGames = useMemo(() => {

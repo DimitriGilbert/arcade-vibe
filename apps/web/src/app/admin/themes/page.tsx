@@ -522,6 +522,7 @@ export default function AdminThemesPage() {
               endDate: null,
               requirements: null,
               systemPrompt: "",
+              mediaConfig: null,
               allowedLibraryPatterns: [],
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),

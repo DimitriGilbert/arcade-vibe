@@ -140,6 +140,7 @@ export const userSubscriptions = pgTable(
     status: text("status").notNull(),
     currentPeriodStart: timestamp("current_period_start").notNull(),
     currentPeriodEnd: timestamp("current_period_end").notNull(),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -149,5 +150,32 @@ export const userSubscriptions = pgTable(
   (table) => [
     index("user_subscriptions_userId_idx").on(table.userId),
     index("user_subscriptions_planId_idx").on(table.planId),
+  ],
+);
+
+// CB-016: User invoices table to store invoice PDF URLs
+export const userInvoices = pgTable(
+  "user_invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id")
+      .references(() => userSubscriptions.id, { onDelete: "set null" }),
+    stripeInvoiceId: text("stripe_invoice_id").notNull().unique(),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("usd"),
+    status: text("status").notNull(),
+    invoicePdf: text("invoice_pdf"),
+    invoiceUrl: text("invoice_url"),
+    hostedInvoiceUrl: text("hosted_invoice_url"),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_invoices_userId_idx").on(table.userId),
+    index("user_invoices_stripeInvoiceId_idx").on(table.stripeInvoiceId),
   ],
 );

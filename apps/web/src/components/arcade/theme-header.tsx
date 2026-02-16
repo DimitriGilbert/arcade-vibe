@@ -127,7 +127,13 @@ export function ThemeHeader({
                     key={theme.id}
                     type="button"
                     onClick={() => onThemeSelect(theme.id)}
-                    className={`text-left p-4 rounded-xl border transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onThemeSelect(theme.id);
+                      }
+                    }}
+                    className={`text-left p-4 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 ${
                       selectedThemeId === theme.id
                         ? "border-[var(--primary)] bg-[var(--muted)]"
                         : "border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/40"

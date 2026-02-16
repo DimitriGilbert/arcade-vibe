@@ -45,6 +45,7 @@ export const themesRouter = router({
         visibility: currentTheme.visibility,
         startDate: currentTheme.startDate,
         endDate: currentTheme.endDate,
+        mediaConfig: currentTheme.mediaConfig,
         createdAt: currentTheme.createdAt,
         updatedAt: currentTheme.updatedAt,
       };
@@ -69,6 +70,7 @@ export const themesRouter = router({
       visibility: freeTheme.visibility,
       startDate: freeTheme.startDate,
       endDate: freeTheme.endDate,
+      mediaConfig: freeTheme.mediaConfig,
       createdAt: freeTheme.createdAt,
       updatedAt: freeTheme.updatedAt,
     };
@@ -102,6 +104,7 @@ export const themesRouter = router({
         startDate: theme.startDate,
         endDate: theme.endDate,
         systemPrompt: theme.systemPrompt,
+        mediaConfig: theme.mediaConfig,
         createdAt: theme.createdAt,
         updatedAt: theme.updatedAt,
         allowedLibraryPatterns: allowedPatterns.map((tp) => ({

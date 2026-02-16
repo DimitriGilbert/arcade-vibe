@@ -2,8 +2,9 @@ import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { themes } from "@arcade-vibe/db/schema/themes";
+import { games } from "@arcade-vibe/db/schema/games";
 import { z } from "zod";
-import { eq, desc, asc, or, and, isNull } from "drizzle-orm";
+import { eq, desc, asc, or, and, isNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   getTokenCount,
@@ -362,4 +363,60 @@ export const promptsRouter = router({
 
     return publicPrompts;
   }),
+
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const prompt = await promptsQuery.findFirst({
+        where: eq(prompts.id, input.id),
+      });
+
+      if (!prompt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Prompt not found",
+        });
+      }
+
+      if (prompt.authorId !== ctx.user?.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only delete your own prompts",
+        });
+      }
+
+      const [gamesCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(games)
+        .where(and(
+          eq(games.promptId, input.id),
+          isNull(games.deletedAt),
+        ));
+
+      if ((gamesCount?.count ?? 0) > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete prompt with associated games. Delete the games first.",
+        });
+      }
+
+      await db.delete(prompts).where(eq(prompts.id, input.id));
+
+      return {
+        success: true,
+        promptId: input.id,
+      };
+    }),
 });

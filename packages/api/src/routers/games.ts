@@ -5,8 +5,10 @@ import {
   moderatorProcedure,
 } from "../index";
 import { db } from "@arcade-vibe/db";
-import { games } from "@arcade-vibe/db/schema/games";
-import { eq, desc, and } from "drizzle-orm";
+import { games, gameVersions, GAME_NAME_MAX_LENGTH, GAME_NAME_MIN_LENGTH } from "@arcade-vibe/db/schema/games";
+import { ratings } from "@arcade-vibe/db/schema/ratings";
+import { gameScores } from "@arcade-vibe/db/schema/games";
+import { eq, desc, and, lt, isNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
 import {
@@ -16,6 +18,10 @@ import {
 import { cacheGet, cacheSet } from "../lib/redis";
 import { redis } from "../lib/redis";
 import z from "zod";
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+const ABANDONED_GAME_THRESHOLD_DAYS = 7;
 
 /**
  * @security SDK_TEMPLATE - Sandboxed iframe HTML template
@@ -232,7 +238,7 @@ export const gamesRouter = router({
     .input(
       z.object({
         promptId: z.string().uuid(),
-        limit: z.number().int().min(1).max(100).default(50),
+        limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         offset: z.number().int().min(0).default(0),
       }),
     )
@@ -290,8 +296,8 @@ export const gamesRouter = router({
       z.object({
         themeId: z.string().uuid(),
         includeSubmitted: z.boolean().default(true),
-        limit: z.number().int().min(1).max(100).default(20),
-        cursor: z.string().uuid().optional(), // Cursor for pagination (game ID)
+        limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+        cursor: z.string().uuid().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -308,7 +314,6 @@ export const gamesRouter = router({
         eq(games.isHidden, false),
       ];
 
-      // Only include submitted games if requested
       if (input.includeSubmitted) {
         whereConditions.push(eq(games.isSubmitted, true));
       }
@@ -504,7 +509,7 @@ export const gamesRouter = router({
     .input(
       z.object({
         gameId: z.string().uuid(),
-        name: z.string().max(100).optional(),
+        name: z.string().min(GAME_NAME_MIN_LENGTH).max(GAME_NAME_MAX_LENGTH).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -524,7 +529,7 @@ export const gamesRouter = router({
       }
 
       const game = await gamesQuery.findFirst({
-        where: eq(games.id, input.gameId),
+        where: and(eq(games.id, input.gameId), isNull(games.deletedAt)),
         with: {
           prompt: {
             with: {
@@ -545,7 +550,6 @@ export const gamesRouter = router({
         });
       }
 
-      // Verify user is the prompt author
       if (game.prompt.user?.id !== ctx.user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -553,7 +557,6 @@ export const gamesRouter = router({
         });
       }
 
-      // Build update object
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
@@ -562,21 +565,44 @@ export const gamesRouter = router({
         updateData.name = input.name;
       }
 
-      // Update game
-      const updated = await db
-        .update(games)
-        .set(updateData)
-        .where(eq(games.id, input.gameId))
-        .returning();
+      const currentVersion = await db
+        .select({ version: gameVersions.version })
+        .from(gameVersions)
+        .where(eq(gameVersions.gameId, input.gameId))
+        .orderBy(desc(gameVersions.version))
+        .limit(1);
 
-      // Invalidate caches
+      const nextVersion = (currentVersion[0]?.version ?? 0) + 1;
+
+      const updated = await db.transaction(async (tx) => {
+        await tx.insert(gameVersions).values({
+          gameId: input.gameId,
+          version: nextVersion,
+          name: game.name,
+          gameData: game.gameData,
+          strudelCode: game.strudelCode,
+          mediaUrls: game.mediaUrls,
+          changedBy: ctx.user.id,
+          changeReason: "User update",
+        });
+
+        const [updatedGame] = await tx
+          .update(games)
+          .set(updateData)
+          .where(eq(games.id, input.gameId))
+          .returning();
+
+        return updatedGame;
+      });
+
       await cacheDeletePattern(`games:theme:*`);
       await cacheDeletePattern(`games:prompt:*`);
       await cacheDelete(`game:${input.gameId}`);
 
       return {
         success: true,
-        game: updated[0],
+        game: updated,
+        version: nextVersion,
       };
     }),
 
@@ -824,6 +850,226 @@ export const gamesRouter = router({
         gameId: game.id,
         sessionToken,
       };
+    }),
+
+  softDelete: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: and(eq(games.id, input.gameId), isNull(games.deletedAt)),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found or already deleted",
+        });
+      }
+
+      const isAuthor = game.prompt.user?.id === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+
+      if (!isAuthor && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only delete your own games",
+        });
+      }
+
+      const [existingRatings] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ratings)
+        .where(eq(ratings.gameId, input.gameId));
+
+      const [existingScores] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(gameScores)
+        .where(eq(gameScores.gameId, input.gameId));
+
+      const hasDependencies = 
+        (existingRatings?.count ?? 0) > 0 || 
+        (existingScores?.count ?? 0) > 0;
+
+      if (hasDependencies && game.isSubmitted) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete a submitted game with ratings or scores. Contact support.",
+        });
+      }
+
+      const updated = await db
+        .update(games)
+        .set({
+          deletedAt: new Date(),
+          isHidden: true,
+          hiddenReason: "User deleted",
+        })
+        .where(eq(games.id, input.gameId))
+        .returning();
+
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return {
+        success: true,
+        gameId: updated[0]?.id,
+        deletedAt: updated[0]?.deletedAt,
+      };
+    }),
+
+  cleanupAbandoned: moderatorProcedure
+    .input(
+      z.object({
+        dryRun: z.boolean().default(true),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const thresholdDate = new Date();
+      thresholdDate.setDate(thresholdDate.getDate() - ABANDONED_GAME_THRESHOLD_DAYS);
+
+      const abandonedGames = await db.query.games.findMany({
+        where: and(
+          sql`${games.status} IN ('generating', 'failed')`,
+          lt(games.createdAt, thresholdDate),
+          isNull(games.deletedAt),
+        ),
+        columns: {
+          id: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+
+      if (input.dryRun) {
+        return {
+          dryRun: true,
+          count: abandonedGames.length,
+          games: abandonedGames,
+        };
+      }
+
+      if (abandonedGames.length === 0) {
+        return {
+          dryRun: false,
+          count: 0,
+          games: [],
+        };
+      }
+
+      const gameIds = abandonedGames.map((g) => g.id);
+
+      await db
+        .update(games)
+        .set({
+          deletedAt: new Date(),
+          isHidden: true,
+          hiddenReason: "Auto-cleanup: abandoned game",
+        })
+        .where(sql`${games.id} IN ${gameIds}`);
+
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+
+      return {
+        dryRun: false,
+        count: abandonedGames.length,
+        games: abandonedGames,
+      };
+    }),
+
+  getVersionHistory: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        limit: z.number().int().min(1).max(50).default(20),
+        offset: z.number().int().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const game = await db.query.games.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      const isPublic = game.status === "completed" && !game.isHidden;
+      const isAuthor = ctx.user.id === game.prompt.user?.id;
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+
+      if (!isPublic && !isAuthor && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to view this game's history",
+        });
+      }
+
+      const versions = await db.query.gameVersions.findMany({
+        where: eq(gameVersions.gameId, input.gameId),
+        orderBy: [desc(gameVersions.version)],
+        limit: input.limit,
+        offset: input.offset,
+        with: {
+          changedByUser: {
+            columns: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      });
+
+      return versions;
     }),
 
   exportPortable: protectedProcedure

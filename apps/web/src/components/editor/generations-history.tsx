@@ -51,6 +51,7 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
       toast.success("Game submitted successfully!");
       void queryClient.invalidateQueries({ queryKey: ["games", "prompt"] });
       void queryClient.invalidateQueries({ queryKey: ["games", "user"] });
+      void queryClient.invalidateQueries({ queryKey: ["games-initial"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to submit game");
