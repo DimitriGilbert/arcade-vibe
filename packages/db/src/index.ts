@@ -5,6 +5,9 @@ import * as schema from "./schema";
 
 export const db = drizzle(env.DATABASE_URL, { schema });
 
+export type DbClient = typeof db;
+export type DbTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+
 // Re-export schema for direct access
 export { schema };
 

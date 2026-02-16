@@ -20,7 +20,9 @@ export interface GamePlayerProps {
 
   /**
    * How to inject the session token
-   * @default "url"
+   * @default "postMessage"
+   * @deprecated "url" method is deprecated due to security concerns (token exposed in URL).
+   *             Use "postMessage" instead. Will be removed in a future version.
    */
   tokenInjectionMethod?: "url" | "postMessage";
 
@@ -135,7 +137,7 @@ class GameErrorBoundary extends React.Component<
 export function GamePlayer({
   gameUrl,
   sessionToken,
-  tokenInjectionMethod = "url",
+  tokenInjectionMethod = "postMessage",
   tokenParamName = "sessionToken",
   gameId,
   className,
@@ -145,6 +147,14 @@ export function GamePlayer({
   onLoad,
   onError,
 }: GamePlayerProps): React.ReactNode {
+  if (tokenInjectionMethod === "url") {
+    console.warn(
+      "[GamePlayer] tokenInjectionMethod='url' is deprecated due to security concerns. " +
+        "The token will be exposed in the URL. Use 'postMessage' instead. " +
+        "This method will be removed in a future version."
+    );
+  }
+
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [iframeError, setIframeError] = useState<Error | null>(null);

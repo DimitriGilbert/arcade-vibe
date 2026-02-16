@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, integer, index, timestamp } from "drizzle-orm/pg-core";
 import { userRoleEnum } from "./enums";
 import { user } from "./auth";
 
@@ -19,6 +19,7 @@ export const userExtended = pgTable(
     credits: integer("credits").notNull().default(0),
     isSuspended: boolean("is_suspended").notNull().default(false),
     suspensionReason: text("suspension_reason"),
+    suspendedUntil: timestamp("suspended_until"),
   },
   (table) => [index("idx_users_suspended").on(table.isSuspended)],
 );

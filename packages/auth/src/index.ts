@@ -22,6 +22,21 @@ export const auth = betterAuth({
     minPasswordLength: 12,
     maxPasswordLength: 128,
   },
+  /**
+   * @security Account Lockout Notice
+   *
+   * Account lockout protection is implemented at the API layer via rate limiting
+   * middleware (see packages/api/src/middleware/rate-limit.ts).
+   *
+   * For additional security, consider implementing:
+   * - Failed login attempt tracking in the database
+   * - Progressive delays after failed attempts
+   * - Account suspension after N failed attempts
+   * - Email notification on lockout
+   *
+   * Better Auth does not provide built-in account lockout. This would require
+   * custom implementation via database hooks or middleware.
+   */
   plugins: [nextCookies()],
   databaseHooks: {
     user: {
@@ -29,30 +44,31 @@ export const auth = betterAuth({
         after: async (user) => {
           const initialCredits = env.INITIAL_CREDITS;
 
-          // Create user_extended record with 0 credits (will be updated by batch)
-          await db
-            .insert(userExtended)
-            .values({
-              id: user.id,
-              role: "participant",
-              reputation: 0,
-              credits: initialCredits, // Denormalized balance for quick display
-              isSuspended: false,
-            })
-            .onConflictDoNothing();
-
           // Create initial credit batch with free_trial type (30-day expiry)
           const expiresAt = new Date();
           expiresAt.setDate(
             expiresAt.getDate() + CREDIT_EXPIRY_FREE_TRIAL_DAYS,
           );
 
-          await db.insert(creditBatches).values({
-            userId: user.id,
-            amount: initialCredits,
-            remainingAmount: initialCredits,
-            sourceType: "free_trial",
-            expiresAt,
+          // CB-006: Wrap in transaction for atomicity
+          await db.transaction(async (tx) => {
+            // Create user_extended record with initial credits
+            await tx.insert(userExtended).values({
+              id: user.id,
+              role: "participant",
+              reputation: 0,
+              credits: initialCredits,
+              isSuspended: false,
+            });
+
+            // Create initial credit batch
+            await tx.insert(creditBatches).values({
+              userId: user.id,
+              amount: initialCredits,
+              remainingAmount: initialCredits,
+              sourceType: "free_trial",
+              expiresAt,
+            });
           });
         },
       },
@@ -61,6 +77,14 @@ export const auth = betterAuth({
 });
 
 // Helper to get user role from userExtended table
+/**
+ * Get user role from userExtended table
+ *
+ * @throws Error if user_extended record does not exist
+ * @security Returning a default role for missing records would be a security risk
+ *           as it could grant unintended permissions. A missing record indicates
+ *           a data integrity issue that should be surfaced.
+ */
 export async function getUserRole(
   userId: string,
 ): Promise<"admin" | "moderator" | "participant" | "viewer"> {
@@ -68,5 +92,12 @@ export async function getUserRole(
     where: eq(userExtended.id, userId),
     columns: { role: true },
   });
-  return extended?.role ?? "participant";
+
+  if (!extended) {
+    throw new Error(
+      `User extended record not found for user ${userId}. This indicates a data integrity issue.`,
+    );
+  }
+
+  return extended.role;
 }

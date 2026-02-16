@@ -46,13 +46,24 @@ export async function POST(req: NextRequest) {
   const wallClockElapsed = (Date.now() - session.startedAt) / 1000;
   const validatedPlaytime = Math.min(input.playtime, wallClockElapsed + 10);
 
-  await db.insert(gameScores).values({
-    gameId: input.gameId,
-    userId: session.userId,
-    score: input.score,
-    completionTime: validatedPlaytime,
-    playedAt: new Date(),
-  });
+  await db
+    .insert(gameScores)
+    .values({
+      gameId: input.gameId,
+      userId: session.userId,
+      sessionId: session.sessionId,
+      score: input.score,
+      completionTime: validatedPlaytime,
+      playedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: gameScores.sessionId,
+      set: {
+        score: input.score,
+        completionTime: validatedPlaytime,
+        playedAt: new Date(),
+      },
+    });
 
   await redis.del(`game_leaderboard:${input.gameId}`);
 

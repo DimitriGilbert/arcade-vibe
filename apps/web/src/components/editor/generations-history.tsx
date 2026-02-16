@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { History, Play, Send, Loader2 } from "lucide-react";
@@ -27,6 +27,8 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
 }
 
 export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
+  const queryClient = useQueryClient();
+
   const {
     data: games,
     isLoading,
@@ -47,6 +49,8 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
     },
     onSuccess: () => {
       toast.success("Game submitted successfully!");
+      void queryClient.invalidateQueries({ queryKey: ["games", "prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["games", "user"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to submit game");

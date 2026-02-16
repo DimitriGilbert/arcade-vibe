@@ -51,13 +51,13 @@ export const themesRouter = router({
     }
 
     const freeTheme = await db.query.themes.findFirst({
-      where: eq(themes.title, "Free Play"),
+      where: eq(themes.isPermanent, true),
     });
 
     if (!freeTheme) {
       throw new TRPCError({
         code: "NOT_FOUND",
-        message: "No active theme found and Free Play theme not seeded",
+        message: "No active theme found and no permanent theme configured",
       });
     }
 

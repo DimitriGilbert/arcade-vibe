@@ -1,6 +1,7 @@
 import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
+import { themes } from "@arcade-vibe/db/schema/themes";
 import { z } from "zod";
 import { eq, desc, asc, or, and, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -8,9 +9,14 @@ import {
   getTokenCount,
   generateContentHash,
 } from "@arcade-vibe/api/lib/tokenizer";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "@arcade-vibe/api/middleware/rate-limit";
 
 export const promptsRouter = router({
   create: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         themeId: z.string().uuid(),
@@ -22,6 +28,38 @@ export const promptsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const theme = await db.query.themes.findFirst({
+        where: eq(themes.id, input.themeId),
+      });
+
+      if (!theme) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Theme not found",
+        });
+      }
+
+      if (theme.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot create prompts for non-active themes",
+        });
+      }
+
+      const now = new Date();
+      if (theme.startDate && theme.startDate > now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Theme has not started yet",
+        });
+      }
+      if (theme.endDate && theme.endDate < now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Theme has already ended",
+        });
+      }
+
       const tokenCount = getTokenCount(input.content, input.tokenizer);
       const contentHash = generateContentHash(input.content);
 
@@ -48,6 +86,7 @@ export const promptsRouter = router({
     }),
 
   update: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         id: z.string().uuid(),
@@ -112,6 +151,7 @@ export const promptsRouter = router({
     }),
 
   fork: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         promptId: z.string().uuid(),

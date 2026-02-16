@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -27,6 +28,37 @@ export function RatingForm({
   playtime,
   onSuccess,
 }: RatingFormProps) {
+  const queryClient = useQueryClient();
+
+  const submitRatingMutation = useMutation({
+    mutationFn: async (value: {
+      overall: number;
+      promptQuality?: number;
+      gameQuality?: number;
+      themeRelevance?: number;
+      feedback?: string;
+    }) => {
+      return await trpcClient.ratings.create.mutate({
+        gameId,
+        promptId,
+        rating: value.overall,
+        playtime,
+        feedback: value.feedback,
+        promptQuality: value.promptQuality,
+        gameQuality: value.gameQuality,
+        themeRelevance: value.themeRelevance,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Rating submitted successfully!");
+      void queryClient.invalidateQueries({ queryKey: ["my-rating"] });
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit rating");
+    },
+  });
+
   const { Form } = useFormedible({
     schema: ratingSchema,
     fields: [
@@ -95,25 +127,7 @@ export function RatingForm({
         feedback: "",
       },
       onSubmit: async ({ value }) => {
-        try {
-          await trpcClient.ratings.create.mutate({
-            gameId,
-            promptId,
-            rating: value.overall,
-            playtime,
-            feedback: value.feedback,
-            promptQuality: value.promptQuality,
-            gameQuality: value.gameQuality,
-            themeRelevance: value.themeRelevance,
-          });
-          toast.success("Rating submitted successfully!");
-          onSuccess();
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Failed to submit rating";
-          toast.error(message);
-          throw error;
-        }
+        submitRatingMutation.mutate(value);
       },
     },
   });

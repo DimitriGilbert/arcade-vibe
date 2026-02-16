@@ -27,7 +27,8 @@ export const scores = pgTable(
       .references(() => prompts.id, { onDelete: "cascade" }),
     gameId: uuid("game_id")
       .notNull()
-      .references(() => gamesImport.id, { onDelete: "cascade" }),
+      .references(() => gamesImport.id, { onDelete: "cascade" })
+      .unique(),
     themeId: uuid("theme_id").references(() => themes.id, {
       onDelete: "set null",
     }),

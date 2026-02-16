@@ -4,7 +4,7 @@ import { ratings } from "@arcade-vibe/db/schema/ratings";
 import { games as gamesTable, gameScores } from "@arcade-vibe/db/schema/games";
 import { scoringWeights, platformStats } from "@arcade-vibe/db/schema/platform";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gt } from "drizzle-orm";
 import { redis } from "./redis";
 
 /**
@@ -113,10 +113,9 @@ async function calculateDifficultyScore(tierCostId: string): Promise<number> {
  */
 function calculateEfficiencyScore(tokenCount: number): number {
   if (tokenCount <= 0) {
-    return 20;
+    return 0;
   }
 
-  // Logarithmic formula
   const efficiencyScore =
     (20 * Math.log(1000 / (tokenCount + 1))) / Math.log(1000);
   return Math.max(0, Math.min(efficiencyScore, 20));
@@ -130,7 +129,10 @@ function calculateEfficiencyScore(tokenCount: number): number {
  */
 async function calculateEngagementScore(gameId: string): Promise<number> {
   const scores = await db.query.gameScores.findMany({
-    where: eq(gameScores.gameId, gameId),
+    where: and(
+      eq(gameScores.gameId, gameId),
+      gt(gameScores.score, 0),
+    ),
     columns: { completionTime: true },
   });
 
@@ -144,7 +146,6 @@ async function calculateEngagementScore(gameId: string): Promise<number> {
   const avgPlaytime =
     validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
 
-  // Cap at 300 seconds (5 minutes)
   const cappedPlaytime = Math.min(avgPlaytime, 300);
   const engagementScore = (20 * cappedPlaytime) / 300;
 
@@ -162,12 +163,9 @@ function calculatePopularityScore(ratingCount: number): number {
     return 0;
   }
 
-  // Logarithmic formula capped at 99 ratings (for log(100))
-  const cappedRatingCount = Math.min(ratingCount, 99);
-  const popularityScore =
-    (20 * Math.log(cappedRatingCount + 1)) / Math.log(100);
+  const popularityScore = (20 * Math.log(ratingCount + 1)) / Math.log(100);
 
-  return popularityScore;
+  return Math.min(popularityScore, 20);
 }
 
 /**

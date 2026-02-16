@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard } from "@/components/arcade";
 import { ArcadeButton } from "@/components/arcade";
@@ -177,6 +177,7 @@ function SourceTypeLabel({ type }: { type: string }) {
 
 export default function SubscriptionSettingsPage() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
+  const queryClient = useQueryClient();
 
   // Fetch credit balance with breakdown
   const { data: balanceData, isLoading: balanceLoading } = useQuery({
@@ -218,6 +219,8 @@ export default function SubscriptionSettingsPage() {
     mutationFn: () => trpcClient.billing.cancelSubscription.mutate(),
     onSuccess: (data) => {
       toast.success(data.message);
+      void queryClient.invalidateQueries({ queryKey: ["billing", "subscription"] });
+      void queryClient.invalidateQueries({ queryKey: ["credits"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to cancel subscription");
@@ -229,6 +232,8 @@ export default function SubscriptionSettingsPage() {
     mutationFn: () => trpcClient.billing.reactivateSubscription.mutate(),
     onSuccess: (data) => {
       toast.success(data.message);
+      void queryClient.invalidateQueries({ queryKey: ["billing", "subscription"] });
+      void queryClient.invalidateQueries({ queryKey: ["credits"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to reactivate subscription");

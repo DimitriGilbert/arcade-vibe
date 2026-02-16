@@ -43,17 +43,19 @@ export const stripeRouter = router({
 
       let amount: number;
       let name: string;
+      let plan: typeof subscriptionPlans.$inferSelect | null = null;
 
       if (input.planId) {
-        const plan = await db.query.subscriptionPlans.findFirst({
+        const foundPlan = await db.query.subscriptionPlans.findFirst({
           where: eq(subscriptionPlans.id, input.planId),
         });
-        if (!plan) {
+        if (!foundPlan) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Plan not found",
           });
         }
+        plan = foundPlan;
         amount = plan.price;
         name = plan.name;
       } else if (input.creditAmount) {
@@ -70,19 +72,40 @@ export const stripeRouter = router({
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
       const userEmail = ctx.session.user.email;
 
+      const isSubscription = plan !== null && plan.isOneTime === false;
+
+      if (isSubscription && plan !== null && !plan.stripePriceId) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Subscription plan missing Stripe price ID",
+        });
+      }
+
+      // CB-014: Use stripePriceId when available for all plan types
+      const usePriceReference = plan !== null && plan.stripePriceId !== null;
+
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = usePriceReference
+        ? [
+            {
+              price: plan!.stripePriceId!,
+              quantity: 1,
+            },
+          ]
+        : [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: { name },
+                unit_amount: amount,
+              },
+              quantity: 1,
+            },
+          ];
+
       const session = await getStripe().checkout.sessions.create({
         payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: { name },
-              unit_amount: amount,
-            },
-            quantity: 1,
-          },
-        ],
-        mode: "payment",
+        line_items: lineItems,
+        mode: isSubscription ? "subscription" : "payment",
         success_url: `${appUrl}/settings/subscription?success=true`,
         cancel_url: `${appUrl}/settings/subscription?canceled=true`,
         customer_email: userEmail,
@@ -90,6 +113,8 @@ export const stripeRouter = router({
           userId: ctx.user.id,
           planId: input.planId ?? "",
           creditAmount: input.creditAmount?.toString() ?? "",
+          isSubscription: isSubscription.toString(),
+          planName: plan?.name ?? "",
         },
       });
 

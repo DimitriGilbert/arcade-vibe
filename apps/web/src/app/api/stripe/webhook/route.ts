@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { db } from "@arcade-vibe/db";
 
-// Lazy load Stripe and handlers to avoid build-time initialization
 async function getStripeLib() {
   const Stripe = (await import("stripe")).default;
   return new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
@@ -45,36 +45,50 @@ export async function POST(request: NextRequest) {
       handleInvoicePaid,
       handleSubscriptionUpdated,
       handleSubscriptionDeleted,
+      tryClaimEvent,
+      DuplicateEventError,
     } = await getWebhookHandlers();
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutCompleted(session);
-        break;
-      }
+    try {
+      await db.transaction(async (tx) => {
+        await tryClaimEvent(event.id, event.type, tx);
 
-      case "invoice.paid": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handleInvoicePaid(invoice);
-        break;
-      }
+        switch (event.type) {
+          case "checkout.session.completed": {
+            const session = event.data.object as Stripe.Checkout.Session;
+            await handleCheckoutCompleted(session, tx);
+            break;
+          }
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdated(subscription);
-        break;
-      }
+          case "invoice.paid": {
+            const invoice = event.data.object as Stripe.Invoice;
+            await handleInvoicePaid(invoice, tx);
+            break;
+          }
 
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionDeleted(subscription);
-        break;
-      }
+          case "customer.subscription.created":
+          case "customer.subscription.updated": {
+            const subscription = event.data.object as Stripe.Subscription;
+            await handleSubscriptionUpdated(subscription, tx);
+            break;
+          }
 
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+          case "customer.subscription.deleted": {
+            const subscription = event.data.object as Stripe.Subscription;
+            await handleSubscriptionDeleted(subscription, tx);
+            break;
+          }
+
+          default:
+            console.log(`Unhandled event type: ${event.type}`);
+        }
+      });
+    } catch (error) {
+      if (error instanceof DuplicateEventError) {
+        console.log(`Event ${event.id} already processed, skipping`);
+        return NextResponse.json({ received: true });
+      }
+      throw error;
     }
 
     return NextResponse.json({ received: true });

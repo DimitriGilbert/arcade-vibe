@@ -20,6 +20,7 @@ import {
   DollarSign,
   Menu,
   X,
+  Gamepad2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -38,6 +39,7 @@ const navigationItems = [
   { name: "Library Patterns", href: "/admin/library-patterns", icon: Layers },
   { name: "Moderation", href: "/admin/moderation", icon: Shield },
   { name: "Themes", href: "/admin/themes", icon: Archive },
+  { name: "Games", href: "/admin/games", icon: Gamepad2 },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Audit Log", href: "/admin/audit", icon: History },
 ];

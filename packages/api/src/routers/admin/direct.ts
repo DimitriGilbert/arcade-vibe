@@ -6,7 +6,7 @@ import { user } from "@arcade-vibe/db/schema/auth";
 import { adminActions, scoringWeights } from "@arcade-vibe/db/schema/platform";
 import { moderationReports } from "@arcade-vibe/db/schema/moderation";
 import { z } from "zod";
-import { eq, and, asc, type SQL } from "drizzle-orm";
+import { eq, and, asc, desc, type SQL } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { redis } from "@arcade-vibe/api/lib/redis";
 import { calculateGameScore } from "@arcade-vibe/api/lib/scoring";
@@ -124,10 +124,41 @@ export const directActionsRouter = router({
       }
 
       if (input.role !== undefined) {
+        if (input.userId === ctx.user.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot change your own role",
+          });
+        }
+
+        if (targetUser.role === "admin" && input.role !== "admin") {
+          const adminCount = await db.query.userExtended.findMany({
+            where: eq(userExtended.role, "admin"),
+            columns: { id: true },
+          });
+          if (adminCount.length <= 1) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Cannot demote the last admin",
+            });
+          }
+        }
+
+        const oldRole = targetUser.role;
+
         await db
           .update(userExtended)
           .set({ role: input.role })
           .where(eq(userExtended.id, input.userId));
+
+        await db.insert(adminActions).values({
+          adminId: ctx.user.id,
+          actionType: "role_change",
+          targetType: "user",
+          targetId: input.userId,
+          reason: `Role changed from ${oldRole} to ${input.role}`,
+          metadata: JSON.stringify({ oldRole, newRole: input.role }),
+        });
       }
 
       if (input.credits !== undefined) {
@@ -156,13 +187,15 @@ export const directActionsRouter = router({
           .where(eq(user.id, input.userId));
       }
 
-      await db.insert(adminActions).values({
-        adminId: ctx.user.id,
-        actionType: "update_user",
-        targetType: "user",
-        targetId: input.userId,
-        reason: `Updated user profile: ${JSON.stringify({ name: input.name, role: input.role, credits: input.credits })}`,
-      });
+      if (input.name !== undefined || input.credits !== undefined) {
+        await db.insert(adminActions).values({
+          adminId: ctx.user.id,
+          actionType: "update_user",
+          targetType: "user",
+          targetId: input.userId,
+          reason: `Updated user profile: ${JSON.stringify({ name: input.name, credits: input.credits })}`,
+        });
+      }
 
       return {
         success: true,
@@ -239,6 +272,159 @@ export const directActionsRouter = router({
     }),
 
   /**
+   * Unhide Game
+   *
+   * Admin directly unhides a previously hidden game.
+   * - Updates game status from 'hidden' to 'completed'
+   * - Clears hidden fields
+   * - Logs action to adminActions
+   */
+  unhideGame: adminProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const game = await db.query.games.findFirst({
+        where: eq(games.id, input.gameId),
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      await db
+        .update(games)
+        .set({
+          status: "completed",
+          isHidden: false,
+          hiddenReason: null,
+          hiddenAt: null,
+        })
+        .where(eq(games.id, input.gameId));
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "unhide_game",
+        targetType: "game",
+        targetId: input.gameId,
+        reason: "Game unhidden by admin",
+      });
+
+      if (game.themeId) {
+        await redis.del(`lb:${game.themeId}`);
+      }
+
+      return {
+        success: true,
+        gameId: input.gameId,
+      };
+    }),
+
+  /**
+   * Get Games
+   *
+   * List all games for admin management with filtering and pagination.
+   */
+  getGames: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(20),
+        offset: z.number().int().min(0).default(0),
+        status: z.enum(["generating", "completed", "failed", "hidden"]).optional(),
+        themeId: z.string().uuid().optional(),
+        isSubmitted: z.boolean().optional(),
+        isHidden: z.boolean().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const whereConditions: SQL[] = [];
+
+      if (input.status) {
+        whereConditions.push(eq(games.status, input.status));
+      }
+      if (input.themeId) {
+        whereConditions.push(eq(games.themeId, input.themeId));
+      }
+      if (input.isSubmitted !== undefined) {
+        whereConditions.push(eq(games.isSubmitted, input.isSubmitted));
+      }
+      if (input.isHidden !== undefined) {
+        whereConditions.push(eq(games.isHidden, input.isHidden));
+      }
+
+      const whereClause =
+        whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      const gamesList = await db.query.games.findMany({
+        where: whereClause,
+        limit: input.limit,
+        offset: input.offset,
+        orderBy: [desc(games.createdAt)],
+        with: {
+          prompt: {
+            columns: {
+              id: true,
+              content: true,
+            },
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true,
+                },
+              },
+            },
+          },
+          theme: {
+            columns: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+      return gamesList.map((game) => ({
+        id: game.id,
+        name: game.name,
+        status: game.status,
+        isHidden: game.isHidden,
+        hiddenReason: game.hiddenReason,
+        hiddenAt: game.hiddenAt,
+        isSubmitted: game.isSubmitted,
+        submittedAt: game.submittedAt,
+        createdAt: game.createdAt,
+        prompt: game.prompt
+          ? {
+              id: game.prompt.id,
+              content: game.prompt.content,
+              user: game.prompt.user
+                ? {
+                    id: game.prompt.user.id,
+                    name: game.prompt.user.name,
+                    email: game.prompt.user.email,
+                    image: game.prompt.user.image,
+                  }
+                : null,
+            }
+          : null,
+        theme: game.theme
+          ? {
+              id: game.theme.id,
+              title: game.theme.title,
+            }
+          : null,
+      }));
+    }),
+
+  /**
    * Suspend User
    *
    * PRD Lines: 2538-2563
@@ -258,7 +444,6 @@ export const directActionsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Verify user exists
       const targetUser = await db.query.userExtended.findFirst({
         where: eq(userExtended.id, input.userId),
       });
@@ -270,12 +455,21 @@ export const directActionsRouter = router({
         });
       }
 
-      // PRD lines 545-551: Update user to suspended
+      const now = new Date();
+      let suspendedUntil: Date | null = null;
+
+      if (input.duration === "7d") {
+        suspendedUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      } else if (input.duration === "30d") {
+        suspendedUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+
       await db
         .update(userExtended)
         .set({
           isSuspended: true,
           suspensionReason: input.reason,
+          suspendedUntil,
         })
         .where(eq(userExtended.id, input.userId));
 
@@ -295,6 +489,61 @@ export const directActionsRouter = router({
         success: true,
         userId: input.userId,
         duration: input.duration,
+      };
+    }),
+
+  /**
+   * Unsuspend User
+   *
+   * Admin removes suspension from a user.
+   * - Clears suspension fields
+   * - Logs action to adminActions
+   */
+  unsuspendUser: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const targetUser = await db.query.userExtended.findFirst({
+        where: eq(userExtended.id, input.userId),
+      });
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (!targetUser.isSuspended) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User is not suspended",
+        });
+      }
+
+      await db
+        .update(userExtended)
+        .set({
+          isSuspended: false,
+          suspensionReason: null,
+          suspendedUntil: null,
+        })
+        .where(eq(userExtended.id, input.userId));
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "unsuspend_user",
+        targetType: "user",
+        targetId: input.userId,
+        reason: "User unsuspended by admin",
+      });
+
+      return {
+        success: true,
+        userId: input.userId,
       };
     }),
 

@@ -238,6 +238,8 @@ export type AdminLibraryPatternsListOutput =
 export type AdminStatsGetStatsOutput = AdminOutput["stats"]["getStats"];
 export type AdminStatsGetActionsOutput = AdminOutput["stats"]["getActions"];
 
+export type AdminDirectGetGamesOutput = AdminOutput["direct"]["getGames"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -317,7 +319,15 @@ export type PromptEntity = PromptByIdOutput;
  * Full theme entity with all nested relations
  * @source RouterOutput["themes"]["getById"]
  *
- * Extended with admin UI fields that may not be in tRPC output yet.
+ * @warning DRIFT RISK: Manual type extensions below
+ * The following fields are manually extended and NOT derived from the tRPC router.
+ * If the backend schema changes, these extensions may become out of sync.
+ * TODO: Move these fields to the tRPC router output to eliminate drift risk.
+ *
+ * Manually extended fields:
+ * - systemPrompt?: string | null
+ * - requirements?: Record<string, unknown> | null
+ * - mediaConfig?: ThemeMediaConfig | null
  */
 export type Theme = ThemeByIdOutput & {
   systemPrompt?: string | null;
@@ -329,7 +339,8 @@ export type Theme = ThemeByIdOutput & {
  * Theme entity as returned from list (array item)
  * @source RouterOutput["themes"]["list"][number]
  *
- * Extended with admin UI fields that may not be in tRPC output yet.
+ * @warning DRIFT RISK: Same manual extensions as Theme type above.
+ * These fields may not exist in the actual API response.
  */
 export type ThemeList = ThemeListOutput[number] & {
   systemPrompt?: string | null;
@@ -459,3 +470,5 @@ export type LibraryPattern = AdminLibraryPatternsListOutput[number];
 export type AdminStats = AdminStatsGetStatsOutput;
 
 export type AdminAction = AdminStatsGetActionsOutput["actions"][number];
+
+export type GameAdminView = AdminDirectGetGamesOutput[number];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,29 +35,80 @@ interface EditorPageProps {
   }>;
 }
 
+const EDITOR_STORAGE_KEY = "arcade-vibe-editor-state";
+
+interface PersistedEditorState {
+  promptContent: string;
+  gameName: string;
+  selectedTheme: string;
+  selectedModel: string;
+  selectedApiKeyId: string | null;
+  reasoningEnabled: boolean;
+  reasoningMaxTokens: number;
+  timestamp: number;
+}
+
+function loadPersistedState(): PersistedEditorState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(EDITOR_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as PersistedEditorState;
+    if (Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(EDITOR_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function persistState(state: Omit<PersistedEditorState, "timestamp">): void {
+  if (typeof window === "undefined") return;
+  try {
+    const toStore: PersistedEditorState = { ...state, timestamp: Date.now() };
+    localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(toStore));
+  } catch {
+    // Storage might be full or disabled
+  }
+}
+
+function clearPersistedState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(EDITOR_STORAGE_KEY);
+  } catch {
+    // Ignore errors
+  }
+}
+
 export default function EditorPage({ searchParams }: EditorPageProps) {
   const resolvedSearchParams = use(
     searchParams || Promise.resolve({ promptId: undefined, forkId: undefined }),
   );
+  const queryClient = useQueryClient();
 
-  // Core state
-  const [promptContent, setPromptContent] = useState("");
-  const [gameName, setGameName] = useState("");
-  const [selectedTheme, setSelectedTheme] = useState("");
-  const [selectedModel, setSelectedModel] = useState("");
-  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(null);
+  const persistedState = loadPersistedState();
+
+  const [promptContent, setPromptContent] = useState(persistedState?.promptContent ?? "");
+  const [gameName, setGameName] = useState(persistedState?.gameName ?? "");
+  const [selectedTheme, setSelectedTheme] = useState(persistedState?.selectedTheme ?? "");
+  const [selectedModel, setSelectedModel] = useState(persistedState?.selectedModel ?? "");
+  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(
+    persistedState?.selectedApiKeyId ?? null,
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [generatedGameId, setGeneratedGameId] = useState<string | null>(null);
 
-  // New state for sidebar layout
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("editor");
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     null,
   );
-  const [reasoningEnabled, setReasoningEnabled] = useState(true);
-  const [reasoningMaxTokens, setReasoningMaxTokens] = useState(2000);
+  const [reasoningEnabled, setReasoningEnabled] = useState(persistedState?.reasoningEnabled ?? true);
+  const [reasoningMaxTokens, setReasoningMaxTokens] = useState(persistedState?.reasoningMaxTokens ?? 2000);
 
   // Version comparison state
   const [showComparison, setShowComparison] = useState(false);
@@ -171,6 +222,41 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     }
   }, [currentTheme, selectedTheme, existingPrompt]);
 
+  // Persist editor state to localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (resolvedSearchParams?.promptId || resolvedSearchParams?.forkId || existingPrompt) {
+      return;
+    }
+    persistState({
+      promptContent,
+      gameName,
+      selectedTheme,
+      selectedModel,
+      selectedApiKeyId,
+      reasoningEnabled,
+      reasoningMaxTokens,
+    });
+  }, [
+    promptContent,
+    gameName,
+    selectedTheme,
+    selectedModel,
+    selectedApiKeyId,
+    reasoningEnabled,
+    reasoningMaxTokens,
+    resolvedSearchParams?.promptId,
+    resolvedSearchParams?.forkId,
+    existingPrompt,
+  ]);
+
+  // Clear persisted state when loading from URL params
+  useEffect(() => {
+    if (existingPrompt) {
+      clearPersistedState();
+    }
+  }, [existingPrompt]);
+
   // Create prompt mutation
   const createPromptMutation = useMutation({
     mutationFn: async (input: { themeId: string; content: string }) => {
@@ -184,6 +270,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
     onSuccess: (data) => {
       toast.success("Prompt created successfully!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      void queryClient.invalidateQueries({ queryKey: ["prompt"] });
       if (data.promptId) {
         setSelectedPromptId(data.promptId);
         setSelectedVersionId(data.promptId);
@@ -206,6 +294,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
     onSuccess: (data) => {
       toast.success("Prompt updated successfully!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      void queryClient.invalidateQueries({ queryKey: ["prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["prompt-versions"] });
       if (data.promptId) {
         setSelectedPromptId(data.promptId);
         setSelectedVersionId(data.promptId);
@@ -227,6 +318,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
     onSuccess: (data) => {
       toast.success("Prompt forked successfully!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
       window.location.href = `/editor?promptId=${data.promptId}`;
     },
     onError: (error: Error) => {
@@ -313,6 +405,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     selectedPromptId,
     selectedApiKeyId,
     gameMedia.mediaUrls,
+    reasoningEnabled,
+    reasoningMaxTokens,
   ]);
 
   const handleSave = useCallback(async () => {

@@ -12,6 +12,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
+export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
+  stripeEventId: text("stripe_event_id").primaryKey(),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+  eventType: text("event_type").notNull(),
+});
+
 // Tier costs configuration - allows admins to set credit costs per tier
 export const tierCosts = pgTable("tier_costs", {
   id: uuid("id").defaultRandom().primaryKey(),

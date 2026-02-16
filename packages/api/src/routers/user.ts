@@ -4,6 +4,10 @@ import { user } from "@arcade-vibe/db/schema/auth";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "@arcade-vibe/api/middleware/rate-limit";
 
 /**
  * User Router
@@ -14,6 +18,7 @@ import { TRPCError } from "@trpc/server";
  */
 export const userRouter = router({
   getByName: publicProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
     .input(
       z.object({
         name: z.string().min(1),
@@ -40,6 +45,7 @@ export const userRouter = router({
       return result;
     }),
   updateProfile: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
       z.object({
         name: z.string().min(2).max(100),

@@ -4,12 +4,20 @@ type AllowedLibraryPattern = typeof allowedLibraryPatterns.$inferSelect;
 
 const SCRIPT_TAG_REGEX = /<script\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
 const INLINE_SCRIPT_REGEX = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+const DANGEROUS_PATTERNS = [
+  /\beval\s*\(/gi,
+  /\bFunction\s*\(/gi,
+  /\bnew\s+Function\s*\(/gi,
+  /setTimeout\s*\(\s*["'`]/gi,
+  /setInterval\s*\(\s*["'`]/gi,
+];
 
 export interface SanitizationResult {
   sanitizedHtml: string;
   blockedUrls: string[];
   blockedInlineScripts: number;
   allowedUrls: string[];
+  dangerousPatternsFound: number;
 }
 
 export function extractCodeFromMarkdown(text: string): string {
@@ -69,6 +77,7 @@ export function sanitizeGameCode(
   const blockedUrls: string[] = [];
   const allowedUrls: string[] = [];
   let blockedInlineScripts = 0;
+  let dangerousPatternsFound = 0;
 
   const sanitizeScriptTags = (input: string): string => {
     return input.replace(SCRIPT_TAG_REGEX, (match, url) => {
@@ -81,13 +90,31 @@ export function sanitizeGameCode(
     });
   };
 
+  const checkDangerousPatterns = (scriptContent: string): boolean => {
+    for (const pattern of DANGEROUS_PATTERNS) {
+      if (pattern.test(scriptContent)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   let sanitized = sanitizeScriptTags(html);
+
+  sanitized = sanitized.replace(INLINE_SCRIPT_REGEX, (match, scriptContent) => {
+    if (checkDangerousPatterns(scriptContent)) {
+      dangerousPatternsFound++;
+      return `<!-- BLOCKED INLINE SCRIPT: dangerous patterns detected (eval/Function) -->`;
+    }
+    return match;
+  });
 
   return {
     sanitizedHtml: sanitized,
     blockedUrls,
     blockedInlineScripts,
     allowedUrls,
+    dangerousPatternsFound,
   };
 }
 

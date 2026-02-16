@@ -6,6 +6,10 @@ import { generateGame } from "@arcade-vibe/api/lib/game-generation";
 import { z } from "zod";
 import { eq, desc, and, isNotNull, notInArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import {
+  createRateLimitMiddleware,
+  rateLimits,
+} from "../middleware/rate-limit";
 
 export const promptRunsRouter = router({
   /**
@@ -14,6 +18,7 @@ export const promptRunsRouter = router({
    * Streams the generation process
    */
   create: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
       z.object({
         promptId: z.string().uuid(),

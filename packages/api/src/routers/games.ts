@@ -45,7 +45,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
       (function () {
         "use strict";
 
-        const SESSION_TOKEN = "__ARCADE_VIBE_SESSION_TOKEN__";
+        let SESSION_TOKEN = null;
         const API_ENDPOINT = "__ARCADE_VIBE_API_ENDPOINT__";
         const GAME_ID = "__ARCADE_VIBE_GAME_ID__";
 
@@ -53,9 +53,21 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
         let lastHeartbeat = Date.now();
         let isSessionActive = true;
 
+        // GL-007: Receive session token via postMessage from parent instead of embedding in HTML
+        function handleSessionToken(event) {
+          if (event.data && event.data.type === "ARCADE_VIBE_SESSION_TOKEN") {
+            SESSION_TOKEN = event.data.token;
+            window.removeEventListener("message", handleSessionToken);
+          }
+        }
+        window.addEventListener("message", handleSessionToken);
+
+        // Notify parent that SDK is ready to receive token
+        window.parent.postMessage({ type: "ARCADE_VIBE_SDK_READY", gameId: GAME_ID }, "*");
+
         // Heartbeat for playtime tracking (every 5 seconds)
         const heartbeatInterval = setInterval(() => {
-          if (!isSessionActive) return;
+          if (!isSessionActive || !SESSION_TOKEN) return;
           const playtime = Math.floor((Date.now() - sessionStart) / 1000);
 
           fetch(\`\${API_ENDPOINT}/api/game-sdk/heartbeat\`, {
@@ -79,6 +91,10 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
           reportScore(score) {
             if (typeof score !== "number" || score < 0 || !Number.isInteger(score)) {
               console.warn("[ArcadeVibe] Invalid score. Must be a positive integer.");
+              return;
+            }
+            if (!SESSION_TOKEN) {
+              console.warn("[ArcadeVibe] Session not initialized. Waiting for token.");
               return;
             }
 
@@ -106,7 +122,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
           },
 
           isReady() {
-            return SESSION_TOKEN !== "__ARCADE_VIBE_SESSION_TOKEN__";
+            return SESSION_TOKEN !== null;
           },
         };
 
@@ -114,6 +130,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
           isSessionActive = false;
           clearInterval(heartbeatInterval);
 
+          if (!SESSION_TOKEN) return;
           const playtime = Math.floor((Date.now() - sessionStart) / 1000);
           navigator.sendBeacon(
             \`\${API_ENDPOINT}/api/game-sdk/end-session\`,
@@ -393,6 +410,7 @@ export const gamesRouter = router({
               },
             },
           },
+          theme: true,
         },
       });
 
@@ -424,6 +442,36 @@ export const gamesRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Game has already been submitted",
+        });
+      }
+
+      // Validate theme status for competition integrity
+      if (!game.theme) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Game must be associated with a theme to submit",
+        });
+      }
+
+      if (game.theme.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot submit game to a theme that is not active",
+        });
+      }
+
+      // Validate theme date range if dates are set
+      const now = new Date();
+      if (game.theme.startDate && now < game.theme.startDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Theme submission period has not started yet",
+        });
+      }
+      if (game.theme.endDate && now > game.theme.endDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Theme submission period has ended",
         });
       }
 
@@ -727,7 +775,7 @@ export const gamesRouter = router({
 
       // Check access permissions
       const isPublic = game.status === "completed" && !game.isHidden;
-      const isAuthor = ctx.user.id === game.prompt.authorId;
+      const isAuthor = ctx.user.id === game.prompt.user?.id;
       const isAdmin =
         ctx.user.role === "admin" || ctx.user.role === "moderator";
 
@@ -753,24 +801,28 @@ export const gamesRouter = router({
       const apiEndpoint =
         process.env.NEXT_PUBLIC_API_URL || "https://api.arcade-vibe.com";
 
-      // Inject SDK script into game HTML
+      // Inject SDK script into game HTML (token NOT embedded - passed via postMessage)
       const gameHtml = SDK_TEMPLATE.replace(
-        "__ARCADE_VIBE_SESSION_TOKEN__",
-        sessionToken,
+        "__ARCADE_VIBE_API_ENDPOINT__",
+        apiEndpoint,
       )
-        .replace("__ARCADE_VIBE_API_ENDPOINT__", apiEndpoint)
         .replace("__ARCADE_VIBE_GAME_ID__", game.id)
         .replace("__GAME_CODE__", game.gameData);
 
       /**
-       * @security Session token is returned in response body and embedded in HTML
+       * @security Session token is returned ONLY in response body - NOT embedded in HTML
+       * @security The parent page must pass the token to the iframe via postMessage:
+       *   iframe.contentWindow.postMessage({
+       *     type: "ARCADE_VIBE_SESSION_TOKEN",
+       *     token: sessionToken
+       *   }, "*");
        * @security HTTPS is REQUIRED in production - tokens must not be transmitted over plain HTTP
        * @security Treat sessionToken as sensitive session data - do not log or expose
        */
       return {
         html: gameHtml,
         gameId: game.id,
-        sessionToken, // WARNING: Sensitive session token - handle securely
+        sessionToken,
       };
     }),
 

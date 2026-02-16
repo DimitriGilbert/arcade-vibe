@@ -1,4 +1,4 @@
-import { db } from "@arcade-vibe/db";
+import { db, type DbTransaction } from "@arcade-vibe/db";
 import {
   creditTransactions,
   creditBatches,
@@ -235,6 +235,7 @@ export const addCreditsInternal = async (
   type: CreditSourceType = "admin_grant",
   description?: string,
   sourceId?: string,
+  tx?: DbTransaction,
 ): Promise<number> => {
   // Validate amount is positive integer
   if (!Number.isInteger(amount) || amount <= 0) {
@@ -244,8 +245,10 @@ export const addCreditsInternal = async (
     });
   }
 
+  const executor = tx ?? db;
+
   // Verify user exists
-  const user = await db.query.userExtended.findFirst({
+  const user = await executor.query.userExtended.findFirst({
     where: eq(userExtended.id, userId),
     columns: { id: true },
   });
@@ -260,9 +263,9 @@ export const addCreditsInternal = async (
   // Calculate expiry date
   const expiresAt = calculateExpiryDate(type);
 
-  const newBalance = await db.transaction(async (tx) => {
+  const executeInTransaction = async (txn: DbTransaction): Promise<number> => {
     // Create credit batch
-    const [batch] = await tx
+    const [batch] = await txn
       .insert(creditBatches)
       .values({
         userId,
@@ -276,7 +279,7 @@ export const addCreditsInternal = async (
 
     // Calculate new balance within transaction
     const now = new Date();
-    const allBatches = await tx.query.creditBatches.findMany({
+    const allBatches = await txn.query.creditBatches.findMany({
       where: and(
         eq(creditBatches.userId, userId),
         gt(creditBatches.remainingAmount, 0),
@@ -287,13 +290,13 @@ export const addCreditsInternal = async (
     const balance = allBatches.reduce((sum, b) => sum + b.remainingAmount, 0);
 
     // Update user's denormalized credit balance
-    await tx
+    await txn
       .update(userExtended)
       .set({ credits: balance })
       .where(eq(userExtended.id, userId));
 
     // Create transaction record
-    await tx.insert(creditTransactions).values({
+    await txn.insert(creditTransactions).values({
       userId,
       amount,
       type,
@@ -303,7 +306,13 @@ export const addCreditsInternal = async (
     });
 
     return balance;
-  });
+  };
+
+  if (tx) {
+    return executeInTransaction(tx);
+  }
+
+  const newBalance = await db.transaction(executeInTransaction);
 
   return newBalance;
 };
@@ -324,9 +333,9 @@ export const expireOldCredits = async (): Promise<number> => {
 
   for (const batch of expiredBatches) {
     if (batch.remainingAmount > 0) {
-      await db.transaction(async (tx) => {
-        const amountToExpire = batch.remainingAmount;
+      const amountToExpire = batch.remainingAmount;
 
+      await db.transaction(async (tx) => {
         // Create expiry transaction
         await tx.insert(creditTransactions).values({
           userId: batch.userId,
@@ -363,7 +372,7 @@ export const expireOldCredits = async (): Promise<number> => {
           .where(eq(userExtended.id, batch.userId));
       });
 
-      expiredCount += batch.remainingAmount;
+      expiredCount += amountToExpire;
     }
   }
 

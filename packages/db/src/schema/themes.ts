@@ -5,6 +5,7 @@ import {
   timestamp,
   unique,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { themeStatusEnum, visibilityEnum } from "./enums";
 import type { ThemeMediaConfig } from "./media-types";
@@ -23,6 +24,7 @@ export const themes = pgTable(
     requirements: jsonb("requirements").notNull(),
     systemPrompt: text("system_prompt").notNull(),
     mediaConfig: jsonb("media_config").$type<ThemeMediaConfig>(),
+    isPermanent: boolean("is_permanent").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

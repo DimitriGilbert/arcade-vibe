@@ -1,4 +1,8 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+
+import { db } from "@arcade-vibe/db";
+import { userExtended } from "@arcade-vibe/db/schema/users";
 
 import type { Context } from "./context";
 
@@ -8,7 +12,7 @@ export const router = t.router;
 
 export const publicProcedure = t.procedure;
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.session || !ctx.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -16,6 +20,23 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
       cause: "No session",
     });
   }
+
+  const extendedUser = await db.query.userExtended.findFirst({
+    where: eq(userExtended.id, ctx.user.id),
+  });
+
+  if (extendedUser?.isSuspended === true) {
+    const now = new Date();
+    const suspendedUntil = extendedUser.suspendedUntil;
+
+    if (suspendedUntil === null || suspendedUntil > now) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Account suspended",
+      });
+    }
+  }
+
   return next({
     ctx: {
       ...ctx,

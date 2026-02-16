@@ -16,6 +16,26 @@ import { redis } from "@arcade-vibe/api/lib/redis";
 
 import { router, protectedProcedure, moderatorProcedure } from "../index";
 
+type GameStatus = "generating" | "completed" | "failed" | "hidden";
+type PromptStatus = "draft" | "submitted" | "disqualified";
+
+const validGameStatuses: GameStatus[] = ["generating", "completed", "failed", "hidden"];
+const validPromptStatuses: PromptStatus[] = ["draft", "submitted", "disqualified"];
+
+function parseGameStatus(status: string | undefined): GameStatus {
+  if (status && validGameStatuses.includes(status as GameStatus)) {
+    return status as GameStatus;
+  }
+  return "completed";
+}
+
+function parsePromptStatus(status: string | undefined): PromptStatus {
+  if (status && validPromptStatuses.includes(status as PromptStatus)) {
+    return status as PromptStatus;
+  }
+  return "draft";
+}
+
 /**
  * Moderation Router
  *
@@ -311,7 +331,12 @@ export const moderationRouter = router({
       // PRD lines 327-363: Execute action based on resolution
       if (input.action === "approved") {
         if (report.targetType === "game" && report.targetId) {
-          // PRD lines 329-344: Hide game
+          const gameBefore = await db.query.games.findFirst({
+            where: eq(games.id, report.targetId),
+            columns: { status: true, themeId: true },
+          });
+          const originalStatus = gameBefore?.status ?? "completed";
+
           await db
             .update(games)
             .set({
@@ -322,27 +347,43 @@ export const moderationRouter = router({
             })
             .where(eq(games.id, report.targetId));
 
-          // PRD line 344: Invalidate theme leaderboard cache
-          const game = await db.query.games.findFirst({
-            where: eq(games.id, report.targetId),
-            columns: {
-              themeId: true,
-            },
-          });
+          await db
+            .update(moderationReports)
+            .set({
+              resolutionNotes: JSON.stringify({
+                reason: input.resolutionReason,
+                originalStatus,
+              }),
+            })
+            .where(eq(moderationReports.id, input.reportId));
 
-          if (game?.themeId) {
-            await redis.del(`lb:${game.themeId}`);
+          if (gameBefore?.themeId) {
+            await redis.del(`lb:${gameBefore.themeId}`);
           }
         } else if (report.targetType === "prompt" && report.targetId) {
-          // PRD lines 345-349: Disqualify prompt
+          const promptBefore = await db.query.prompts.findFirst({
+            where: eq(prompts.id, report.targetId),
+            columns: { status: true },
+          });
+          const originalStatus = promptBefore?.status ?? "draft";
+
           await db
             .update(prompts)
             .set({
               status: "disqualified",
             })
             .where(eq(prompts.id, report.targetId));
+
+          await db
+            .update(moderationReports)
+            .set({
+              resolutionNotes: JSON.stringify({
+                reason: input.resolutionReason,
+                originalStatus,
+              }),
+            })
+            .where(eq(moderationReports.id, input.reportId));
         } else if (report.targetType === "user" && report.targetId) {
-          // PRD lines 350-354: Suspend user
           await db
             .update(userExtended)
             .set({
@@ -351,13 +392,10 @@ export const moderationRouter = router({
             })
             .where(eq(userExtended.id, report.targetId));
         } else if (report.targetType === "review" && report.targetId) {
-          // Delete the rating/review
           await db.delete(ratings).where(eq(ratings.id, report.targetId));
-          // Invalidate cache
           await redis.del(`lb:*`);
         }
       } else if (input.action === "escalated") {
-        // PRD lines 358-363: Notify admin via Redis
         await redis.xadd(
           "admin:escalation",
           "*",
@@ -368,7 +406,7 @@ export const moderationRouter = router({
         );
       }
 
-      // PRD lines 365-372: Log to adminActions
+      const userRole = ctx.user!.role;
       await db.insert(adminActions).values({
         adminId: userId,
         actionType: "resolve_report",
@@ -378,6 +416,7 @@ export const moderationRouter = router({
         metadata: JSON.stringify({
           resolutionAction: input.action,
           reportId: input.reportId,
+          resolvedByRole: userRole,
         }),
       });
 
@@ -446,6 +485,19 @@ export const moderationRouter = router({
           code: "FORBIDDEN",
           message: "You can only appeal if you are the content owner",
         });
+      }
+
+      if (report.targetType === "user" && report.targetId) {
+        const targetUser = await db.query.userExtended.findFirst({
+          where: eq(userExtended.id, report.targetId),
+          columns: { isSuspended: true },
+        });
+        if (!targetUser?.isSuspended) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot appeal: user is not currently suspended",
+          });
+        }
       }
 
       // PRD lines 421-425: Insert appeal
@@ -565,19 +617,25 @@ export const moderationRouter = router({
 
       // PRD lines 465-483: If approved, revert original resolution
       if (input.status === "approved" && appeal.report.resolutionNotes) {
-        // Only revert if there was an approved action
+        let parsedNotes: { reason?: string; originalStatus?: string } | null = null;
+        try {
+          parsedNotes = JSON.parse(appeal.report.resolutionNotes);
+        } catch {
+          parsedNotes = null;
+        }
+
         if (appeal.report.targetType === "game" && appeal.report.targetId) {
+          const restoredStatus = parseGameStatus(parsedNotes?.originalStatus);
           await db
             .update(games)
             .set({
-              status: "completed",
+              status: restoredStatus,
               isHidden: false,
               hiddenAt: null,
               hiddenReason: null,
             })
             .where(eq(games.id, appeal.report.targetId));
 
-          // Invalidate cache
           const game = await db.query.games.findFirst({
             where: eq(games.id, appeal.report.targetId),
             columns: {
@@ -592,10 +650,11 @@ export const moderationRouter = router({
           appeal.report.targetType === "prompt" &&
           appeal.report.targetId
         ) {
+          const restoredStatus = parsePromptStatus(parsedNotes?.originalStatus);
           await db
             .update(prompts)
             .set({
-              status: "draft",
+              status: restoredStatus,
             })
             .where(eq(prompts.id, appeal.report.targetId));
         } else if (
@@ -612,7 +671,7 @@ export const moderationRouter = router({
         }
       }
 
-      // PRD lines 485-492: Log to adminActions
+      const userRole = ctx.user!.role;
       await db.insert(adminActions).values({
         adminId: userId,
         actionType: "resolve_appeal",
@@ -622,6 +681,7 @@ export const moderationRouter = router({
         metadata: JSON.stringify({
           appealStatus: input.status,
           originalReportId: appeal.reportId,
+          resolvedByRole: userRole,
         }),
       });
 

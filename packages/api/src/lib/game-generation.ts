@@ -403,6 +403,23 @@ export async function generateGame(
     });
   }
 
+  // GL-011: Validate mediaUrls against theme.mediaConfig.imageSlots
+  if (options.mediaUrls && prompt.theme.mediaConfig?.enabled) {
+    const allowedSlotNames = prompt.theme.mediaConfig.imageSlots.map(
+      (slot) => slot.name,
+    );
+    const providedKeys = Object.keys(options.mediaUrls);
+    const invalidKeys = providedKeys.filter(
+      (key) => !allowedSlotNames.includes(key),
+    );
+    if (invalidKeys.length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Invalid media slot names: ${invalidKeys.join(", ")}. Allowed slots: ${allowedSlotNames.join(", ")}`,
+      });
+    }
+  }
+
   // 2. Fetch model configuration with tier cost relation
   const modelConfigEntry = await db.query.modelConfig.findFirst({
     where: eq(modelConfig.modelName, modelKey),
@@ -554,34 +571,8 @@ export async function generateGame(
         };
       }
 
-      // 8. Upload to CDN
-      let assetUrl: string;
-      try {
-        const extractedCode = extractCodeFromMarkdown(fullCode);
-        assetUrl = await uploadToCDN(extractedCode, confirmedGameId);
-      } catch (error) {
-        // Update game status to failed
-        await db
-          .update(games)
-          .set({
-            status: "failed",
-            updatedAt: new Date(),
-          })
-          .where(eq(games.id, confirmedGameId));
-
-        yield {
-          type: "error",
-          gameId: confirmedGameId,
-          error: "Failed to upload game to CDN",
-        };
-        return;
-      }
-
-      // Get token usage from the result
-      const usage = await result.usage;
-      const totalTokens = usage.totalTokens ?? 0;
-
-      // 9. Sanitize the generated code
+      // GL-008: Sanitize FIRST, then upload to CDN
+      // 8. Sanitize the generated code
       const extractedCode = extractCodeFromMarkdown(fullCode);
       const sanitizationResult = sanitizeGameCode(
         extractedCode,
@@ -594,7 +585,30 @@ export async function generateGame(
         );
       }
 
+      if (sanitizationResult.dangerousPatternsFound > 0) {
+        console.warn(
+          `Blocked ${sanitizationResult.dangerousPatternsFound} dangerous inline script patterns`,
+        );
+      }
+
+      // Get token usage from the result
+      const usage = await result.usage;
+      const totalTokens = usage.totalTokens ?? 0;
+
+      // 9. Upload SANITIZED code to CDN
+      let assetUrl: string | null = null;
+      try {
+        assetUrl = await uploadToCDN(
+          sanitizationResult.sanitizedHtml,
+          confirmedGameId,
+        );
+      } catch (error) {
+        // GL-009: Store gameData even on CDN failure
+        console.error("CDN upload failed, storing gameData locally:", error);
+      }
+
       // 10. Update game status to completed with token usage
+      // GL-009: Always store gameData, even if CDN upload failed
       await db
         .update(games)
         .set({
@@ -604,7 +618,9 @@ export async function generateGame(
           generatedAt: new Date(),
           status: "completed",
           blockedScriptUrls: sanitizationResult.blockedUrls,
-          sanitizationApplied: sanitizationResult.blockedUrls.length > 0,
+          sanitizationApplied:
+            sanitizationResult.blockedUrls.length > 0 ||
+            sanitizationResult.dangerousPatternsFound > 0,
         })
         .where(eq(games.id, confirmedGameId));
 
@@ -612,7 +628,7 @@ export async function generateGame(
       yield {
         type: "complete",
         gameId: confirmedGameId,
-        assetUrl,
+        assetUrl: assetUrl ?? "",
         tokenUsage: totalTokens,
       };
     } catch (error) {

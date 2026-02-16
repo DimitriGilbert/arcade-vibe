@@ -11,7 +11,6 @@ import {
 import { user } from "./auth";
 import { themes } from "./themes";
 
-// per PRD lines 1372-1378 - Platform statistics table
 export const platformStats = pgTable(
   "platform_stats",
   {
@@ -29,7 +28,6 @@ export const platformStats = pgTable(
   ],
 );
 
-// per PRD lines 1381-1392 - Admin actions log table
 export const adminActions = pgTable(
   "admin_actions",
   {
@@ -53,14 +51,15 @@ export const adminActions = pgTable(
   ],
 );
 
-// per PRD lines 2436-2462 - Scoring weights configuration table
 export const scoringWeights = pgTable(
   "scoring_weights",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    themeId: uuid("theme_id").references(() => themes.id, {
-      onDelete: "cascade",
-    }),
+    themeId: uuid("theme_id")
+      .references(() => themes.id, {
+        onDelete: "cascade",
+      })
+      .unique(),
     qualityWeight: decimal("quality_weight", {
       precision: 3,
       scale: 2,

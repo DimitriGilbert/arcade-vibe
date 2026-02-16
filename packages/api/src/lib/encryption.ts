@@ -1,10 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { env } from "@arcade-vibe/env/server";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-
-if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
-  throw new Error("ENCRYPTION_KEY must be 32 characters for AES-256-GCM");
-}
+const ENCRYPTION_KEY = env.ENCRYPTION_KEY;
 
 export const encryptApiKey = (apiKey: string): { encrypted: string; iv: string } => {
   const iv = randomBytes(16);

@@ -29,6 +29,7 @@ const freeThemeData = {
   endDate: new Date("2100-12-31T23:59:59Z"),
   requirements: [],
   systemPrompt: FREE_FORM_SYSTEM_PROMPT,
+  isPermanent: true,
 };
 
 async function seedFreeTheme() {

@@ -10,6 +10,7 @@ import {
   createRateLimitMiddleware,
   rateLimits,
 } from "../middleware/rate-limit";
+import { calculateGameScore } from "../lib/scoring";
 
 export const ratingsRouter = router({
   create: protectedProcedure
@@ -69,6 +70,7 @@ export const ratingsRouter = router({
           eq(gameScores.userId, ctx.user.id),
           eq(gameScores.gameId, input.gameId),
         ),
+        orderBy: [desc(gameScores.playedAt)],
       });
 
       if (!userScore) {
@@ -109,6 +111,9 @@ export const ratingsRouter = router({
       // Trigger score recalculation (delete game score cache for now)
       await cacheDeletePattern(`game_leaderboard:${input.gameId}`);
       await cacheDeletePattern(`lb:*`);
+
+      // Recalculate game score after rating
+      await calculateGameScore(input.gameId);
 
       return {
         success: true,
@@ -175,6 +180,9 @@ export const ratingsRouter = router({
       await cacheDeletePattern(`ratings:*:${existingRating.gameId}`);
       await cacheDeletePattern(`game_leaderboard:${existingRating.gameId}`);
       await cacheDeletePattern(`lb:*`);
+
+      // Recalculate game score after rating update
+      await calculateGameScore(existingRating.gameId);
 
       return {
         success: true,

@@ -10,7 +10,7 @@ import {
   createRateLimitMiddleware,
   rateLimits,
 } from "../middleware/rate-limit";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 /**
  * Extract Bearer token from Authorization header
@@ -93,25 +93,7 @@ export const gameSdkRouter = router({
         // Continue processing but this is flagged for review
       }
 
-      // After 60 seconds of playtime, create a gameScore record for rating eligibility
-      if (input.playtime >= 60) {
-        const existingScore = await db.query.gameScores.findFirst({
-          where: and(
-            eq(gameScores.userId, session.userId),
-            eq(gameScores.gameId, input.gameId),
-          ),
-        });
 
-        if (!existingScore) {
-          // Create a placeholder score record for rating eligibility
-          await db.insert(gameScores).values({
-            gameId: input.gameId,
-            userId: session.userId,
-            score: 0, // Placeholder, will be updated if user submits actual score
-            completionTime: input.playtime,
-          });
-        }
-      }
 
       // Store updated session data in Redis
       const sessionData = {
@@ -173,6 +155,14 @@ export const gameSdkRouter = router({
         });
       }
 
+      // Prevent anonymous users from submitting to leaderboards
+      if (session.userId.startsWith("anonymous:")) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Authentication required for leaderboard submission. Please sign in to submit scores.",
+        });
+      }
+
       // Calculate wall-clock elapsed time
       const wallClockElapsed = (Date.now() - session.startedAt) / 1000;
       const validatedPlaytime = Math.min(
@@ -180,14 +170,29 @@ export const gameSdkRouter = router({
         wallClockElapsed + 10, // Cap at wall-clock + tolerance
       );
 
-      // Insert score into database
-      await db.insert(gameScores).values({
-        gameId: input.gameId,
-        userId: session.userId,
-        score: input.score,
-        completionTime: validatedPlaytime,
-        playedAt: new Date(),
+      const existingScore = await db.query.gameScores.findFirst({
+        where: eq(gameScores.sessionId, session.sessionId),
       });
+
+      if (existingScore) {
+        await db
+          .update(gameScores)
+          .set({
+            score: input.score,
+            completionTime: validatedPlaytime,
+            playedAt: new Date(),
+          })
+          .where(eq(gameScores.sessionId, session.sessionId));
+      } else {
+        await db.insert(gameScores).values({
+          gameId: input.gameId,
+          userId: session.userId,
+          sessionId: session.sessionId,
+          score: input.score,
+          completionTime: validatedPlaytime,
+          playedAt: new Date(),
+        });
+      }
 
       // Invalidate leaderboard cache for this game
       await redis.del(`game_leaderboard:${input.gameId}`);
@@ -244,21 +249,8 @@ export const gameSdkRouter = router({
         });
       }
 
-      // Store final playtime in Redis
-      const sessionData = {
-        userId: session.userId,
-        gameId: session.gameId,
-        startedAt: session.startedAt,
-        lastPlaytime: input.playtime,
-        lastHeartbeat: Date.now(),
-        endedAt: Date.now(),
-      };
-
-      await redis.setex(
-        `game_session:${session.sessionId}`,
-        3600, // Keep for 1 hour for reference
-        JSON.stringify(sessionData),
-      );
+      // Delete the session from Redis to revoke the token
+      await redis.del(`game_session:${session.sessionId}`);
 
       return { ok: true };
     }),

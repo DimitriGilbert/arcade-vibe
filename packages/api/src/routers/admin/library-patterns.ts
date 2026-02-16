@@ -9,6 +9,7 @@ import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { z } from "zod";
 import { eq, desc, and, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { validateRegexPattern } from "../../lib/script-sanitizer";
 
 export const libraryPatternsRouter = router({
   list: adminProcedure.query(async () => {
@@ -107,6 +108,14 @@ export const libraryPatternsRouter = router({
         });
       }
 
+      const regexValidation = validateRegexPattern(input.urlPattern);
+      if (!regexValidation.valid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid regex pattern",
+        });
+      }
+
       const newPattern = await db
         .insert(allowedLibraryPatterns)
         .values({
@@ -172,6 +181,16 @@ export const libraryPatternsRouter = router({
           code: "NOT_FOUND",
           message: "Library pattern not found",
         });
+      }
+
+      if (input.urlPattern !== undefined) {
+        const regexValidation = validateRegexPattern(input.urlPattern);
+        if (!regexValidation.valid) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid regex pattern",
+          });
+        }
       }
 
       const updateData: Record<string, unknown> = {};

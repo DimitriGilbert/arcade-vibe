@@ -2,15 +2,43 @@ import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
 import { scores } from "@arcade-vibe/db/schema/scores";
 import { eq, desc } from "drizzle-orm";
-import { cacheGet, cacheSet, redis } from "../lib/redis";
+import { redis } from "../lib/redis";
 import z from "zod";
 
+type LeaderboardEntry = {
+  id: string;
+  userId: string;
+  promptId: string;
+  gameId: string;
+  themeId: string | null;
+  score: number;
+  isHighScore: boolean;
+  completionTime: number | null;
+  playedAt: Date;
+  bayesianRating: string | null;
+  difficultyMultiplier: string | null;
+  brevityScore: string | null;
+  engagementScore: string | null;
+  popularityScore: string | null;
+  finalScore: string;
+  calculatedAt: Date;
+  version: number;
+  game: {
+    id: string;
+    name: string | null;
+    promptId: string;
+    themeId: string | null;
+    prompt: {
+      id: string;
+      user: {
+        id: string;
+        name: string | null;
+      };
+    };
+  };
+};
+
 export const leaderboardRouter = router({
-  /**
-   * Get top games for a theme
-   * Returns top 100 games ordered by score
-   * Results are cached for 5 minutes
-   */
   getTop: publicProcedure
     .input(
       z.object({
@@ -19,14 +47,17 @@ export const leaderboardRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      // Check Redis cache first
       const cacheKey = `lb:${input.themeId}`;
-      const cached = await cacheGet<typeof result>(cacheKey);
+      const cached = await redis.get(cacheKey);
+
       if (cached) {
-        return cached;
+        const parsed = JSON.parse(cached) as { data: LeaderboardEntry[]; timestamp: number };
+        const cacheAge = (Date.now() - parsed.timestamp) / 1000;
+        if (cacheAge < 300) {
+          return parsed.data;
+        }
       }
 
-      // Query scores from database
       const scoresQuery = db.query.scores;
       if (!scoresQuery) {
         throw new Error("Database query not available");
@@ -54,17 +85,15 @@ export const leaderboardRouter = router({
         },
       });
 
-      // Cache results for 5 minutes (300 seconds)
-      await cacheSet(cacheKey, result, 300);
+      const cacheValue = JSON.stringify({
+        data: result,
+        timestamp: Date.now(),
+      });
+      await redis.setex(cacheKey, 300, cacheValue);
 
       return result;
     }),
 
-  /**
-   * Subscribe to real-time leaderboard updates
-   * Uses Redis Streams for efficient real-time updates
-   * Clients receive fresh leaderboard data when new scores are published
-   */
   subscribe: publicProcedure
     .input(
       z.object({
@@ -73,32 +102,44 @@ export const leaderboardRouter = router({
     )
     .subscription(async function* ({ input }) {
       let lastId = "$";
+      let consecutiveErrors = 0;
+      const MAX_CONSECUTIVE_ERRORS = 5;
 
       while (true) {
-        // Read from Redis Stream, blocking for 5 seconds
-        const results = await redis.xread(
-          "BLOCK",
-          5000,
-          "STREAMS",
-          `leaderboard:${input.themeId}`,
-          lastId,
-        );
+        try {
+          const results = await redis.xread(
+            "BLOCK",
+            5000,
+            "STREAMS",
+            `leaderboard:${input.themeId}`,
+            lastId,
+          );
 
-        if (results) {
-          // Update lastId from new entries
-          const entries = results[0]?.[1];
-          if (entries) {
-            for (const [entryId] of entries) {
-              lastId = entryId;
+          if (results) {
+            const entries = results[0]?.[1];
+            if (entries) {
+              for (const [entryId] of entries) {
+                lastId = entryId;
+              }
             }
-          }
 
-          // Try to get cached leaderboard
-          const cacheKey = `lb:${input.themeId}`;
-          const cached = await cacheGet(cacheKey);
+            const cacheKey = `lb:${input.themeId}`;
+            const cachedWithMeta = await redis.get(cacheKey);
 
-          if (!cached) {
-            // Cache not exists, fetch fresh top 100 from database
+            if (cachedWithMeta) {
+              const parsed = JSON.parse(cachedWithMeta) as {
+                data: LeaderboardEntry[];
+                timestamp: number;
+              };
+              const cacheAge = (Date.now() - parsed.timestamp) / 1000;
+
+              if (cacheAge < 300) {
+                yield parsed.data;
+                consecutiveErrors = 0;
+                continue;
+              }
+            }
+
             const scoresQuery = db.query.scores;
             if (!scoresQuery) {
               continue;
@@ -126,13 +167,34 @@ export const leaderboardRouter = router({
               },
             });
 
-            // Cache with 5 minute TTL
-            await cacheSet(cacheKey, topGames, 300);
+            const cacheValue = JSON.stringify({
+              data: topGames,
+              timestamp: Date.now(),
+            });
+            await redis.setex(cacheKey, 300, cacheValue);
             yield topGames;
-          } else {
-            // Return cached data
-            yield cached;
+            consecutiveErrors = 0;
           }
+        } catch (error) {
+          consecutiveErrors++;
+          console.error(
+            `[Leaderboard Subscription] Error for theme ${input.themeId}:`,
+            error,
+          );
+
+          yield {
+            error: true,
+            message: "Failed to fetch leaderboard update",
+          };
+
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            console.error(
+              `[Leaderboard Subscription] Max consecutive errors reached (${MAX_CONSECUTIVE_ERRORS}), terminating subscription for theme ${input.themeId}`,
+            );
+            return;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     }),

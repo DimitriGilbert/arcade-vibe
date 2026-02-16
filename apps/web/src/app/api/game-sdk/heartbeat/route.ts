@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       await db.insert(gameScores).values({
         gameId: input.gameId,
         userId: session.userId,
+        sessionId: session.sessionId,
         score: 0,
         completionTime: input.playtime,
       });

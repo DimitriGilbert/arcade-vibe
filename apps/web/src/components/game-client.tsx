@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -90,6 +90,16 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     enabled: !!game?.promptId,
   });
 
+  const visibilityRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      visibilityRef.current = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
   const { data: leaderboard } = useQuery({
     queryKey: ["game-leaderboard", gameId],
     queryFn: async () => {
@@ -98,7 +108,7 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
         limit: 10,
       });
     },
-    refetchInterval: 10000,
+    refetchInterval: () => (visibilityRef.current ? 10000 : false),
     enabled: !!gameId,
   });
 

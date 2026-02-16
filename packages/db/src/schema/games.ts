@@ -76,6 +76,7 @@ export const gameScores = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    sessionId: text("session_id").notNull().unique(),
     score: integer("score").notNull(),
     isHighScore: boolean("is_high_score").notNull().default(false),
     completionTime: integer("completion_time"),

@@ -199,7 +199,20 @@ export async function GET(
     .replace("__ARCADE_VIBE_GAME_ID__", game.id)
     .replace("__GAME_CODE__", game.gameData);
 
-  // Return HTML response with security headers
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https:",
+    "media-src 'self' blob: data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+
   return new NextResponse(gameHtml, {
     status: 200,
     headers: {
@@ -207,6 +220,11 @@ export async function GET(
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       Pragma: "no-cache",
       Expires: "0",
+      "Content-Security-Policy": cspDirectives,
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
     },
   });
 }

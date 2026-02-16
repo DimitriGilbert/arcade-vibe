@@ -1,5 +1,8 @@
 import { router, protectedProcedure } from "@arcade-vibe/api";
 import { generateGame } from "@arcade-vibe/api/lib/game-generation";
+import { db } from "@arcade-vibe/db";
+import { games } from "@arcade-vibe/db/schema/games";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -26,6 +29,22 @@ export const generateRouter = router({
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "User not authenticated",
+        });
+      }
+
+      // GL-016: Check for existing 'generating' status to prevent concurrent generation
+      const existingGeneration = await db.query.games.findFirst({
+        where: and(
+          eq(games.promptId, input.promptId),
+          eq(games.status, "generating"),
+        ),
+        columns: { id: true, createdAt: true },
+      });
+
+      if (existingGeneration) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `A game is already being generated for this prompt. Please wait for it to complete (started at ${existingGeneration.createdAt?.toISOString()}).`,
         });
       }
 
