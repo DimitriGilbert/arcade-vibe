@@ -265,7 +265,7 @@ export function EditorOutputPanelV2({
                 />
               ) : null}
 
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
                   code={generation.code}
                   language="html"

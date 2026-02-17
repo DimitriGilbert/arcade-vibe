@@ -17,6 +17,9 @@ export interface StreamingCodeViewerV2Props {
 }
 
 function clampLines(source: string, maxLines: number): string {
+  if (!Number.isFinite(maxLines)) {
+    return source;
+  }
   const lines = source.split("\n");
   if (lines.length <= maxLines) {
     return source;
@@ -31,7 +34,7 @@ export function StreamingCodeViewerV2({
   isStreaming = false,
   onComplete,
   fileName,
-  maxLines = 1000,
+  maxLines = Number.POSITIVE_INFINITY,
 }: StreamingCodeViewerV2Props) {
   const [theme, setTheme] = useState<"github-dark" | "github-light">(
     "github-dark",
@@ -274,7 +277,10 @@ export function StreamingCodeViewerV2({
         </div>
       </div>
 
-      <div className="streaming-code-viewer__scroll flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-contain">
+      <div
+        className="streaming-code-viewer__scroll flex-1 min-h-0 max-h-[1000px] overflow-y-auto overflow-x-auto overscroll-contain"
+        style={{ maxHeight: "1000px" }}
+      >
         <div className="inline-block min-w-full p-4 md:p-5">
           {isShikiReady && highlightedCode ? (
             <div
