@@ -142,6 +142,7 @@ export function EditorOutputPanelV2({
   onOutputTabChange?: (id: string) => void;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const userScrollIntentRef = useRef(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 
@@ -155,33 +156,42 @@ export function EditorOutputPanelV2({
   const getScrollElement = (): HTMLElement | null => {
     const root = panelRef.current;
     if (!root) return null;
-
-    const monacoScroller = root.querySelector(
-      ".streaming-code-viewer__scroll .monaco-scrollable-element",
-    );
-    if (monacoScroller instanceof HTMLElement) {
-      return monacoScroller;
-    }
-
-    const fallbackScroller = root.querySelector(".streaming-code-viewer__scroll");
-    return fallbackScroller instanceof HTMLElement ? fallbackScroller : null;
+    const scroller = root.querySelector(".streaming-code-viewer__scroll");
+    return scroller instanceof HTMLElement ? scroller : null;
   };
 
   useEffect(() => {
     const scroller = getScrollElement();
     if (!scroller) return;
 
+    const markUserScrollIntent = () => {
+      userScrollIntentRef.current = true;
+    };
+
     const onScroll = () => {
       const isNearBottom =
         scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrolling && !isNearBottom) {
+      if (isAutoScrolling && userScrollIntentRef.current && !isNearBottom) {
         setIsAutoScrolling(false);
       }
       setShowScrollButton(!isNearBottom);
+      if (isNearBottom) {
+        userScrollIntentRef.current = false;
+      }
     };
 
+    scroller.addEventListener("wheel", markUserScrollIntent, { passive: true });
+    scroller.addEventListener("touchstart", markUserScrollIntent, {
+      passive: true,
+    });
+    scroller.addEventListener("mousedown", markUserScrollIntent);
     scroller.addEventListener("scroll", onScroll);
-    return () => scroller.removeEventListener("scroll", onScroll);
+    return () => {
+      scroller.removeEventListener("wheel", markUserScrollIntent);
+      scroller.removeEventListener("touchstart", markUserScrollIntent);
+      scroller.removeEventListener("mousedown", markUserScrollIntent);
+      scroller.removeEventListener("scroll", onScroll);
+    };
   }, [isAutoScrolling, activeOutputTab]);
 
   useEffect(() => {
@@ -212,6 +222,7 @@ export function EditorOutputPanelV2({
     if (!scroller) return;
 
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
+    userScrollIntentRef.current = false;
     setIsAutoScrolling(true);
     setShowScrollButton(false);
   };

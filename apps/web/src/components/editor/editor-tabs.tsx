@@ -45,7 +45,7 @@ export function EditorTabs({
     <ArcadeTabs
       value={activeTab}
       onValueChange={onTabChange}
-      className="h-full flex flex-col"
+      className="h-full min-h-0 flex flex-col overflow-hidden"
     >
       <ArcadeTabsList className="shrink-0">
         <ArcadeTabsTrigger value="editor">
@@ -68,7 +68,7 @@ export function EditorTabs({
         ) : null}
       </ArcadeTabsList>
 
-      <ArcadeTabsContent value="editor" className="flex-1 min-h-0 mt-0">
+      <ArcadeTabsContent value="editor" className="flex-1 min-h-0 overflow-hidden mt-0">
         <div className="h-full border border-[var(--border)] rounded-md overflow-hidden">
           <Editor
             height="100%"
@@ -89,7 +89,7 @@ export function EditorTabs({
         </div>
       </ArcadeTabsContent>
 
-      <ArcadeTabsContent value="output" className="flex-1 min-h-0 mt-0">
+      <ArcadeTabsContent value="output" className="flex-1 min-h-0 overflow-hidden mt-0">
         <EditorOutputPanel
           activeOutputTab={activeOutputTab}
           selectedModels={selectedModels}
@@ -97,12 +97,12 @@ export function EditorTabs({
         />
       </ArcadeTabsContent>
 
-      <ArcadeTabsContent value="history" className="flex-1 min-h-0 mt-0">
+      <ArcadeTabsContent value="history" className="flex-1 min-h-0 overflow-hidden mt-0">
         <GenerationsHistory promptId={promptId} />
       </ArcadeTabsContent>
 
       {showMediaTab && themeMediaConfig && onMediaChange ? (
-        <ArcadeTabsContent value="media" className="flex-1 min-h-0 mt-0">
+        <ArcadeTabsContent value="media" className="flex-1 min-h-0 overflow-hidden mt-0">
           <div className="h-full border border-[var(--border)] rounded-md bg-[var(--card)] overflow-hidden">
             <MediaTabContent
               themeMediaConfig={themeMediaConfig}

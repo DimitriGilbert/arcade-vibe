@@ -642,9 +642,9 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   return (
     <div className="relative h-full min-h-0 overflow-hidden">
       <div className="absolute inset-0 bg-background min-h-screen" />
-      <div className="relative h-full flex flex-col md:flex-row">
+      <div className="relative h-full min-h-0 flex flex-col md:flex-row">
         {/* Sidebar */}
-        <aside className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
+        <aside className="w-full md:w-80 lg:w-96 min-h-0 border-b md:border-b-0 md:border-r border-[var(--border)] shrink-0 p-4 overflow-y-auto">
           <EditorSidebar
             selectedTheme={selectedTheme}
             onSelectTheme={setSelectedTheme}
@@ -698,7 +698,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <main className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden">
           {/* Header with credits and fork button */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
             <div className="flex items-center gap-2">

@@ -5,9 +5,7 @@ import { Check, Copy, Download, Moon, Sun } from "lucide-react";
 import { highlightCode, initShiki, isShikiInitialized } from "@/lib/shiki";
 
 const shikiWarmupPromise = initShiki();
-const RENDER_INTERVAL_MS = 33;
-const STREAM_HIGHLIGHT_INTERVAL_MS = 220;
-const IDLE_HIGHLIGHT_INTERVAL_MS = 50;
+const FRAME_MS = 33;
 
 export interface StreamingCodeViewerV2Props {
   code: string;
@@ -18,7 +16,7 @@ export interface StreamingCodeViewerV2Props {
   maxLines?: number;
 }
 
-function truncateByMaxLines(source: string, maxLines: number): string {
+function clampLines(source: string, maxLines: number): string {
   const lines = source.split("\n");
   if (lines.length <= maxLines) {
     return source;
@@ -39,30 +37,31 @@ export function StreamingCodeViewerV2({
     "github-dark",
   );
   const [isShikiReady, setIsShikiReady] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [renderedCode, setRenderedCode] = useState("");
   const [highlightedCode, setHighlightedCode] = useState("");
-  const [highlightedFor, setHighlightedFor] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const onCompleteRef = useRef(onComplete);
-  const latestCodeRef = useRef(code);
-  const isHighlightingRef = useRef(false);
+  const targetCodeRef = useRef("");
+  const renderedCodeRef = useRef("");
+  const isStreamingRef = useRef(isStreaming);
+  const highlightingRef = useRef(false);
+  const highlightedSignatureRef = useRef("");
 
   onCompleteRef.current = onComplete;
+  isStreamingRef.current = isStreaming;
+
+  const targetCode = clampLines(code, maxLines);
+  const lineCount = code.split("\n").length;
 
   useEffect(() => {
-    latestCodeRef.current = code;
-  }, [code]);
-
-  useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
     const setup = async () => {
       if (!isShikiInitialized()) {
         await shikiWarmupPromise;
       }
-      if (isMounted) {
+      if (mounted) {
         setIsShikiReady(true);
       }
     };
@@ -70,89 +69,105 @@ export function StreamingCodeViewerV2({
     void setup();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, []);
 
   useEffect(() => {
-    const applyNextFrame = () => {
-      const next = truncateByMaxLines(latestCodeRef.current, maxLines);
-      setRenderedCode((prev) => (prev === next ? prev : next));
-    };
+    targetCodeRef.current = targetCode;
 
-    applyNextFrame();
-    const intervalId = setInterval(applyNextFrame, RENDER_INTERVAL_MS);
+    if (!isStreamingRef.current || targetCode.length < renderedCodeRef.current.length) {
+      setRenderedCode(targetCode);
+      renderedCodeRef.current = targetCode;
+    }
+  }, [targetCode]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const target = targetCodeRef.current;
+      const current = renderedCodeRef.current;
+
+      if (current === target) {
+        return;
+      }
+
+      if (!isStreamingRef.current) {
+        renderedCodeRef.current = target;
+        setRenderedCode(target);
+        return;
+      }
+
+      const remaining = target.length - current.length;
+      const step = Math.max(1, Math.ceil(remaining / 4));
+      const next = target.slice(0, Math.min(target.length, current.length + step));
+
+      renderedCodeRef.current = next;
+      setRenderedCode(next);
+    }, FRAME_MS);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [maxLines]);
+  }, []);
 
   useEffect(() => {
-    if (!isShikiReady || !renderedCode) {
-      setHighlightedCode("");
-      setHighlightedFor("");
-      return;
-    }
-
     let cancelled = false;
 
-    const tick = async () => {
-      if (cancelled || isHighlightingRef.current) {
+    const workerId = setInterval(() => {
+      if (!isShikiReady || cancelled || highlightingRef.current) {
         return;
       }
 
-      const source = renderedCode;
-      if (!source || source === highlightedFor) {
-        return;
-      }
-
-      isHighlightingRef.current = true;
-      try {
-        const html = await highlightCode({
-          code: source,
-          lang: language,
-          theme,
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        setHighlightedCode(html);
-        setHighlightedFor(source);
-      } catch {
-        if (!cancelled) {
+      const snapshot = renderedCodeRef.current;
+      if (!snapshot) {
+        if (highlightedCode) {
           setHighlightedCode("");
-          setHighlightedFor("");
+          highlightedSignatureRef.current = "";
         }
-      } finally {
-        isHighlightingRef.current = false;
+        return;
       }
-    };
 
-    void tick();
-    const intervalId = setInterval(
-      () => {
-        void tick();
-      },
-      isStreaming ? STREAM_HIGHLIGHT_INTERVAL_MS : IDLE_HIGHLIGHT_INTERVAL_MS,
-    );
+      const signature = `${language}|${theme}|${snapshot}`;
+      if (signature === highlightedSignatureRef.current) {
+        return;
+      }
+
+      highlightingRef.current = true;
+      const run = async () => {
+        try {
+          const html = await highlightCode({
+            code: snapshot,
+            lang: language,
+            theme,
+          });
+
+          if (cancelled) {
+            return;
+          }
+
+          setHighlightedCode(html);
+          highlightedSignatureRef.current = signature;
+        } catch {
+          if (!cancelled) {
+            setHighlightedCode("");
+            highlightedSignatureRef.current = "";
+          }
+        } finally {
+          highlightingRef.current = false;
+        }
+      };
+
+      void run();
+    }, FRAME_MS);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      clearInterval(workerId);
     };
-  }, [renderedCode, highlightedFor, isShikiReady, language, theme, isStreaming]);
+  }, [isShikiReady, language, theme, highlightedCode]);
 
   useEffect(() => {
-    if (isStreaming) {
-      setProgress(50);
-      return;
-    }
-
-    setProgress(100);
-    if (renderedCode.length > 0) {
+    if (!isStreaming && renderedCodeRef.current === targetCodeRef.current && renderedCodeRef.current.length > 0) {
       onCompleteRef.current?.();
     }
   }, [isStreaming, renderedCode]);
@@ -185,12 +200,8 @@ export function StreamingCodeViewerV2({
     setTheme((prev) =>
       prev === "github-dark" ? "github-light" : "github-dark",
     );
+    highlightedSignatureRef.current = "";
   }, []);
-
-  const progressClass =
-    progress >= 100 ? "w-full" : progress === 0 ? "w-0" : "w-1/2";
-
-  const lineCount = code.split("\n").length;
 
   return (
     <div
@@ -210,12 +221,10 @@ export function StreamingCodeViewerV2({
         </div>
 
         <div className="flex items-center gap-2">
-          {isStreaming && progress < 100 ? (
+          {isStreaming ? (
             <div className="flex items-center gap-2">
               <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
-                <div
-                  className={`h-full bg-[var(--primary)] transition-all duration-300 ${progressClass}`}
-                />
+                <div className="h-full bg-[var(--primary)] transition-all duration-150 w-1/2" />
               </div>
               <span className="text-xs text-[var(--muted-foreground)]">
                 Streaming...
@@ -267,7 +276,7 @@ export function StreamingCodeViewerV2({
 
       <div className="streaming-code-viewer__scroll flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-contain">
         <div className="inline-block min-w-full p-4 md:p-5">
-          {highlightedCode && highlightedFor === renderedCode ? (
+          {isShikiReady && highlightedCode ? (
             <div
               className="[&_pre]:m-0 [&_pre]:rounded-lg [&_.shiki]:!bg-transparent [&_.shiki]:m-0"
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
