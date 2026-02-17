@@ -91,7 +91,6 @@ export const promptRunsRouter = router({
               promptId: input.promptId,
               promptAuthor: prompt.user,
               code: event.code,
-              highlighted: event.highlighted,
               isComplete: false,
             };
             break;

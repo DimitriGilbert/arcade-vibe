@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Check, Copy, Download, Moon, Sun } from "lucide-react";
 import { highlightCode, isShikiInitialized } from "@/lib/shiki";
 
@@ -62,6 +62,10 @@ export function StreamingCodeViewer({
   const [copied, setCopied] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Store onComplete in a ref to avoid it being in the dependency array
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   // Initialize Shiki on mount
   useEffect(() => {
     if (!isShikiInitialized()) {
@@ -76,30 +80,62 @@ export function StreamingCodeViewer({
   }, []);
 
   // Highlight code when it changes or theme changes
+  // Debounced at ~30fps (~33ms) with proper cancellation
   useEffect(() => {
     if (!isShikiReady || !code) {
       return;
     }
 
-    const highlight = async () => {
-      const html = await highlightCode({
-        code,
-        lang: language,
-        theme,
-      });
-      setHighlightedCode(html);
+    // AbortController for cancelling in-flight highlights
+    const abortController = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-      // Update progress based on streaming state
-      if (isStreaming) {
-        setProgress(50); // Streaming in progress
-      } else {
-        setProgress(100);
-        onComplete?.();
+    // Debounce the highlight operation to ~30fps
+    timeoutId = setTimeout(() => {
+      // Check if already aborted before starting
+      if (abortController.signal.aborted) {
+        return;
       }
-    };
 
-    highlight();
-  }, [code, language, theme, isShikiReady, isStreaming, onComplete]);
+      const highlight = async () => {
+        try {
+          const html = await highlightCode({
+            code,
+            lang: language,
+            theme,
+          });
+
+          // Check if aborted before updating state
+          if (abortController.signal.aborted) {
+            return;
+          }
+
+          setHighlightedCode(html);
+
+          // Update progress based on streaming state
+          if (isStreaming) {
+            setProgress(50); // Streaming in progress
+          } else {
+            setProgress(100);
+            onCompleteRef.current?.();
+          }
+        } catch {
+          // Silently handle errors during highlighting
+          // The component will fall back to displaying raw code
+        }
+      };
+
+      highlight();
+    }, 33); // ~30fps debounce
+
+    // Cleanup: cancel timeout and abort in-flight highlights
+    return () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      abortController.abort();
+    };
+  }, [code, language, theme, isShikiReady, isStreaming]);
 
   // Copy code to clipboard
   const handleCopy = useCallback(async () => {

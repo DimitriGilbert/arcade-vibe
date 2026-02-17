@@ -25,6 +25,7 @@ export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchStreamLink({
       url: "/api/trpc",
+      maxItems: 1,
       fetch(url, options) {
         return fetch(url, {
           ...options,

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 
 import {
   Accordion,
@@ -61,6 +61,14 @@ export function EditorSidebar({
   onNewPrompt,
   children,
 }: EditorSidebarProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayTheme = mounted && selectedTheme ? getThemeName(themes, selectedTheme) : "Select a theme";
+
   return (
     <div className="h-full border border-[var(--border)] bg-[var(--card)] rounded-[var(--radius)] overflow-hidden">
       <Accordion
@@ -89,9 +97,7 @@ export function EditorSidebar({
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a theme">
-                    {selectedTheme
-                      ? getThemeName(themes, selectedTheme)
-                      : "Select a theme"}
+                    {displayTheme}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

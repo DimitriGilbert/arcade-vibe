@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, use, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -26,7 +26,17 @@ import {
 import { EditorSidebar } from "../../components/editor/editor-sidebar";
 import { VersionSelector } from "../../components/editor/version-selector";
 import { EditorTabs } from "../../components/editor/editor-tabs";
+import { SelectedModelsList } from "../../components/editor/selected-models-list";
 import type { GameMedia } from "@/lib/trpc-types";
+import type { ModelSelection, GenerationStatus } from "../../components/editor/model-types";
+import { MAX_MODELS } from "../../components/editor/model-types";
+import {
+  useGenerationsStore,
+  useGenerationById,
+  useCompletedCount,
+  useTotalCount,
+  type GenerationEntry,
+} from "@/stores/generations-store";
 
 interface EditorPageProps {
   searchParams?: Promise<{
@@ -41,10 +51,7 @@ interface PersistedEditorState {
   promptContent: string;
   gameName: string;
   selectedTheme: string;
-  selectedModel: string;
-  selectedApiKeyId: string | null;
-  reasoningEnabled: boolean;
-  reasoningMaxTokens: number;
+  selectedModels: ModelSelection[];
   timestamp: number;
 }
 
@@ -89,26 +96,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   );
   const queryClient = useQueryClient();
 
-  const persistedState = loadPersistedState();
-
-  const [promptContent, setPromptContent] = useState(persistedState?.promptContent ?? "");
-  const [gameName, setGameName] = useState(persistedState?.gameName ?? "");
-  const [selectedTheme, setSelectedTheme] = useState(persistedState?.selectedTheme ?? "");
-  const [selectedModel, setSelectedModel] = useState(persistedState?.selectedModel ?? "");
-  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string | null>(
-    persistedState?.selectedApiKeyId ?? null,
-  );
+  const [mounted, setMounted] = useState(false);
+  const [promptContent, setPromptContent] = useState("");
+  const [gameName, setGameName] = useState("");
+  const [selectedTheme, setSelectedTheme] = useState("");
+  const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState("");
-  const [generatedGameId, setGeneratedGameId] = useState<string | null>(null);
+  const generationAbortedRef = useRef(false);
 
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("editor");
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
-    null,
-  );
-  const [reasoningEnabled, setReasoningEnabled] = useState(persistedState?.reasoningEnabled ?? true);
-  const [reasoningMaxTokens, setReasoningMaxTokens] = useState(persistedState?.reasoningMaxTokens ?? 2000);
+  const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
+  // Use Zustand store for generations (must be after activeOutputTab declaration)
+  const { setGeneration, updateGenerationStatus, updateGenerationCode, updateGenerationGameId, updateGenerationError, removeGeneration, clearGenerations, setMultipleGenerations } = useGenerationsStore();
+  const activeGeneration = useGenerationById(activeOutputTab);
+  const completedCount = useCompletedCount();
+  const totalCount = useTotalCount();
 
   // Version comparison state
   const [showComparison, setShowComparison] = useState(false);
@@ -120,6 +125,18 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     strudelCode: null,
     mediaUrls: null,
   });
+
+  // Load persisted state on mount (client-side only)
+  useEffect(() => {
+    const persistedState = loadPersistedState();
+    if (persistedState) {
+      setPromptContent(persistedState.promptContent);
+      setGameName(persistedState.gameName);
+      setSelectedTheme(persistedState.selectedTheme);
+      setSelectedModels(persistedState.selectedModels);
+    }
+    setMounted(true);
+  }, []);
 
   // Fetch themes using direct tRPC client
   const { data: themes, isLoading: themesLoading } = useQuery({
@@ -232,19 +249,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       promptContent,
       gameName,
       selectedTheme,
-      selectedModel,
-      selectedApiKeyId,
-      reasoningEnabled,
-      reasoningMaxTokens,
+      selectedModels,
     });
   }, [
     promptContent,
     gameName,
     selectedTheme,
-    selectedModel,
-    selectedApiKeyId,
-    reasoningEnabled,
-    reasoningMaxTokens,
+    selectedModels,
     resolvedSearchParams?.promptId,
     resolvedSearchParams?.forkId,
     existingPrompt,
@@ -256,6 +267,14 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       clearPersistedState();
     }
   }, [existingPrompt]);
+
+  // Auto-select first output tab when generations start
+  useEffect(() => {
+    const firstModel = selectedModels[0];
+    if (firstModel && !activeOutputTab) {
+      setActiveOutputTab(firstModel.id);
+    }
+  }, [selectedModels, activeOutputTab]);
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
@@ -326,7 +345,38 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     },
   });
 
-  // Generate content using tRPC streaming API
+  // Handle adding a model to the selection
+  const handleAddModel = useCallback((selection: ModelSelection) => {
+    if (selectedModels.length >= MAX_MODELS) {
+      toast.error(`Maximum ${MAX_MODELS} models allowed`);
+      return;
+    }
+    if (selectedModels.some((m) => m.modelKey === selection.modelKey)) {
+      toast.error("Model already selected");
+      return;
+    }
+    setSelectedModels((prev) => [...prev, selection]);
+  }, [selectedModels]);
+
+  // Handle removing a model from the selection
+  const handleRemoveModel = useCallback((id: string) => {
+    const generation = useGenerationsStore.getState().generations[id];
+    if (generation && (generation.status === "reasoning" || generation.status === "generating")) {
+      toast.error("Cannot remove model while generating");
+      return;
+    }
+    setSelectedModels((prev) => prev.filter((m) => m.id !== id));
+    removeGeneration(id);
+    setActiveOutputTab((prev) => {
+      if (prev === id) {
+        const remaining = selectedModels.filter((m) => m.id !== id);
+        return remaining.length > 0 ? remaining[0]!.id : null;
+      }
+      return prev;
+    });
+  }, [selectedModels, removeGeneration]);
+
+  // Generate content using tRPC streaming API - parallel multi-model
   const handleGenerate = useCallback(async () => {
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
@@ -337,9 +387,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       return;
     }
 
-    const modelData = models?.find((m) => m.modelName === selectedModel);
-    if (!modelData) {
-      toast.error("Invalid model selected");
+    if (selectedModels.length === 0) {
+      toast.error("Please select at least one model");
       return;
     }
 
@@ -351,9 +400,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     }
 
     setIsGenerating(true);
-    setGeneratedCode("");
-    setGeneratedGameId(null);
-    setActiveTab("output"); // Auto-switch to output tab
+    setActiveTab("output");
+    generationAbortedRef.current = false;
+
+    // Track completion count with ref to avoid stale closure
+    const completionStats = { completed: 0, errors: 0, total: selectedModels.length };
+
+    // Initialize all generations using Zustand store
+    const initialGenerations: Record<string, GenerationEntry> = {};
+    for (const model of selectedModels) {
+      initialGenerations[model.id] = {
+        modelSelectionId: model.id,
+        modelKey: model.modelKey,
+        status: "idle",
+        code: "",
+        gameId: null,
+      };
+    }
+    setMultipleGenerations(initialGenerations);
 
     try {
       // Create new prompt first if not exists
@@ -367,46 +431,84 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         setSelectedPromptId(promptId);
       }
 
-      // Use tRPC streaming procedure
-      const stream = await trpcClient.generate.streamGeneration.mutate({
-        promptId,
-        modelKey: selectedModel,
-        apiKeyId: selectedApiKeyId ?? undefined,
-        name: gameName.trim() || undefined,
-        mediaUrls: gameMedia.mediaUrls ?? undefined,
-        reasoningEnabled,
-        reasoningMaxTokens,
+      // Launch all generations in parallel
+      const generationPromises = selectedModels.map(async (model) => {
+        if (generationAbortedRef.current) return;
+
+        // Update status to reasoning
+        updateGenerationStatus(model.id, "reasoning");
+
+        try {
+          const stream = await trpcClient.generate.streamGeneration.mutate({
+            promptId,
+            modelKey: model.modelKey,
+            apiKeyId: model.apiKeyId ?? undefined,
+            name: gameName.trim() || undefined,
+            mediaUrls: gameMedia.mediaUrls ?? undefined,
+            reasoningEnabled: model.reasoningEnabled,
+            reasoningMaxTokens: model.reasoningMaxTokens,
+          });
+
+          for await (const chunk of stream) {
+            if (generationAbortedRef.current) return;
+
+            if (chunk.type === "status" && "status" in chunk) {
+              updateGenerationStatus(model.id, chunk.status as GenerationStatus);
+            } else if (chunk.type === "chunk" && "code" in chunk) {
+              updateGenerationCode(model.id, chunk.code as string);
+            } else if (chunk.type === "complete" && "gameId" in chunk) {
+              completionStats.completed++;
+              updateGenerationGameId(model.id, chunk.gameId as string);
+            } else if (chunk.type === "error") {
+              completionStats.errors++;
+              const errorMsg = "error" in chunk ? String(chunk.error) : "Generation failed";
+              toast.error(`${model.modelName}: ${errorMsg}`);
+              updateGenerationError(model.id, errorMsg);
+            }
+          }
+        } catch (error) {
+          if (generationAbortedRef.current) return;
+          
+          const errorMsg = error instanceof Error ? error.message : "Generation failed";
+          completionStats.errors++;
+          toast.error(`${model.modelName}: ${errorMsg}`);
+          console.error(`Generation error for ${model.modelKey}:`, error);
+          updateGenerationError(model.id, errorMsg);
+        }
       });
 
-      for await (const chunk of stream) {
-        if (chunk.type === "chunk" && "code" in chunk) {
-          setGeneratedCode(chunk.code);
-        } else if (chunk.type === "complete" && "gameId" in chunk) {
-          setIsGenerating(false);
-          setGeneratedGameId(chunk.gameId);
-          toast.success("Game generated and saved successfully!");
-        }
+      await Promise.all(generationPromises);
+      
+      // Show aggregate toast based on tracked stats
+      if (completionStats.completed === completionStats.total) {
+        toast.success(`All ${completionStats.total} games generated successfully!`);
+      } else if (completionStats.completed > 0) {
+        toast.info(`${completionStats.completed}/${completionStats.total} games generated (${completionStats.errors} failed)`);
+      } else {
+        toast.error("All generations failed");
       }
     } catch (error) {
       console.error("Generation error:", error);
-      setIsGenerating(false);
       toast.error(
-        error instanceof Error ? error.message : "Failed to generate game",
+        error instanceof Error ? error.message : "Failed to generate games",
       );
+    } finally {
+      setIsGenerating(false);
     }
   }, [
     promptContent,
     gameName,
     existingPrompt,
     selectedTheme,
-    selectedModel,
-    models,
+    selectedModels,
     createPromptMutation,
     selectedPromptId,
-    selectedApiKeyId,
     gameMedia.mediaUrls,
-    reasoningEnabled,
-    reasoningMaxTokens,
+    setMultipleGenerations,
+    updateGenerationStatus,
+    updateGenerationCode,
+    updateGenerationGameId,
+    updateGenerationError,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -472,12 +574,17 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     setSelectedPromptId(null);
     setSelectedVersionId(null);
     setActiveTab("editor");
-    setGeneratedCode("");
-    setGeneratedGameId(null);
-  }, []);
+    setSelectedModels([]);
+    clearGenerations();
+    setActiveOutputTab(null);
+  }, [clearGenerations]);
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
+  }, []);
+
+  const handleOutputTabChange = useCallback((id: string) => {
+    setActiveOutputTab(id);
   }, []);
 
   const handleSelectVersion = useCallback(
@@ -521,6 +628,14 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     existingPrompt ??
     (selectedPromptId ? { id: selectedPromptId, version: 1 } : null);
 
+  // activeGeneration is already defined from useGenerationById hook above
+  const activeModel = selectedModels.find((m) => m.id === activeOutputTab);
+
+  // completedCount and totalCount come from store hooks above
+  const progressText = isGenerating && selectedModels.length > 1
+    ? `Generating ${completedCount}/${selectedModels.length}...`
+    : null;
+
   return (
     <div className="relative h-full min-h-0 overflow-hidden">
       <div className="absolute inset-0 bg-background min-h-screen" />
@@ -553,6 +668,16 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             onSelectPrompt={handleSelectPrompt}
             onNewPrompt={handleNewPrompt}
           >
+            {/* Selected Models List */}
+            <div className="mb-4">
+              <SelectedModelsList
+                models={selectedModels}
+                onRemoveModel={handleRemoveModel}
+                disabled={isGenerating}
+              />
+            </div>
+
+            {/* Model Selector */}
             {modelsLoading ? (
               <div className="flex items-center justify-center h-20">
                 <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
@@ -560,19 +685,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             ) : modelMetadata ? (
               <ModelSelector
                 modelMetadata={modelMetadata}
-                selectedModel={selectedModel}
-                onSelectModel={(modelName) => {
-                  if (modelName) {
-                    setSelectedModel(modelName);
-                  }
-                }}
+                existingModelKeys={selectedModels.map((m) => m.modelKey)}
+                onAddModel={handleAddModel}
                 apiKeys={apiKeys as ApiKey[] | undefined}
-                selectedApiKeyId={selectedApiKeyId}
-                onSelectApiKey={setSelectedApiKeyId}
-                reasoningEnabled={reasoningEnabled}
-                reasoningMaxTokens={reasoningMaxTokens}
-                onReasoningChange={setReasoningEnabled}
-                onReasoningMaxTokensChange={setReasoningMaxTokens}
+                disabled={isGenerating || selectedModels.length >= MAX_MODELS}
               />
             ) : null}
           </EditorSidebar>
@@ -582,20 +698,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header with credits and fork button */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-            {/* <div>
-            <h1 className="text-xl font-bold text-[var(--foreground)]">
-              {isForking
-                ? "Fork Prompt"
-                : isEditing
-                  ? "Edit Prompt"
-                  : "Create Prompt"}
-            </h1>
-            {credits && (
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {credits.balance} credits available
-              </p>
-            )}
-          </div> */}
             <div className="flex items-center gap-2">
               {isForking && (
                 <ArcadeButton
@@ -607,7 +709,17 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                   {forkPromptMutation.isPending ? "Forking..." : "Fork"}
                 </ArcadeButton>
               )}
+              {progressText && (
+                <span className="text-sm text-[var(--muted-foreground)]">
+                  {progressText}
+                </span>
+              )}
             </div>
+            {credits && (
+              <span className="text-xs text-[var(--muted-foreground)]">
+                {credits.balance} credits
+              </span>
+            )}
           </div>
 
           {/* Version Selector - only when editing existing prompt */}
@@ -632,15 +744,15 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             <EditorTabs
               promptContent={promptContent}
               onPromptChange={setPromptContent}
-              generatedCode={generatedCode}
-              isGenerating={isGenerating}
               activeTab={activeTab}
               onTabChange={handleTabChange}
               promptId={selectedPromptId}
-              generatedGameId={generatedGameId}
-              themeMediaConfig={themeMediaConfig}
-              showMediaTab={showMediaTab}
+              themeMediaConfig={undefined}
+              showMediaTab={false}
               onMediaChange={handleMediaChange}
+              selectedModels={selectedModels}
+              activeOutputTab={activeOutputTab}
+              onOutputTabChange={handleOutputTabChange}
             />
           </div>
 
@@ -680,26 +792,26 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               </ArcadeButton>
               <ArcadeButton
                 onClick={handleGenerate}
-                disabled={isGenerating || !promptContent.trim()}
+                disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
                 className="flex-1"
               >
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
+                    {selectedModels.length > 1 ? `Generating ${completedCount}/${selectedModels.length}...` : "Generating..."}
                   </>
                 ) : (
                   <>
                     <Play className="h-4 w-4 mr-2" />
-                    Generate
+                    Generate ({selectedModels.length} model{selectedModels.length !== 1 ? "s" : ""})
                   </>
                 )}
               </ArcadeButton>
-              {generatedGameId && !isGenerating && (
+              {activeGeneration?.gameId && !isGenerating && (
                 <ArcadeButton
                   variant="glow"
                   onClick={() =>
-                    window.open(`/game/${generatedGameId}`, "_blank")
+                    window.open(`/game/${activeGeneration.gameId}`, "_blank")
                   }
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />

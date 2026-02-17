@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useFormedible } from "@/hooks/use-formedible";
 import { ArcadeBadge } from "@/components/arcade";
 import { ChevronDown, ChevronRight, Filter, Key } from "lucide-react";
 import { z } from "zod";
+import type { ModelSelection } from "./model-types";
+import { MAX_MODELS } from "./model-types";
 
 export interface ModelConfig {
   id: string;
@@ -58,15 +60,9 @@ export interface ModelMetadata {
 
 export interface ModelSelectorProps {
   modelMetadata: ModelMetadata;
-  selectedModel: string;
-  onSelectModel: (modelName: string | null) => void;
+  existingModelKeys: string[];
+  onAddModel: (selection: ModelSelection) => void;
   apiKeys?: ApiKey[];
-  selectedApiKeyId: string | null;
-  onSelectApiKey: (apiKeyId: string | null) => void;
-  reasoningEnabled: boolean;
-  reasoningMaxTokens: number;
-  onReasoningChange: (enabled: boolean) => void;
-  onReasoningMaxTokensChange: (maxTokens: number) => void;
   disabled?: boolean;
 }
 
@@ -83,18 +79,14 @@ type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
 
 export function ModelSelector({
   modelMetadata,
-  selectedModel,
-  onSelectModel,
+  existingModelKeys,
+  onAddModel,
   apiKeys = [],
-  selectedApiKeyId,
-  onSelectApiKey,
-  reasoningEnabled,
-  reasoningMaxTokens,
-  onReasoningChange,
-  onReasoningMaxTokensChange,
   disabled = false,
 }: ModelSelectorProps) {
   const [showFilters, setShowFilters] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+  const idCounterRef = useRef(0);
 
   const tierOptions = useMemo(() => {
     return modelMetadata.tiers
@@ -143,29 +135,18 @@ export function ModelSelector({
       return filtered.map((m) => {
         const cost = modelMetadata.tierCosts[m.tier];
         const costLabel = cost !== undefined ? `${cost}cr` : "cost unknown";
+        const alreadySelected = existingModelKeys.includes(m.modelName);
         return {
           value: m.modelName,
-          label: `${m.modelName} (${m.tier}, ${costLabel})`,
+          label: `${m.modelName} (${m.tier}, ${costLabel})${alreadySelected ? " ✓" : ""}`,
+          disabled: alreadySelected,
         };
       });
     },
-    [modelMetadata],
+    [modelMetadata, existingModelKeys],
   );
 
-  const selectedModelData = useMemo(() => {
-    return modelMetadata.models.find((m) => m.modelName === selectedModel);
-  }, [modelMetadata.models, selectedModel]);
-
-  const creditCost = useMemo(() => {
-    if (!selectedModelData) return 0;
-    return modelMetadata.tierCosts[selectedModelData.tier] ?? 0;
-  }, [selectedModelData, modelMetadata.tierCosts]);
-
-  const isByok = useMemo(() => {
-    return selectedApiKeyId !== null && selectedApiKeyId !== "";
-  }, [selectedApiKeyId]);
-
-  const { Form } = useFormedible<ModelSelectionValues>({
+  const { Form, form } = useFormedible<ModelSelectionValues>({
     schema: modelSelectionSchema,
     fields: [
       {
@@ -232,16 +213,44 @@ export function ModelSelector({
       defaultValues: {
         tierFilter: [],
         providerFilter: [],
-        selectedModel: selectedModel ?? "",
-        selectedApiKeyId: selectedApiKeyId ?? "",
-        reasoningEnabled: reasoningEnabled,
-        reasoningMaxTokens: reasoningMaxTokens,
+        selectedModel: "",
+        selectedApiKeyId: "",
+        reasoningEnabled: true,
+        reasoningMaxTokens: 2000,
       },
       onSubmit: async ({ value }) => {
-        onSelectModel(value.selectedModel);
-        onSelectApiKey(value.selectedApiKeyId || null);
-        onReasoningChange(value.reasoningEnabled);
-        onReasoningMaxTokensChange(value.reasoningMaxTokens);
+        if (existingModelKeys.includes(value.selectedModel)) {
+          return;
+        }
+
+        if (existingModelKeys.length >= MAX_MODELS) {
+          return;
+        }
+
+        const modelData = modelMetadata.models.find(
+          (m) => m.modelName === value.selectedModel,
+        );
+        if (!modelData) return;
+
+        const creditCost = modelMetadata.tierCosts[modelData.tier] ?? 0;
+        const isByok = value.selectedApiKeyId && value.selectedApiKeyId !== "";
+
+        const selection: ModelSelection = {
+          id: `model-${Date.now()}-${idCounterRef.current++}`,
+          modelKey: value.selectedModel,
+          modelName: value.selectedModel,
+          tier: modelData.tier,
+          tierName: modelData.tierName,
+          creditCost: isByok ? 0 : creditCost,
+          apiKeyId: isByok ? (value.selectedApiKeyId ?? null) : null,
+          isByok: !!isByok,
+          reasoningEnabled: value.reasoningEnabled,
+          reasoningMaxTokens: value.reasoningMaxTokens,
+        };
+
+        onAddModel(selection);
+        form.reset();
+        setFormKey((k) => k + 1);
       },
     },
   });
@@ -249,14 +258,11 @@ export function ModelSelector({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Model</span>
-        {isByok ? (
-          <ArcadeBadge text="BYOK" variant="neon" />
-        ) : selectedModel ? (
-          <ArcadeBadge text={`${creditCost} credits`} variant="neon" />
-        ) : (
-          <ArcadeBadge text="Select model" variant="neon" />
-        )}
+        <span className="text-sm font-medium">Add Model</span>
+        <ArcadeBadge
+          text={`${existingModelKeys.length}/${MAX_MODELS}`}
+          variant="neon"
+        />
       </div>
 
       <button
@@ -279,16 +285,7 @@ export function ModelSelector({
         )}
       </button>
 
-      <Form className="space-y-4" />
-
-      {selectedModelData && (
-        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
-          <span>Providers: {selectedModelData.providers.join(", ")}</span>
-          <span>
-            Max: {selectedModelData.maxTokens.toLocaleString()} tokens
-          </span>
-        </div>
-      )}
+      <Form key={formKey} className="space-y-4" />
 
       {apiKeys.length === 0 && (
         <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">

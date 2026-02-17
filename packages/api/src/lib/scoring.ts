@@ -388,12 +388,12 @@ export async function updateGameScore(
       .update(scores)
       .set({
         score: roundedScore,
-        finalScore: scoreResult.finalScore.toString(),
-        bayesianRating: scoreResult.components.qualityScore.toString(),
-        difficultyMultiplier: scoreResult.components.difficultyScore.toString(),
-        brevityScore: scoreResult.components.efficiencyScore.toString(),
-        engagementScore: scoreResult.components.engagementScore.toString(),
-        popularityScore: scoreResult.components.popularityScore.toString(),
+        finalScore: scoreResult.finalScore.toFixed(2),
+        bayesianRating: scoreResult.components.qualityScore.toFixed(2),
+        difficultyMultiplier: scoreResult.components.difficultyScore.toFixed(2),
+        brevityScore: scoreResult.components.efficiencyScore.toFixed(2),
+        engagementScore: scoreResult.components.engagementScore.toFixed(2),
+        popularityScore: scoreResult.components.popularityScore.toFixed(2),
         calculatedAt: new Date(),
         version: existingScore.version + 1,
       })
@@ -403,7 +403,7 @@ export async function updateGameScore(
       gameId,
       existingScore.id,
       existingScore.finalScore,
-      scoreResult.finalScore.toString(),
+      scoreResult.finalScore.toFixed(2),
       {
         qualityScore: parseFloat(existingScore.bayesianRating ?? "0"),
         difficultyScore: parseFloat(existingScore.difficultyMultiplier ?? "0"),
@@ -427,12 +427,12 @@ export async function updateGameScore(
         isHighScore: false,
         completionTime: null,
         playedAt: new Date(),
-        finalScore: scoreResult.finalScore.toString(),
-        bayesianRating: scoreResult.components.qualityScore.toString(),
-        difficultyMultiplier: scoreResult.components.difficultyScore.toString(),
-        brevityScore: scoreResult.components.efficiencyScore.toString(),
-        engagementScore: scoreResult.components.engagementScore.toString(),
-        popularityScore: scoreResult.components.popularityScore.toString(),
+        finalScore: scoreResult.finalScore.toFixed(2),
+        bayesianRating: scoreResult.components.qualityScore.toFixed(2),
+        difficultyMultiplier: scoreResult.components.difficultyScore.toFixed(2),
+        brevityScore: scoreResult.components.efficiencyScore.toFixed(2),
+        engagementScore: scoreResult.components.engagementScore.toFixed(2),
+        popularityScore: scoreResult.components.popularityScore.toFixed(2),
       })
       .returning({ id: scores.id });
 
@@ -441,7 +441,7 @@ export async function updateGameScore(
         gameId,
         inserted.id,
         null,
-        scoreResult.finalScore.toString(),
+        scoreResult.finalScore.toFixed(2),
         null,
         scoreResult.components,
         "initial",

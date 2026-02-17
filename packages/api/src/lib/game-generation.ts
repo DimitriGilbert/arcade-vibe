@@ -10,7 +10,6 @@ import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 import { getProviderModel } from "./ai-providers";
 import { deductCredits, getValidCreditBalance } from "./credits";
 import { decryptApiKey } from "./encryption";
-import { highlightCode } from "./highlighter";
 import { uploadToCDN } from "./cdn";
 import {
   sanitizeGameCode,
@@ -44,11 +43,16 @@ export interface GenerateGameOptions {
   reasoningMaxTokens?: number;
 }
 
+export interface GenerateGameStatusEvent {
+  type: "status";
+  gameId: string;
+  status: "reasoning" | "generating";
+}
+
 export interface GenerateGameChunkEvent {
   type: "chunk";
   gameId: string;
   code: string;
-  highlighted: string;
 }
 
 export interface GenerateGameCompleteEvent {
@@ -65,6 +69,7 @@ export interface GenerateGameErrorEvent {
 }
 
 export type GenerateGameEvent =
+  | GenerateGameStatusEvent
   | GenerateGameChunkEvent
   | GenerateGameCompleteEvent
   | GenerateGameErrorEvent;
@@ -554,20 +559,36 @@ export async function generateGame(
   // Create the async generator
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
     let fullCode = "";
+    let hasEmittedGenerating = false;
 
     try {
+      // Emit reasoning status if enabled
+      if (options.reasoningEnabled ?? true) {
+        yield {
+          type: "status",
+          gameId: confirmedGameId,
+          status: "reasoning",
+        };
+      }
+
       // Stream chunks
       for await (const chunk of result.textStream) {
-        fullCode += chunk;
+        // Emit generating status on first chunk
+        if (!hasEmittedGenerating) {
+          hasEmittedGenerating = true;
+          yield {
+            type: "status",
+            gameId: confirmedGameId,
+            status: "generating",
+          };
+        }
 
-        // Apply Shiki syntax highlighting
-        const highlighted = await highlightCode(fullCode, "html");
+        fullCode += chunk;
 
         yield {
           type: "chunk",
           gameId: confirmedGameId,
           code: fullCode,
-          highlighted,
         };
       }
 

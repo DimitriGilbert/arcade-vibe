@@ -46,7 +46,7 @@ export function ArcadeButton({
   children,
   className,
   onClick,
-  disabled,
+  disabled = false,
   type = "button",
 }: ArcadeButtonProps) {
   return (

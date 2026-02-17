@@ -1,8 +1,5 @@
 import { router, protectedProcedure } from "@arcade-vibe/api";
 import { generateGame } from "@arcade-vibe/api/lib/game-generation";
-import { db } from "@arcade-vibe/db";
-import { games } from "@arcade-vibe/db/schema/games";
-import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -32,22 +29,6 @@ export const generateRouter = router({
         });
       }
 
-      // GL-016: Check for existing 'generating' status to prevent concurrent generation
-      const existingGeneration = await db.query.games.findFirst({
-        where: and(
-          eq(games.promptId, input.promptId),
-          eq(games.status, "generating"),
-        ),
-        columns: { id: true, createdAt: true },
-      });
-
-      if (existingGeneration) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: `A game is already being generated for this prompt. Please wait for it to complete (started at ${existingGeneration.createdAt?.toISOString()}).`,
-        });
-      }
-
       // Use shared generation logic
       const result = await generateGame({
         promptId: input.promptId,
@@ -64,12 +45,19 @@ export const generateRouter = router({
       // Stream events from the generator
       for await (const event of result.stream) {
         switch (event.type) {
+          case "status":
+            yield {
+              type: "status",
+              gameId: event.gameId,
+              status: event.status,
+              isComplete: false,
+            };
+            break;
           case "chunk":
             yield {
               type: "chunk",
               gameId: event.gameId,
               code: event.code,
-              highlighted: event.highlighted,
               isComplete: false,
             };
             break;
