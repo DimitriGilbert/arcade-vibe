@@ -17,6 +17,7 @@ export interface GenerationEntry {
   modelKey: string;
   status: GenerationStatus;
   code: string;
+  reasoning?: string;
   gameId: string | null;
   usage?: GenerationUsageMetrics;
   error?: string;
@@ -30,6 +31,7 @@ interface GenerationsState {
   setGeneration: (id: string, generation: GenerationEntry) => void;
   updateGenerationStatus: (id: string, status: GenerationStatus) => void;
   updateGenerationCode: (id: string, code: string) => void;
+  updateGenerationReasoning: (id: string, reasoning: string) => void;
   updateGenerationGameId: (
     id: string,
     gameId: string,
@@ -64,14 +66,26 @@ export const useGenerationsStore = create<GenerationsState>((set) => ({
       };
     }),
 
-  updateGenerationCode: (id, code) =>
+  updateGenerationCode: (id, delta) =>
     set((state) => {
       const existing = state.generations[id];
       if (!existing) return state;
       return {
         generations: {
           ...state.generations,
-          [id]: { ...existing, code },
+          [id]: { ...existing, code: existing.code + delta },
+        },
+      };
+    }),
+
+  updateGenerationReasoning: (id, delta) =>
+    set((state) => {
+      const existing = state.generations[id];
+      if (!existing) return state;
+      return {
+        generations: {
+          ...state.generations,
+          [id]: { ...existing, reasoning: (existing.reasoning ?? "") + delta },
         },
       };
     }),
@@ -176,6 +190,7 @@ export function toGenerationResult(entry: GenerationEntry): GenerationResult {
     modelKey: entry.modelKey,
     status: entry.status,
     code: entry.code,
+    reasoning: entry.reasoning,
     gameId: entry.gameId,
     usage: entry.usage,
     error: entry.error,
@@ -191,6 +206,7 @@ export function fromGenerationResult(result: GenerationResult): GenerationEntry 
     modelKey: result.modelKey,
     status: result.status,
     code: result.code,
+    reasoning: result.reasoning,
     gameId: result.gameId,
     usage: result.usage,
     error: result.error,

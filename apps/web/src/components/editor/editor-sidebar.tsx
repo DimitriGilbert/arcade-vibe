@@ -16,6 +16,7 @@ import {
 import { ArcadeButton } from "@/components/arcade";
 import { PromptListItem } from "./prompt-list-item";
 import { Plus, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Theme {
   id: string;
@@ -134,7 +135,7 @@ export function EditorSidebar({
           </AccordionTrigger>
           <AccordionContent>
             <div className="px-4 pb-3">
-              <div className="overflow-y-auto max-h-[50vh] -mx-1 px-1">
+              <ScrollArea className="h-[50vh]">
                 {promptsLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="size-4 animate-spin text-[var(--muted-foreground)]" />
@@ -163,7 +164,7 @@ export function EditorSidebar({
                     </p>
                   </div>
                 )}
-              </div>
+              </ScrollArea>
               <div className="pt-3">
                 <ArcadeButton
                   variant="outline"

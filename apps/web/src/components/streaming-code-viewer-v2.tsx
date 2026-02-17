@@ -14,6 +14,7 @@ export interface StreamingCodeViewerV2Props {
   onComplete?: () => void;
   fileName?: string;
   maxLines?: number;
+  reasoning?: string;
 }
 
 function clampLines(source: string, maxLines: number): string {
@@ -27,7 +28,6 @@ function clampLines(source: string, maxLines: number): string {
   return lines.slice(0, maxLines).join("\n");
 }
 
-// eslint-disable-next-line react/no-dangerously-set-inner-html -- Shiki generates trusted, safe HTML for syntax highlighting
 export function StreamingCodeViewerV2({
   code,
   language,
@@ -35,21 +35,24 @@ export function StreamingCodeViewerV2({
   onComplete,
   fileName,
   maxLines = Number.POSITIVE_INFINITY,
+  reasoning,
 }: StreamingCodeViewerV2Props) {
-  const [theme, setTheme] = useState<"github-dark" | "github-light">(
-    "github-dark",
-  );
+  const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
   const [isShikiReady, setIsShikiReady] = useState(false);
   const [renderedCode, setRenderedCode] = useState("");
+  const [renderedReasoning, setRenderedReasoning] = useState("");
   const [highlightedCode, setHighlightedCode] = useState("");
   const [copied, setCopied] = useState(false);
 
   const onCompleteRef = useRef(onComplete);
   const targetCodeRef = useRef("");
+  const targetReasoningRef = useRef("");
   const renderedCodeRef = useRef("");
+  const renderedReasoningRef = useRef("");
   const isStreamingRef = useRef(isStreaming);
   const highlightingRef = useRef(false);
   const highlightedSignatureRef = useRef("");
+  const hasHighlightedCodeRef = useRef(false);
 
   onCompleteRef.current = onComplete;
   isStreamingRef.current = isStreaming;
@@ -86,34 +89,63 @@ export function StreamingCodeViewerV2({
   }, [targetCode]);
 
   useEffect(() => {
+    targetReasoningRef.current = reasoning ?? "";
+
+    if (!isStreamingRef.current) {
+      setRenderedReasoning(reasoning ?? "");
+      renderedReasoningRef.current = reasoning ?? "";
+    }
+  }, [reasoning]);
+
+  useEffect(() => {
+    if (!isStreaming) {
+      return;
+    }
+
     const intervalId = setInterval(() => {
       const target = targetCodeRef.current;
       const current = renderedCodeRef.current;
 
-      if (current === target) {
-        return;
+      if (current !== target) {
+        if (!isStreamingRef.current) {
+          renderedCodeRef.current = target;
+          setRenderedCode(target);
+        } else {
+          const remaining = target.length - current.length;
+          const step = Math.max(1, Math.ceil(remaining / 4));
+          const next = target.slice(0, Math.min(target.length, current.length + step));
+          renderedCodeRef.current = next;
+          setRenderedCode(next);
+        }
       }
 
-      if (!isStreamingRef.current) {
-        renderedCodeRef.current = target;
-        setRenderedCode(target);
-        return;
+      const targetReason = targetReasoningRef.current;
+      const currentReason = renderedReasoningRef.current;
+
+      if (currentReason !== targetReason) {
+        if (!isStreamingRef.current) {
+          renderedReasoningRef.current = targetReason;
+          setRenderedReasoning(targetReason);
+        } else {
+          const remainingReason = targetReason.length - currentReason.length;
+          const stepReason = Math.max(1, Math.ceil(remainingReason / 4));
+          const nextReason = targetReason.slice(0, Math.min(targetReason.length, currentReason.length + stepReason));
+          renderedReasoningRef.current = nextReason;
+          setRenderedReasoning(nextReason);
+        }
       }
-
-      const remaining = target.length - current.length;
-      const step = Math.max(1, Math.ceil(remaining / 4));
-      const next = target.slice(0, Math.min(target.length, current.length + step));
-
-      renderedCodeRef.current = next;
-      setRenderedCode(next);
     }, FRAME_MS);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [isStreaming]);
 
   useEffect(() => {
+    if (!isStreaming) {
+      return;
+    }
+
     let cancelled = false;
 
     const workerId = setInterval(() => {
@@ -123,9 +155,10 @@ export function StreamingCodeViewerV2({
 
       const snapshot = renderedCodeRef.current;
       if (!snapshot) {
-        if (highlightedCode) {
+        if (hasHighlightedCodeRef.current) {
           setHighlightedCode("");
           highlightedSignatureRef.current = "";
+          hasHighlightedCodeRef.current = false;
         }
         return;
       }
@@ -150,10 +183,12 @@ export function StreamingCodeViewerV2({
 
           setHighlightedCode(html);
           highlightedSignatureRef.current = signature;
+          hasHighlightedCodeRef.current = true;
         } catch {
           if (!cancelled) {
             setHighlightedCode("");
             highlightedSignatureRef.current = "";
+            hasHighlightedCodeRef.current = false;
           }
         } finally {
           highlightingRef.current = false;
@@ -167,13 +202,13 @@ export function StreamingCodeViewerV2({
       cancelled = true;
       clearInterval(workerId);
     };
-  }, [isShikiReady, language, theme, highlightedCode]);
+  }, [isStreaming, isShikiReady, language, theme]);
 
   useEffect(() => {
     if (!isStreaming && renderedCodeRef.current === targetCodeRef.current && renderedCodeRef.current.length > 0) {
       onCompleteRef.current?.();
     }
-  }, [isStreaming, renderedCode]);
+  }, [isStreaming]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -200,9 +235,7 @@ export function StreamingCodeViewerV2({
   }, [code, fileName]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) =>
-      prev === "github-dark" ? "github-light" : "github-dark",
-    );
+    setTheme((prev) => (prev === "github-dark" ? "github-light" : "github-dark"));
     highlightedSignatureRef.current = "";
   }, []);
 
@@ -214,13 +247,9 @@ export function StreamingCodeViewerV2({
       <div className="streaming-code-viewer__header shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]">
         <div className="flex items-center gap-2 min-w-0">
           {fileName ? (
-            <span className="text-xs font-medium text-[var(--foreground)]/80 truncate">
-              {fileName}
-            </span>
+            <span className="text-xs font-medium text-[var(--foreground)]/80 truncate">{fileName}</span>
           ) : null}
-          <span className="text-xs font-mono text-[var(--foreground)]/60">
-            {language}
-          </span>
+          <span className="text-xs font-mono text-[var(--foreground)]/60">{language}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -229,9 +258,7 @@ export function StreamingCodeViewerV2({
               <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
                 <div className="h-full bg-[var(--primary)] transition-all duration-150 w-1/2" />
               </div>
-              <span className="text-xs text-[var(--muted-foreground)]">
-                Streaming...
-              </span>
+              <span className="text-xs text-[var(--muted-foreground)]">Streaming...</span>
             </div>
           ) : null}
 
@@ -282,18 +309,26 @@ export function StreamingCodeViewerV2({
         style={{ maxHeight: "1000px" }}
       >
         <div className="inline-block min-w-full p-4 md:p-5">
+          {renderedReasoning ? (
+            <div className="mb-4 pb-4 border-b border-[var(--border)]">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-blue-400">Reasoning</span>
+              </div>
+              <p className="text-xs text-blue-300/80 italic whitespace-pre-wrap font-mono leading-relaxed">
+                {renderedReasoning}
+              </p>
+            </div>
+          ) : null}
           {isShikiReady && highlightedCode ? (
             <div
               className="[&_pre]:m-0 [&_pre]:rounded-lg [&_.shiki]:!bg-transparent [&_.shiki]:m-0"
+              // eslint-disable-next-line react/no-dangerously-set-inner-html -- Shiki generates trusted, safe HTML for syntax highlighting
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
           ) : (
             <div className="text-[var(--foreground)]/80">
               {renderedCode.split("\n").map((line, index) => (
-                <div
-                  key={`${index}-${line.slice(0, 16)}`}
-                  className="whitespace-pre"
-                >
+                <div key={`${index}-${line.slice(0, 16)}`} className="whitespace-pre">
                   {line || "\u00A0"}
                 </div>
               ))}

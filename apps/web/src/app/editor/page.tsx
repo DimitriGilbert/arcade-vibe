@@ -113,7 +113,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Use Zustand store for generations (must be after activeOutputTab declaration)
-  const { setGeneration, updateGenerationStatus, updateGenerationCode, updateGenerationGameId, updateGenerationError, removeGeneration, clearGenerations, setMultipleGenerations } = useGenerationsStore();
+  const { setGeneration, updateGenerationStatus, updateGenerationCode, updateGenerationReasoning, updateGenerationGameId, updateGenerationError, removeGeneration, clearGenerations, setMultipleGenerations } = useGenerationsStore();
   const activeGeneration = useGenerationById(activeOutputTab);
   const completedCount = useCompletedCount();
   const totalCount = useTotalCount();
@@ -457,8 +457,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
             if (chunk.type === "status" && "status" in chunk) {
               updateGenerationStatus(model.id, chunk.status as GenerationStatus);
-            } else if (chunk.type === "chunk" && "code" in chunk) {
-              updateGenerationCode(model.id, chunk.code as string);
+            } else if (chunk.type === "reasoning-chunk" && "delta" in chunk) {
+              updateGenerationReasoning(model.id, chunk.delta as string);
+            } else if (chunk.type === "chunk" && "delta" in chunk) {
+              updateGenerationCode(model.id, chunk.delta as string);
             } else if (chunk.type === "complete" && "gameId" in chunk) {
               completionStats.completed++;
               updateGenerationGameId(model.id, chunk.gameId as string);
@@ -510,6 +512,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     setMultipleGenerations,
     updateGenerationStatus,
     updateGenerationCode,
+    updateGenerationReasoning,
     updateGenerationGameId,
     updateGenerationError,
   ]);

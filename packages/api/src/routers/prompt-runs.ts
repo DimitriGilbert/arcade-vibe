@@ -90,7 +90,7 @@ export const promptRunsRouter = router({
               gameId: event.gameId,
               promptId: input.promptId,
               promptAuthor: prompt.user,
-              code: event.code,
+              delta: event.delta,
               isComplete: false,
             };
             break;

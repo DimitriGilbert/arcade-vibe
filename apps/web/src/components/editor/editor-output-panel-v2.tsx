@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, AlertCircle, Brain, Check, Sparkles } from "lucide-react";
+import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { ArrowDown, AlertCircle, Check, Sparkles, Brain } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import type { ModelSelection, GenerationStatus } from "./model-types";
@@ -39,49 +39,18 @@ function OutputStatusCard({
   );
 }
 
-function StreamingReasoningBanner({
-  modelName,
-  reasoningMaxTokens,
-}: {
-  modelName: string;
-  reasoningMaxTokens: number;
-}) {
+function WaitingState({ status }: { status: "reasoning" | "generating" }) {
   return (
-    <div className="shrink-0 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <Brain className="h-4 w-4 text-blue-400 animate-pulse" />
-        <p className="text-xs text-blue-100">
-          <span className="font-medium">Reasoning</span> active for {modelName}.
-          Token budget: {reasoningMaxTokens.toLocaleString()}.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function GeneratingState({ status }: { status: GenerationStatus }) {
-  const isReasoning = status === "reasoning";
-
-  return (
-    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center p-6">
-      <div className="text-center space-y-4">
-        <div className="mx-auto w-12 h-12 relative flex items-center justify-center">
-          {isReasoning ? (
-            <Brain className="h-10 w-10 text-blue-400 animate-pulse" />
-          ) : (
-            <div className="h-10 w-10 rounded-full border-[3px] border-[var(--primary)] border-t-transparent animate-spin" />
-          )}
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            {isReasoning ? "Reasoning about your prompt" : "Generating output"}
-          </p>
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {isReasoning
-              ? "Reasoning is visible above this pane while the model plans output."
-              : "Streaming code is in progress."}
-          </p>
-        </div>
+    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+      <div className="flex items-center gap-3">
+        {status === "reasoning" ? (
+          <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
+        ) : (
+          <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
+        )}
+        <span className="text-sm text-[var(--muted-foreground)]">
+          {status === "reasoning" ? "Waiting for reasoning..." : "Waiting for code..."}
+        </span>
       </div>
     </div>
   );
@@ -143,22 +112,22 @@ export function EditorOutputPanelV2({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const userScrollIntentRef = useRef(false);
+  const isAutoScrollingRef = useRef(true);
+  const lastScrollTimeRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 
   const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
     generation?.status === "reasoning" || generation?.status === "generating";
-  const code = generation?.code ?? "";
 
-  const getScrollElement = (): HTMLElement | null => {
+  const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
     if (!root) return null;
     const scroller = root.querySelector(".streaming-code-viewer__scroll");
     return scroller instanceof HTMLElement ? scroller : null;
-  };
+  }, []);
 
   useEffect(() => {
     const scroller = getScrollElement();
@@ -171,8 +140,8 @@ export function EditorOutputPanelV2({
     const onScroll = () => {
       const isNearBottom =
         scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrolling && userScrollIntentRef.current && !isNearBottom) {
-        setIsAutoScrolling(false);
+      if (isAutoScrollingRef.current && userScrollIntentRef.current && !isNearBottom) {
+        isAutoScrollingRef.current = false;
       }
       setShowScrollButton(!isNearBottom);
       if (isNearBottom) {
@@ -192,30 +161,42 @@ export function EditorOutputPanelV2({
       scroller.removeEventListener("mousedown", markUserScrollIntent);
       scroller.removeEventListener("scroll", onScroll);
     };
-  }, [isAutoScrolling, activeOutputTab]);
+  }, [getScrollElement]);
 
   useEffect(() => {
+    const tab = activeOutputTab;
     const scroller = getScrollElement();
     if (!scroller) return;
-
-    if (isStreaming && isAutoScrolling && code.length > 0) {
-      scroller.scrollTop = scroller.scrollHeight;
-    }
-  }, [isStreaming, isAutoScrolling, code]);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
     scroller.scrollLeft = 0;
-  }, [activeOutputTab]);
+  }, [activeOutputTab, getScrollElement]);
 
   useEffect(() => {
     if (isStreaming) {
-      setIsAutoScrolling(true);
+      isAutoScrollingRef.current = true;
       setShowScrollButton(false);
     }
-  }, [isStreaming, activeOutputTab]);
+  }, [isStreaming]);
+
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    const intervalId = setInterval(() => {
+      const scroller = getScrollElement();
+      if (!scroller) return;
+
+      const now = Date.now();
+      if (now - lastScrollTimeRef.current < 100) return;
+
+      if (isAutoScrollingRef.current) {
+        scroller.scrollTop = scroller.scrollHeight;
+        lastScrollTimeRef.current = now;
+      }
+    }, 100);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isStreaming, getScrollElement]);
 
   const scrollToBottom = () => {
     const scroller = getScrollElement();
@@ -223,7 +204,7 @@ export function EditorOutputPanelV2({
 
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
     userScrollIntentRef.current = false;
-    setIsAutoScrolling(true);
+    isAutoScrollingRef.current = true;
     setShowScrollButton(false);
   };
 
@@ -255,19 +236,13 @@ export function EditorOutputPanelV2({
       ) : null}
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
-        {generation?.code ? (
+        {generation?.code || generation?.reasoning ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
             <div className="h-full min-h-0 flex flex-col gap-2">
-              {generation.status === "reasoning" && currentModel ? (
-                <StreamingReasoningBanner
-                  modelName={currentModel.modelName}
-                  reasoningMaxTokens={currentModel.reasoningMaxTokens}
-                />
-              ) : null}
-
               <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
-                  code={generation.code}
+                  code={generation.code ?? ""}
+                  reasoning={generation.reasoning}
                   language="html"
                   isStreaming={isStreaming}
                   fileName="game.html"
@@ -289,12 +264,12 @@ export function EditorOutputPanelV2({
           </div>
         ) : null}
 
-        {!generation?.code && generation?.status === "reasoning" ? (
-          <GeneratingState status="reasoning" />
+        {generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
+          <WaitingState status="reasoning" />
         ) : null}
 
-        {!generation?.code && generation?.status === "generating" ? (
-          <GeneratingState status="generating" />
+        {generation?.status === "generating" && !generation?.code ? (
+          <WaitingState status="generating" />
         ) : null}
 
         {generation?.status === "error" ? (
@@ -307,6 +282,7 @@ export function EditorOutputPanelV2({
         ) : null}
 
         {!generation?.code &&
+        !generation?.reasoning &&
         generation?.status !== "error" &&
         generation?.status !== "reasoning" &&
         generation?.status !== "generating" ? (

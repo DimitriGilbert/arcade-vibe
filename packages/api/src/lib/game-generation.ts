@@ -49,10 +49,16 @@ export interface GenerateGameStatusEvent {
   status: "reasoning" | "generating";
 }
 
+export interface GenerateGameReasoningEvent {
+  type: "reasoning-chunk";
+  gameId: string;
+  delta: string;
+}
+
 export interface GenerateGameChunkEvent {
   type: "chunk";
   gameId: string;
-  code: string;
+  delta: string;
 }
 
 export interface GenerateGameCompleteEvent {
@@ -71,6 +77,7 @@ export interface GenerateGameErrorEvent {
 
 export type GenerateGameEvent =
   | GenerateGameStatusEvent
+  | GenerateGameReasoningEvent
   | GenerateGameChunkEvent
   | GenerateGameCompleteEvent
   | GenerateGameErrorEvent;
@@ -613,6 +620,7 @@ export async function generateGame(
   // Create the async generator
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
     let fullCode = "";
+    let fullReasoning = "";
     let hasEmittedGenerating = false;
 
     try {
@@ -625,25 +633,33 @@ export async function generateGame(
         };
       }
 
-      // Stream chunks
-      for await (const chunk of result.textStream) {
-        // Emit generating status on first chunk
-        if (!hasEmittedGenerating) {
-          hasEmittedGenerating = true;
+      // Stream chunks using fullStream to capture reasoning
+      for await (const chunk of result.fullStream) {
+        if (chunk.type === "reasoning-delta") {
+          fullReasoning += chunk.text;
           yield {
-            type: "status",
+            type: "reasoning-chunk",
             gameId: confirmedGameId,
-            status: "generating",
+            delta: chunk.text,
+          };
+        } else if (chunk.type === "text-delta") {
+          if (!hasEmittedGenerating) {
+            hasEmittedGenerating = true;
+            yield {
+              type: "status",
+              gameId: confirmedGameId,
+              status: "generating",
+            };
+          }
+
+          fullCode += chunk.text;
+
+          yield {
+            type: "chunk",
+            gameId: confirmedGameId,
+            delta: chunk.text,
           };
         }
-
-        fullCode += chunk;
-
-        yield {
-          type: "chunk",
-          gameId: confirmedGameId,
-          code: fullCode,
-        };
       }
 
       // GL-008: Sanitize FIRST, then upload to CDN

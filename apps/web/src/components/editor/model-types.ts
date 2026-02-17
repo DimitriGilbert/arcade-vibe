@@ -27,6 +27,7 @@ export interface GenerationResult {
   modelKey: string;
   status: GenerationStatus;
   code: string;
+  reasoning?: string;
   gameId: string | null;
   usage?: GenerationUsageMetrics;
   error?: string;

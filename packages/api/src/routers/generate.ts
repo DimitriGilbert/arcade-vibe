@@ -53,11 +53,19 @@ export const generateRouter = router({
               isComplete: false,
             };
             break;
+          case "reasoning-chunk":
+            yield {
+              type: "reasoning-chunk",
+              gameId: event.gameId,
+              delta: event.delta,
+              isComplete: false,
+            };
+            break;
           case "chunk":
             yield {
               type: "chunk",
               gameId: event.gameId,
-              code: event.code,
+              delta: event.delta,
               isComplete: false,
             };
             break;
