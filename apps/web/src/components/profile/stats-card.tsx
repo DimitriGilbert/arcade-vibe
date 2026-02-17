@@ -1,4 +1,4 @@
-import { Gamepad2, Star, TrendingUp } from "lucide-react";
+import { Gamepad2, Star, TrendingUp, Play } from "lucide-react";
 import { ArcadeCard } from "@/components/arcade";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
@@ -6,6 +6,7 @@ interface StatsCardProps {
   gamesCreated: number;
   totalRatings: number;
   reputation: number;
+  promptRuns: number;
   isLoading: boolean;
 }
 
@@ -13,6 +14,7 @@ export function StatsCard({
   gamesCreated,
   totalRatings,
   reputation,
+  promptRuns,
   isLoading,
 }: StatsCardProps) {
   const stats = [
@@ -23,16 +25,22 @@ export function StatsCard({
       tone: "primary",
     },
     {
+      label: "Prompt Runs",
+      value: promptRuns,
+      icon: Play,
+      tone: "accent",
+    },
+    {
       label: "Ratings Given",
       value: totalRatings,
       icon: Star,
-      tone: "accent",
+      tone: "secondary",
     },
     {
       label: "Reputation",
       value: reputation,
       icon: TrendingUp,
-      tone: "secondary",
+      tone: "primary",
     },
   ] as const;
 
@@ -55,7 +63,7 @@ export function StatsCard({
   return (
     <ArcadeCard className="bg-[var(--card)]/60 backdrop-blur-sm">
       <div className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <div
               key={stat.label}

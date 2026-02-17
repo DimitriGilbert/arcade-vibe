@@ -263,6 +263,8 @@ export type GameFromApi = NonNullable<GameListByThemeOutput>["games"][number];
  */
 export type GameWithRanking = Game & {
   ranking: number | null;
+  tierCost?: { slug: string } | null;
+  modelName?: string;
 };
 
 /**

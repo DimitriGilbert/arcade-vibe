@@ -364,6 +364,43 @@ export const promptsRouter = router({
     return publicPrompts;
   }),
 
+  listByUser: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        includePrivate: z.boolean().default(false),
+      }),
+    )
+    .query(async ({ input }) => {
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      if (input.includePrivate) {
+        const userPrompts = await promptsQuery.findMany({
+          where: eq(prompts.authorId, input.userId),
+          orderBy: [desc(prompts.createdAt)],
+          limit: 100,
+        });
+        return userPrompts;
+      }
+
+      const userPrompts = await promptsQuery.findMany({
+        where: and(
+          eq(prompts.authorId, input.userId),
+          eq(prompts.visibility, "public"),
+        ),
+        orderBy: [desc(prompts.createdAt)],
+        limit: 100,
+      });
+
+      return userPrompts;
+    }),
+
   delete: protectedProcedure
     .input(
       z.object({

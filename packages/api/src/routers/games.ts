@@ -6,9 +6,10 @@ import {
 } from "../index";
 import { db } from "@arcade-vibe/db";
 import { games, gameVersions, GAME_NAME_MAX_LENGTH, GAME_NAME_MIN_LENGTH } from "@arcade-vibe/db/schema/games";
+import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
 import { gameScores } from "@arcade-vibe/db/schema/games";
-import { eq, desc, and, lt, isNull, sql } from "drizzle-orm";
+import { eq, desc, and, lt, isNull, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
 import {
@@ -376,11 +377,103 @@ export const gamesRouter = router({
       };
     }),
 
-  /**
-   * Submit a game as an official competition entry
-   * User must be the prompt author
-   * Game must be completed
-   */
+  listByUser: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+        cursor: z.string().uuid().optional(),
+        isSubmitted: z.boolean().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const userPrompts = await promptsQuery.findMany({
+        where: eq(prompts.authorId, input.userId),
+        columns: { id: true },
+      });
+
+      const promptIds = userPrompts.map((p) => p.id);
+
+      if (promptIds.length === 0) {
+        return { games: [], nextCursor: undefined, hasMore: false };
+      }
+
+      const whereConditions = [
+        inArray(games.promptId, promptIds),
+        eq(games.isHidden, false),
+        isNull(games.deletedAt),
+        ...(input.isSubmitted !== undefined ? [eq(games.isSubmitted, input.isSubmitted)] : []),
+      ];
+
+      let cursorDate: Date | null = null;
+      if (input.cursor) {
+        const cursorGame = await gamesQuery.findFirst({
+          where: eq(games.id, input.cursor),
+          columns: { createdAt: true },
+        });
+        if (cursorGame) {
+          cursorDate = cursorGame.createdAt;
+        }
+      }
+
+      if (cursorDate) {
+        whereConditions.push(lt(games.createdAt, cursorDate));
+      }
+
+      const result = await gamesQuery.findMany({
+        where: and(...whereConditions),
+        orderBy: [desc(games.createdAt)],
+        limit: input.limit + 1,
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+          theme: true,
+          tierCost: {
+            columns: {
+              slug: true,
+            },
+          },
+        },
+      });
+
+      const hasMore = result.length > input.limit;
+      const games_result = hasMore ? result.slice(0, input.limit) : result;
+      const nextCursor = hasMore
+        ? games_result[games_result.length - 1]?.id
+        : undefined;
+
+      return {
+        games: games_result,
+        nextCursor,
+        hasMore,
+      };
+    }),
+
   submit: protectedProcedure
     .input(
       z.object({

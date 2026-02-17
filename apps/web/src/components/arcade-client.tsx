@@ -2,97 +2,80 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { trpcClient } from "@/utils/trpc";
-import { ArcadeCard, ArcadeButton, ArcadeInput } from "@/components/arcade";
+import { ArcadeCard, ArcadeButton, ArcadeInput, ArcadeBadge } from "@/components/arcade";
 import {
   Search,
-  Gamepad2,
+  Trophy,
   Clock,
-  TrendingUp,
   Star,
   RefreshCw,
   Loader2,
-  Filter,
+  ChevronDown,
+  User,
+  Play,
+  Cpu,
+  Calendar,
 } from "lucide-react";
 import { ThemeHeader } from "@/components/arcade/theme-header";
-import { GameCard } from "@/components/arcade/game-card";
-import { LoadingState, EmptyState } from "@/components/reusable";
+import { EmptyState } from "@/components/reusable";
 import type { RouterOutput } from "@/lib/trpc-types";
 
-type GamesListResponse = RouterOutput["games"]["listByTheme"];
-type Game = NonNullable<GamesListResponse>["games"][number];
-type SortOption = "recent" | "popular" | "score";
+type LeaderboardEntry = NonNullable<RouterOutput["leaderboard"]["getTop"]>["entries"][number];
 type ThemeStatus = "current" | "archived";
-type TierFilter = "all" | "easy" | "medium" | "hard" | "extreme";
-type SubmissionFilter = "all" | "submitted" | "not-submitted";
+type SortOption = "score" | "recent";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 
-/**
- * Skeleton component for game cards during loading
- */
-function GameCardSkeleton() {
+const skeletonIds = Array.from({ length: 10 }, (_, i) => `skeleton-${i}`);
+
+function LeaderboardSkeleton() {
   return (
-    <div className="animate-pulse rounded-lg border border-[var(--border)] bg-[var(--card)] overflow-hidden">
-      {/* Thumbnail skeleton */}
-      <div className="aspect-video bg-[var(--muted)]"></div>
-      {/* Content skeleton */}
-      <div className="p-4">
-        <div className="space-y-3">
-          {/* Title skeleton */}
-          <div className="h-5 w-3/4 bg-[var(--muted)] rounded"></div>
-          {/* Description skeleton */}
-          <div className="space-y-2">
-            <div className="h-3 w-full bg-[var(--muted)] rounded"></div>
-            <div className="h-3 w-2/3 bg-[var(--muted)] rounded"></div>
+    <div className="animate-pulse">
+      {skeletonIds.map((id) => (
+        <div key={id} className="flex items-center gap-4 p-4 border-b border-[var(--border)]">
+          <div className="w-12 h-8 bg-[var(--muted)] rounded" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/3 bg-[var(--muted)] rounded" />
+            <div className="h-3 w-1/4 bg-[var(--muted)] rounded" />
           </div>
+          <div className="w-20 h-6 bg-[var(--muted)] rounded" />
         </div>
-        {/* Meta info skeleton */}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="h-3 w-20 bg-[var(--muted)] rounded"></div>
-          <div className="h-3 w-16 bg-[var(--muted)] rounded"></div>
-        </div>
-      </div>
-      {/* Button skeleton */}
-      <div className="p-4 pt-0">
-        <div className="h-10 w-full bg-[var(--muted)] rounded-lg"></div>
-      </div>
+      ))}
     </div>
   );
 }
 
-/**
- * Grid of skeleton cards for loading state
- */
-function GameCardSkeletonGrid({ count = 8 }: { count?: number }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {Array.from({ length: count }).map((_, index) => (
-        <GameCardSkeleton key={index} />
-      ))}
-    </div>
-  );
+function formatScore(score: number | string): string {
+  const num = typeof score === "string" ? parseFloat(score) : score;
+  if (Number.isNaN(num) || num === 0) return "0";
+  return num.toLocaleString();
+}
+
+function formatDate(date: Date | string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getRankBadge(rank: number) {
+  if (rank === 1) return { bg: "bg-amber-500", text: "text-white", label: "1ST" };
+  if (rank === 2) return { bg: "bg-slate-400", text: "text-white", label: "2ND" };
+  if (rank === 3) return { bg: "bg-amber-700", text: "text-white", label: "3RD" };
+  return null;
 }
 
 export default function ArcadePage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>("current");
   const [themeStatus, setThemeStatus] = useState<ThemeStatus>("current");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("recent");
-
-  // Filter state
-  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
-  const [submissionFilter, setSubmissionFilter] =
-    useState<SubmissionFilter>("all");
-  const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
-
-  // Pagination state
-  const [allGames, setAllGames] = useState<Game[]>([]);
+  const [sortOption, setSortOption] = useState<SortOption>("score");
+  const [allEntries, setAllEntries] = useState<LeaderboardEntry[]>([]);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Fetch all themes
   const {
     data: themes,
     isLoading: themesLoading,
@@ -105,38 +88,30 @@ export default function ArcadePage() {
     },
   });
 
-  // Get current theme ID for queries - use the already-loaded themes
-  const getCurrentThemeId = useCallback((): string | null => {
+  const getCurrentThemeId = useCallback((): string | undefined => {
     if (selectedThemeId && selectedThemeId !== "current") {
       return selectedThemeId;
     }
     const activeTheme = themes?.find((t) => t.status === "active");
-    return activeTheme?.id ?? null;
+    return activeTheme?.id;
   }, [selectedThemeId, themes]);
 
-  // Fetch initial games for the selected theme
-  const { isLoading: gamesLoading, refetch: refetchGames } = useQuery({
-    queryKey: ["games-initial", selectedThemeId, themeStatus],
+  const { isLoading: leaderboardLoading } = useQuery({
+    queryKey: ["leaderboard-initial", selectedThemeId],
     queryFn: async () => {
       const themeId = getCurrentThemeId();
-      if (!themeId) {
-        setAllGames([]);
-        setHasMore(false);
-        return { games: [], nextCursor: undefined, hasMore: false };
-      }
-
-      const result = await trpcClient.games.listByTheme.query({
+      
+      const result = await trpcClient.leaderboard.getTop.query({
         themeId,
-        includeSubmitted: true,
         limit: PAGE_SIZE,
       });
 
       if (result) {
-        setAllGames(result.games);
-        setCursor(result.nextCursor);
+        setAllEntries(result.entries as LeaderboardEntry[]);
+        setCursor(result.nextCursor ?? undefined);
         setHasMore(result.hasMore);
       } else {
-        setAllGames([]);
+        setAllEntries([]);
         setHasMore(false);
       }
 
@@ -145,25 +120,22 @@ export default function ArcadePage() {
     enabled: !!themes,
   });
 
-  // Load more games
-  const loadMoreGames = useCallback(async () => {
+  const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
 
     const themeId = getCurrentThemeId();
-    if (!themeId) return;
 
     setIsLoadingMore(true);
     try {
-      const result = await trpcClient.games.listByTheme.query({
+      const result = await trpcClient.leaderboard.getTop.query({
         themeId,
-        includeSubmitted: true,
         limit: PAGE_SIZE,
         cursor,
       });
 
       if (result) {
-        setAllGames((prev) => [...prev, ...result.games]);
-        setCursor(result.nextCursor);
+        setAllEntries((prev) => [...prev, ...(result.entries as LeaderboardEntry[])]);
+        setCursor(result.nextCursor ?? undefined);
         setHasMore(result.hasMore);
       }
     } finally {
@@ -171,135 +143,37 @@ export default function ArcadePage() {
     }
   }, [cursor, hasMore, isLoadingMore, getCurrentThemeId]);
 
-  // Fetch leaderboard data for score sorting
-  const { data: leaderboardData } = useQuery({
-    queryKey: ["leaderboard", selectedThemeId],
-    queryFn: async () => {
-      const themeId = getCurrentThemeId();
-      if (!themeId) return { entries: [], nextCursor: null, hasMore: false };
-      return await trpcClient.leaderboard.getTop.query({
-        themeId,
-        limit: 100,
-      });
-    },
-    enabled: !!themes,
-  });
+  const filteredEntries = useMemo(() => {
+    if (!searchQuery.trim()) return allEntries;
 
-  const leaderboard = leaderboardData?.entries ?? [];
-
-  // Create score map from leaderboard data
-  const scoreMap = useMemo(() => {
-    if (!leaderboard.length) return new Map<string, number>();
-    const map = new Map<string, number>();
-    leaderboard.forEach((entry) => {
-      if (entry.game?.id) {
-        map.set(entry.game.id, Number(entry.finalScore));
-      }
+    const query = searchQuery.toLowerCase();
+    return allEntries.filter((entry) => {
+      const gameName = entry.gameName?.toLowerCase() ?? "";
+      const userName = entry.creator?.name?.toLowerCase() ?? "";
+      const modelName = entry.modelName?.toLowerCase() ?? "";
+      return gameName.includes(query) || userName.includes(query) || modelName.includes(query);
     });
-    return map;
-  }, [leaderboard]);
+  }, [allEntries, searchQuery]);
 
-  // Filter games based on search query and filter options
-  const filteredGames = useMemo(() => {
-    if (!allGames) return [];
-
-    return allGames.filter((game) => {
-      // Search query filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const creatorName = game.prompt.user.name?.toLowerCase() || "";
-        const creatorEmail = game.prompt.user.name?.toLowerCase() || "";
-        const promptContent = game.prompt.content?.toLowerCase() || "";
-        const themeTitle = game.theme?.title?.toLowerCase() || "";
-        const modelName = game.modelName?.toLowerCase() || "";
-
-        const matchesSearch =
-          creatorName.includes(query) ||
-          creatorEmail.includes(query) ||
-          promptContent.includes(query) ||
-          themeTitle.includes(query) ||
-          modelName.includes(query);
-
-        if (!matchesSearch) return false;
-      }
-
-      // Tier filter
-      if (tierFilter !== "all") {
-        const gameTier = game.tierCost?.slug ?? "unknown";
-        if (gameTier !== tierFilter) return false;
-      }
-
-      // Submission status filter
-      if (submissionFilter === "submitted" && !game.isSubmitted) return false;
-      if (submissionFilter === "not-submitted" && game.isSubmitted)
-        return false;
-
-      // Minimum rating filter
-      if (minRatingFilter > 0) {
-        const gameScore = scoreMap.get(game.id) ?? 0;
-        if (gameScore < minRatingFilter) return false;
-      }
-
-      return true;
-    });
-  }, [
-    allGames,
-    searchQuery,
-    tierFilter,
-    submissionFilter,
-    minRatingFilter,
-    scoreMap,
-  ]);
-
-  // Sort games based on sort option
-  const sortedGames = useMemo(() => {
-    const gamesToSort = [...filteredGames];
-
-    switch (sortOption) {
-      case "recent":
-        return gamesToSort.sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA;
-        });
-
-      case "popular":
-        // Sort by number of submissions or other popularity metrics
-        // For now, use createdAt as a proxy for popularity (newer = more visible)
-        return gamesToSort.sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA;
-        });
-
-      case "score": {
-        // Sort by actual game scores from leaderboard
-        // Games without scores appear at the end
-        return gamesToSort.sort((a, b) => {
-          const scoreA = scoreMap.get(a.id) ?? 0;
-          const scoreB = scoreMap.get(b.id) ?? 0;
-          return scoreB - scoreA;
-        });
-      }
-
-      default:
-        return gamesToSort;
+  const sortedEntries = useMemo(() => {
+    if (sortOption === "recent") {
+      return [...filteredEntries].sort((a, b) => 
+        new Date(b.submittedAt ?? b.createdAt).getTime() - new Date(a.submittedAt ?? a.createdAt).getTime()
+      );
     }
-  }, [filteredGames, sortOption, scoreMap]);
+    return filteredEntries;
+  }, [filteredEntries, sortOption]);
 
-  // Get current theme
   const currentTheme = useMemo(() => {
     if (!themes) return null;
     return themes.find((t) => t.status === "active");
   }, [themes]);
 
-  // Get archived themes
   const archivedThemes = useMemo(() => {
     if (!themes) return [];
     return themes.filter((t) => t.status === "archived");
   }, [themes]);
 
-  // Get selected theme object
   const selectedTheme = useMemo(() => {
     if (!themes) return null;
     if (selectedThemeId === "current") return currentTheme;
@@ -313,33 +187,32 @@ export default function ArcadePage() {
     } else {
       setThemeStatus("archived");
     }
-    // Reset pagination when theme changes
-    setAllGames([]);
+    setAllEntries([]);
     setCursor(undefined);
     setHasMore(true);
   };
 
+  const isLoading = themesLoading || leaderboardLoading;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
-        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-[var(--primary)] rounded-xl">
-              <Gamepad2 className="h-8 w-8 text-[var(--primary-foreground)]" />
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/20">
+              <Trophy className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-[var(--foreground)]">
-                Arcade
+              <h1 className="text-4xl font-black tracking-tight text-[var(--foreground)]">
+                LEADERBOARD
               </h1>
-              <p className="text-[var(--muted-foreground)]">
-                Discover and play AI-generated games
+              <p className="text-[var(--muted-foreground)] font-medium">
+                Top scores this theme
               </p>
             </div>
           </div>
         </div>
 
-        {/* Theme Selector */}
         <ThemeHeader
           currentTheme={currentTheme || null}
           archivedThemes={archivedThemes}
@@ -350,7 +223,6 @@ export default function ArcadePage() {
           isLoading={themesLoading}
         />
 
-        {/* Theme Loading Error with Retry */}
         {themesError && (
           <ArcadeCard className="mb-6 border-destructive/50 bg-destructive/5">
             <div className="p-6">
@@ -376,198 +248,150 @@ export default function ArcadePage() {
           </ArcadeCard>
         )}
 
-        {/* Filters and Search */}
         <ArcadeCard className="mb-6">
-          <div className="p-6">
-            <div className="flex flex-col gap-4">
-              {/* Search and Sort Row */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Search */}
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-                  <ArcadeInput
-                    placeholder="Search by creator, prompt, theme, or model..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                {/* Sort Options */}
-                <div className="flex gap-2">
-                  <ArcadeButton
-                    variant={sortOption === "recent" ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setSortOption("recent")}
-                    className="gap-2"
-                  >
-                    <Clock className="h-4 w-4" />
-                    Recent
-                  </ArcadeButton>
-                  <ArcadeButton
-                    variant={sortOption === "popular" ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setSortOption("popular")}
-                    className="gap-2"
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                    Popular
-                  </ArcadeButton>
-                  <ArcadeButton
-                    variant={sortOption === "score" ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setSortOption("score")}
-                    className="gap-2"
-                  >
-                    <Star className="h-4 w-4" />
-                    Score
-                  </ArcadeButton>
-                </div>
+          <div className="p-4 border-b border-[var(--border)]">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+                <ArcadeInput
+                  placeholder="Search games, players, or models..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
 
-              {/* Filter Dropdowns Row */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                  <Filter className="h-4 w-4" />
-                  <span>Filters:</span>
-                </div>
-
-                {/* Difficulty Tier Filter */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-[var(--muted-foreground)]">
-                    Difficulty
-                  </label>
-                  <select
-                    value={tierFilter}
-                    onChange={(e) => {
-                      setTierFilter(e.target.value as TierFilter);
-                      // Reset pagination when filter changes
-                      setAllGames([]);
-                      setCursor(undefined);
-                      setHasMore(true);
-                    }}
-                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  >
-                    <option value="all">All Tiers</option>
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                    <option value="extreme">Extreme</option>
-                  </select>
-                </div>
-
-                {/* Submission Status Filter */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-[var(--muted-foreground)]">
-                    Status
-                  </label>
-                  <select
-                    value={submissionFilter}
-                    onChange={(e) => {
-                      setSubmissionFilter(e.target.value as SubmissionFilter);
-                      // Reset pagination when filter changes
-                      setAllGames([]);
-                      setCursor(undefined);
-                      setHasMore(true);
-                    }}
-                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  >
-                    <option value="all">All Games</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="not-submitted">Not Submitted</option>
-                  </select>
-                </div>
-
-                {/* Minimum Rating Filter */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-[var(--muted-foreground)]">
-                    Min Score
-                  </label>
-                  <select
-                    value={minRatingFilter}
-                    onChange={(e) => {
-                      setMinRatingFilter(Number(e.target.value));
-                      // Reset pagination when filter changes
-                      setAllGames([]);
-                      setCursor(undefined);
-                      setHasMore(true);
-                    }}
-                    className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                  >
-                    <option value={0}>Any Score</option>
-                    <option value={100}>100+</option>
-                    <option value={500}>500+</option>
-                    <option value={1000}>1,000+</option>
-                    <option value={5000}>5,000+</option>
-                    <option value={10000}>10,000+</option>
-                  </select>
-                </div>
-
-                {/* Clear Filters Button */}
-                {(tierFilter !== "all" ||
-                  submissionFilter !== "all" ||
-                  minRatingFilter > 0) && (
-                  <ArcadeButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setTierFilter("all");
-                      setSubmissionFilter("all");
-                      setMinRatingFilter(0);
-                      // Reset pagination
-                      setAllGames([]);
-                      setCursor(undefined);
-                      setHasMore(true);
-                    }}
-                    className="mt-4 sm:mt-0"
-                  >
-                    Clear Filters
-                  </ArcadeButton>
-                )}
+              <div className="flex gap-2">
+                <ArcadeButton
+                  variant={sortOption === "score" ? "primary" : "outline"}
+                  size="sm"
+                  onClick={() => setSortOption("score")}
+                  className="gap-2"
+                >
+                  <Star className="h-4 w-4" />
+                  Score
+                </ArcadeButton>
+                <ArcadeButton
+                  variant={sortOption === "recent" ? "primary" : "outline"}
+                  size="sm"
+                  onClick={() => setSortOption("recent")}
+                  className="gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Recent
+                </ArcadeButton>
               </div>
             </div>
           </div>
-        </ArcadeCard>
 
-        {/* Game Grid */}
-        {gamesLoading ? (
-          <GameCardSkeletonGrid count={8} />
-        ) : sortedGames.length === 0 ? (
-          <ArcadeCard>
+          {isLoading ? (
+            <LeaderboardSkeleton />
+          ) : sortedEntries.length === 0 ? (
             <div className="p-20">
               <EmptyState
                 variant="card"
-                icon={<Gamepad2 className="h-16 w-16 opacity-50" />}
-                title="No Games Found"
+                icon={<Trophy className="h-16 w-16 opacity-50" />}
+                title="No Games Yet"
                 message={
                   selectedTheme
-                    ? `No games available for ${selectedTheme.title}`
-                    : "Select a theme to view available games"
+                    ? `No games submitted for ${selectedTheme.title}`
+                    : "Select a theme to view games"
                 }
               />
             </div>
-          </ArcadeCard>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedGames.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </div>
-        )}
+          ) : (
+            <div className="divide-y divide-[var(--border)]">
+              {sortedEntries.map((entry, index) => {
+                const rank = sortOption === "score" ? index + 1 : null;
+                const badge = rank ? getRankBadge(rank) : null;
 
-        {/* Load More Button */}
-        {sortedGames.length > 0 &&
-          hasMore &&
-          !searchQuery &&
-          tierFilter === "all" &&
-          submissionFilter === "all" &&
-          minRatingFilter === 0 && (
-            <div className="mt-8 flex justify-center">
+                return (
+                  <div
+                    key={entry.gameId}
+                    className="flex items-center gap-4 p-4 hover:bg-[var(--muted)]/30 transition-colors group"
+                  >
+                    <div className="w-16 flex-shrink-0 text-center">
+                      {badge ? (
+                        <span className={`inline-flex items-center justify-center w-12 h-8 rounded-md font-black text-sm ${badge.bg} ${badge.text}`}>
+                          {badge.label}
+                        </span>
+                      ) : rank ? (
+                        <span className="text-2xl font-bold text-[var(--muted-foreground)]">
+                          {rank}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-[var(--muted-foreground)]">
+                          #{index + 1}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link
+                          href={`/game/${entry.gameId}`}
+                          className="font-bold text-[var(--foreground)] hover:text-[var(--primary)] transition-colors truncate"
+                        >
+                          {entry.gameName || "Untitled Game"}
+                        </Link>
+                        <Link
+                          href={`/game/${entry.gameId}`}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Play className="h-4 w-4 text-[var(--primary)]" />
+                        </Link>
+                        {entry.tier && (
+                          <ArcadeBadge text={entry.tier.slug} variant="default" />
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--muted-foreground)]">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {entry.creator?.name ? (
+                            <Link
+                              href={`/profile/${entry.creator.name}`}
+                              className="hover:text-[var(--primary)] transition-colors"
+                            >
+                              {entry.creator.name}
+                            </Link>
+                          ) : (
+                            <span>Anonymous</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Cpu className="h-3 w-3" />
+                          <span className="truncate max-w-[120px]">{entry.modelName}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(entry.submittedAt ?? entry.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-black text-xl text-[var(--foreground)] font-mono">
+                          {formatScore(entry.finalScore)}
+                        </div>
+                        <div className="text-xs text-[var(--muted-foreground)]">
+                          pts
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {hasMore && !searchQuery && sortedEntries.length > 0 && (
+            <div className="p-4 border-t border-[var(--border)]">
               <ArcadeButton
                 variant="outline"
-                onClick={loadMoreGames}
+                onClick={loadMore}
                 disabled={isLoadingMore}
-                className="min-w-[200px] gap-2"
+                className="w-full gap-2"
               >
                 {isLoadingMore ? (
                   <>
@@ -575,30 +399,20 @@ export default function ArcadePage() {
                     Loading...
                   </>
                 ) : (
-                  "Load More Games"
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    Load More
+                  </>
                 )}
               </ArcadeButton>
             </div>
           )}
+        </ArcadeCard>
 
-        {/* Results Count */}
-        {sortedGames.length > 0 && (
-          <div className="mt-6 text-center text-sm text-[var(--muted-foreground)]">
-            Showing {sortedGames.length}
-            {hasMore &&
-            !searchQuery &&
-            tierFilter === "all" &&
-            submissionFilter === "all" &&
-            minRatingFilter === 0
-              ? "+"
-              : ""}{" "}
-            {sortedGames.length === 1 ? "game" : "games"}
-            {hasMore &&
-              !searchQuery &&
-              tierFilter === "all" &&
-              submissionFilter === "all" &&
-              minRatingFilter === 0 &&
-              " - scroll down for more"}
+        {sortedEntries.length > 0 && (
+          <div className="text-center text-sm text-[var(--muted-foreground)]">
+            {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
+            {hasMore && !searchQuery && " - scroll for more"}
           </div>
         )}
       </div>

@@ -37,14 +37,14 @@ function PlanCard({
   const isPopular = plan.isPopular === true;
 
   return (
-    <ArcadeCard className={`relative ${isPopular ? "scale-105" : ""}`}>
+    <ArcadeCard className={`relative ${isPopular ? "scale-105 overflow-visible" : ""}`}>
       {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
           <ArcadeBadge text="Most Popular" variant="neon" />
         </div>
       )}
-      <div className="p-4 border-b border-[var(--border)]">
-        <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
+      <div className="p-4 border-b border-[var(--border)] text-center">
+        <h3 className="text-xl font-semibold text-[var(--foreground)] flex items-center justify-center gap-2">
           {plan.name === "Free" && (
             <Sparkles className="h-5 w-5 text-[var(--muted-foreground)]" />
           )}
@@ -121,16 +121,19 @@ function OneTimePackage({
 
   return (
     <ArcadeCard
-      className={`relative cursor-pointer ${isPopular ? "ring-2 ring-[var(--primary)]/60" : ""}`}
+      className={`relative cursor-pointer min-w-[180px] flex-1 max-w-[220px] ${isPopular ? "ring-2 ring-[var(--primary)]/60 overflow-visible" : ""}`}
       onClick={() => !isLoading && onSelect(plan)}
     >
       {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
           <ArcadeBadge text="Best Value" variant="neon" />
         </div>
       )}
       <div className="p-6">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
+          <h3 className="text-lg font-semibold text-[var(--foreground)]">
+            {plan.displayName ?? plan.name}
+          </h3>
           <div className="flex items-center justify-center gap-1">
             <span className="text-3xl font-bold">
               {plan.credits.toLocaleString()}
@@ -285,7 +288,7 @@ export default function PricingPage() {
                 Buy credits in bulk, valid for 1 year
               </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
               {oneTimePackages.map((plan) => (
                 <OneTimePackage
                   key={plan.id}

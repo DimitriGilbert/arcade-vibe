@@ -17,6 +17,7 @@ interface Stats {
   reputation: number;
   credits: number;
   promptsCount: number;
+  promptRuns: number;
 }
 
 export function useProfileData(username: string, isOwnProfile: boolean) {
@@ -65,31 +66,37 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
   });
 
   const { data: prompts, isLoading: promptsLoading } = useQuery({
-    queryKey: ["prompts", user?.id],
+    queryKey: ["prompts-by-user", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const allPrompts = await trpcClient.prompts.listPublic.query();
-      const userPrompts = allPrompts.filter(
-        (prompt) => prompt.authorId === user.id,
-      );
-      return userPrompts;
+      try {
+        return await trpcClient.prompts.listByUser.query({
+          userId: user.id,
+          includePrivate: isOwnProfile,
+        });
+      } catch (error) {
+        console.error("Error fetching prompts:", error);
+        return [];
+      }
     },
     enabled: !!user?.id,
   });
 
   const { data: allGames, isLoading: gamesLoading } = useQuery({
-    queryKey: ["games-all"],
+    queryKey: ["games-by-user", user?.id],
     queryFn: async (): Promise<Game[]> => {
+      if (!user?.id) return [];
+      
       try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
-        const result = await trpcClient.games.listByTheme.query({
-          themeId: currentTheme.id,
-          includeSubmitted: true,
-          limit: 200,
+        const result = await trpcClient.games.listByUser.query({
+          userId: user.id,
+          limit: 100,
+          isSubmitted: true,
         });
         return result?.games ?? [];
-      } catch {
+      } catch (error) {
+        console.error("Error fetching games:", error);
         return [];
       }
     },
@@ -97,39 +104,34 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
   });
 
   const userGames = useMemo(() => {
-    if (!allGames || !user?.id) return [];
-    return allGames.filter((game) => game.prompt.user?.id === user.id);
-  }, [allGames, user?.id]);
+    return allGames ?? [];
+  }, [allGames]);
 
   const { data: leaderboard } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: async () => {
       try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
         return await trpcClient.leaderboard.getTop.query({
-          themeId: currentTheme.id,
-          limit: 200,
+          limit: 100,
         });
       } catch {
-        return [];
+        return null;
       }
     },
     enabled: !!user?.id,
   });
 
   const userGamesWithRankings = useMemo((): GameWithRanking[] => {
-    if (!userGames || !leaderboard)
-      return userGames.map((game) => ({ ...game, ranking: null }));
-
+    if (!userGames) return [];
+    
     const rankingMap = new Map<string, number>();
-    const leaderboardArray = Array.isArray(leaderboard) ? leaderboard : [];
-    leaderboardArray.forEach(
-      (entry: { game?: { id: string } | null }, index: number) => {
-        if (entry.game) {
-          rankingMap.set(entry.game.id, index + 1);
+    if (leaderboard && leaderboard.entries) {
+      leaderboard.entries.forEach((entry, index: number) => {
+        if (entry.gameId) {
+          rankingMap.set(entry.gameId, index + 1);
         }
-      },
-    );
+      });
+    }
 
     return userGames.map((game) => ({
       ...game,
@@ -150,25 +152,18 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
     queryKey: ["prompt-runs-history", user?.id],
     queryFn: async (): Promise<Game[]> => {
       if (!user?.id) return [];
-      if (!prompts || prompts.length === 0) return [];
 
       try {
-        const currentTheme = await trpcClient.themes.getCurrent.query();
-        const result = await trpcClient.games.listByTheme.query({
-          themeId: currentTheme.id,
-          includeSubmitted: true,
-          limit: 200,
+        const result = await trpcClient.games.listByUser.query({
+          userId: user.id,
+          limit: 100,
         });
-        const allGames = result?.games ?? [];
-
-        return allGames.filter((game) => {
-          return game.prompt.user?.id === user.id;
-        });
+        return result?.games ?? [];
       } catch {
         return [];
       }
     },
-    enabled: !!user?.id && !!prompts && prompts.length > 0,
+    enabled: !!user?.id,
   });
 
   const stats = useMemo((): Stats | null => {
@@ -182,8 +177,9 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
         : 0,
       credits: credits?.balance || 0,
       promptsCount: prompts?.length || 0,
+      promptRuns: promptRunsHistory?.length || 0,
     };
-  }, [user, userGames, ratings, credits, prompts, userExtended]);
+  }, [user, userGames, ratings, credits, prompts, userExtended, promptRunsHistory]);
 
   return {
     user,

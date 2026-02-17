@@ -386,11 +386,11 @@ function MonthlyChallengeSection() {
                 <div className="space-y-4">
                   {leaderboard.map((entry, index) => {
                     const rank = index + 1;
-                    const playerName =
-                      entry.game.prompt.user.name ?? "Anonymous";
+                    const playerName = entry.creator?.name ?? "Anonymous";
+                    const score = parseFloat(entry.finalScore) || 0;
                     return (
                       <div
-                        key={entry.id}
+                        key={entry.gameId}
                         className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50 hover:bg-[var(--primary)]/10 transition-colors"
                       >
                         <div
@@ -410,12 +410,12 @@ function MonthlyChallengeSection() {
                             {playerName}
                           </p>
                           <p className="text-xs text-[var(--muted-foreground)]">
-                            {entry.score.toLocaleString()} points
+                            {score.toLocaleString()} points
                           </p>
                         </div>
 
                         <ArcadeBadge
-                          text={entry.score.toLocaleString()}
+                          text={score.toLocaleString()}
                           variant="default"
                         />
                       </div>

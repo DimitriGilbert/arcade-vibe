@@ -8,7 +8,6 @@ import { PromptList } from "@/components/profile/prompt-list";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { GamesListCard } from "@/components/profile/games-list-card";
 import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
-import { PromptRunsCard } from "@/components/profile/prompt-runs-card";
 import { useProfileData } from "@/hooks/use-profile-data";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
 
@@ -30,19 +29,15 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   const {
     user,
-    userExtended,
     prompts,
     userGamesWithRankings,
     ratings,
-    promptRunsHistory,
     stats,
     isOwnProfile: computedIsOwnProfile,
-    userEmail,
     userLoading,
     promptsLoading,
     gamesLoading,
     ratingsLoading,
-    promptRunsLoading,
   } = useProfileData(username, isOwnProfile);
 
   useEffect(() => {
@@ -120,6 +115,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               gamesCreated={stats.gamesCreated}
               totalRatings={stats.totalRatings}
               reputation={stats.reputation}
+              promptRuns={stats.promptRuns}
               isLoading={gamesLoading || ratingsLoading}
             />
           </div>
@@ -158,10 +154,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <RatingsHistoryCard
             ratings={ratings || []}
             isLoading={ratingsLoading}
-          />
-          <PromptRunsCard
-            promptRuns={promptRunsHistory || []}
-            isLoading={promptRunsLoading}
           />
         </div>
       </div>

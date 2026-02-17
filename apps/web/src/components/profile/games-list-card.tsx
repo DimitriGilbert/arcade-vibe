@@ -66,10 +66,14 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
               {game.ranking && (
                 <ArcadeBadge text={`Rank #${game.ranking}`} variant="default" />
               )}
-              <ArcadeBadge
-                text={game.status}
-                variant={game.status === "completed" ? "neon" : "default"}
-              />
+              {game.tierCost?.slug && (
+                <ArcadeBadge text={game.tierCost.slug} variant="default" />
+              )}
+              {game.modelName && (
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {game.modelName}
+                </span>
+              )}
             </div>
           </button>
         ))}
