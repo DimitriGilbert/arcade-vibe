@@ -1,5 +1,14 @@
 export type GenerationStatus = "idle" | "reasoning" | "generating" | "complete" | "error";
 
+export interface GenerationUsageMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+  requestCostUsd?: number;
+}
+
 export interface ModelSelection {
   id: string;
   modelKey: string;
@@ -19,6 +28,7 @@ export interface GenerationResult {
   status: GenerationStatus;
   code: string;
   gameId: string | null;
+  usage?: GenerationUsageMetrics;
   error?: string;
 }
 

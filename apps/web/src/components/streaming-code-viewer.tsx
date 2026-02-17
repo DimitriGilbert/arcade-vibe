@@ -269,7 +269,7 @@ export function StreamingCodeViewer({
             />
           ) : (
             <div className="text-[var(--foreground)]/60">
-              {code.split("\n").map((line, index) => (
+              {displayCode.split("\n").map((line, index) => (
                 <div
                   key={`${index}-${line.slice(0, 10)}`}
                   className="whitespace-pre"

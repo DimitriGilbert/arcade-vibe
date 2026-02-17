@@ -28,7 +28,10 @@ import { VersionSelector } from "../../components/editor/version-selector";
 import { EditorTabs } from "../../components/editor/editor-tabs";
 import { SelectedModelsList } from "../../components/editor/selected-models-list";
 import type { GameMedia } from "@/lib/trpc-types";
-import type { ModelSelection, GenerationStatus } from "../../components/editor/model-types";
+import type {
+  ModelSelection,
+  GenerationStatus,
+} from "../../components/editor/model-types";
 import { MAX_MODELS } from "../../components/editor/model-types";
 import {
   useGenerationsStore,

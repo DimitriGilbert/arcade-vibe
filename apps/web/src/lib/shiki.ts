@@ -1,6 +1,7 @@
 import { createHighlighter } from "shiki";
 
 let highlighterInstance: Awaited<ReturnType<typeof createHighlighter>> | null = null;
+let highlighterPromise: Promise<Awaited<ReturnType<typeof createHighlighter>>> | null = null;
 
 export interface CodeHighlightOptions {
   code: string;
@@ -17,7 +18,11 @@ export async function initShiki() {
     return highlighterInstance;
   }
 
-  highlighterInstance = await createHighlighter({
+  if (highlighterPromise) {
+    return highlighterPromise;
+  }
+
+  highlighterPromise = createHighlighter({
     themes: ["github-dark", "github-light"],
     langs: [
       "typescript",
@@ -43,6 +48,7 @@ export async function initShiki() {
     ],
   });
 
+  highlighterInstance = await highlighterPromise;
   return highlighterInstance;
 }
 

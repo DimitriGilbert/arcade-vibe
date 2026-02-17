@@ -60,6 +60,7 @@ export interface GenerateGameCompleteEvent {
   gameId: string;
   assetUrl: string;
   tokenUsage: number;
+  usage: GenerateGameUsageMetrics;
 }
 
 export interface GenerateGameErrorEvent {
@@ -77,6 +78,15 @@ export type GenerateGameEvent =
 export interface GenerateGameResult {
   gameId: string;
   stream: AsyncGenerator<GenerateGameEvent>;
+}
+
+export interface GenerateGameUsageMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+  requestCostUsd?: number;
 }
 
 export interface PromptWithTheme {
@@ -312,6 +322,49 @@ const getPlatformKey = (
   return { apiKey, provider };
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+function getProviderReportedCost(usageRaw: unknown): number | undefined {
+  if (!isRecord(usageRaw)) return undefined;
+
+  const directCostKeys = ["totalCost", "total_cost", "requestCost", "request_cost", "cost"];
+  for (const key of directCostKeys) {
+    const value = parseNumber(usageRaw[key]);
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  const nestedUsage = usageRaw["usage"];
+  if (isRecord(nestedUsage)) {
+    for (const key of directCostKeys) {
+      const value = parseNumber(nestedUsage[key]);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 const selectPlatformProvider = (availableProviders: string[]): Provider => {
   for (const provider of PLATFORM_PROVIDERS_WITH_KEYS) {
     if (availableProviders.includes(provider)) {
@@ -450,6 +503,7 @@ export async function generateGame(
   }
 
   const availableProviders = modelConfigEntry.providers.map((p) => p.provider);
+  const modelCostPer1k = Number(modelConfigEntry.costPer1kTokens);
 
   if (availableProviders.length === 0) {
     throw new TRPCError({
@@ -614,7 +668,27 @@ export async function generateGame(
 
       // Get token usage from the result
       const usage = await result.usage;
-      const totalTokens = usage.totalTokens ?? 0;
+      const inputTokens = usage.inputTokens ?? 0;
+      const outputTokens = usage.outputTokens ?? 0;
+      const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
+      const reasoningTokens = usage.outputTokenDetails.reasoningTokens ?? undefined;
+      const cachedInputTokens = usage.inputTokenDetails.cacheReadTokens ?? undefined;
+
+      const providerReportedCost = getProviderReportedCost(usage.raw);
+      const estimatedCost =
+        Number.isFinite(modelCostPer1k) && totalTokens > 0
+          ? (totalTokens / 1000) * modelCostPer1k
+          : undefined;
+      const requestCostUsd = providerReportedCost ?? estimatedCost;
+
+      const usageMetrics: GenerateGameUsageMetrics = {
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        reasoningTokens,
+        cachedInputTokens,
+        requestCostUsd,
+      };
 
       // 9. Upload SANITIZED code to CDN
       let assetUrl: string | null = null;
@@ -636,6 +710,12 @@ export async function generateGame(
           gameData: sanitizationResult.sanitizedHtml,
           imageUrl: assetUrl,
           tokenUsage: totalTokens,
+          inputTokens,
+          outputTokens,
+          reasoningTokens,
+          cachedInputTokens,
+          requestCostUsd:
+            requestCostUsd !== undefined ? requestCostUsd.toFixed(6) : null,
           generatedAt: new Date(),
           status: "completed",
           blockedScriptUrls: sanitizationResult.blockedUrls,
@@ -651,6 +731,7 @@ export async function generateGame(
         gameId: confirmedGameId,
         assetUrl: assetUrl ?? "",
         tokenUsage: totalTokens,
+        usage: usageMetrics,
       };
     } catch (error) {
       // Update game status to failed

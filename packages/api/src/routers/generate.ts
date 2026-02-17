@@ -67,6 +67,7 @@ export const generateRouter = router({
               gameId: event.gameId,
               assetUrl: event.assetUrl,
               tokenUsage: event.tokenUsage,
+              usage: event.usage,
               isComplete: true,
             };
             break;

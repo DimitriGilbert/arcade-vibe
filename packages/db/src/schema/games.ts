@@ -35,6 +35,11 @@ export const games = pgTable(
       .notNull()
       .references(() => tierCosts.id, { onDelete: "restrict" }),
     tokenUsage: integer("token_usage"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    cachedInputTokens: integer("cached_input_tokens"),
+    requestCostUsd: text("request_cost_usd"),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
     generatedAt: timestamp("generated_at"),
