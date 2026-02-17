@@ -327,6 +327,7 @@ export const promptsRouter = router({
           eq(prompts.authorId, ctx.user.id),
           eq(prompts.themeId, input.themeId),
           isNull(prompts.parentId),
+          isNull(prompts.hiddenAt),
         ),
         orderBy: [desc(prompts.updatedAt)],
         columns: {
@@ -454,6 +455,120 @@ export const promptsRouter = router({
       return {
         success: true,
         promptId: input.id,
+      };
+    }),
+
+  softDelete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const prompt = await promptsQuery.findFirst({
+        where: eq(prompts.id, input.id),
+      });
+
+      if (!prompt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Prompt not found",
+        });
+      }
+
+      if (prompt.authorId !== ctx.user?.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only delete your own prompts",
+        });
+      }
+
+      if (prompt.hiddenAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Prompt is already deleted",
+        });
+      }
+
+      const updated = await db
+        .update(prompts)
+        .set({
+          hiddenAt: new Date(),
+          hiddenBy: ctx.user.id,
+          hiddenReason: "User deleted",
+        })
+        .where(eq(prompts.id, input.id))
+        .returning();
+
+      return {
+        success: true,
+        promptId: updated[0]?.id,
+        hiddenAt: updated[0]?.hiddenAt,
+      };
+    }),
+
+  updateVisibility: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        visibility: z.enum(["private", "public_on_freeze", "public"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const prompt = await promptsQuery.findFirst({
+        where: eq(prompts.id, input.id),
+      });
+
+      if (!prompt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Prompt not found",
+        });
+      }
+
+      if (prompt.authorId !== ctx.user?.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only update your own prompts",
+        });
+      }
+
+      if (prompt.hiddenAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot update visibility of a deleted prompt",
+        });
+      }
+
+      const updated = await db
+        .update(prompts)
+        .set({
+          visibility: input.visibility,
+          updatedAt: new Date(),
+        })
+        .where(eq(prompts.id, input.id))
+        .returning();
+
+      return {
+        success: true,
+        promptId: updated[0]?.id,
+        visibility: updated[0]?.visibility,
       };
     }),
 });

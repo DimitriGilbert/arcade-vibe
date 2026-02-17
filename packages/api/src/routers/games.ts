@@ -1215,6 +1215,170 @@ export const gamesRouter = router({
 
       return { html, filename };
     }),
+
+  unpublish: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: and(eq(games.id, input.gameId), isNull(games.deletedAt)),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      if (game.prompt.user?.id !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only unpublish your own games",
+        });
+      }
+
+      if (!game.isSubmitted) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Game is not published",
+        });
+      }
+
+      const updated = await db
+        .update(games)
+        .set({
+          isSubmitted: false,
+          submittedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(games.id, input.gameId))
+        .returning();
+
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return {
+        success: true,
+        gameId: updated[0]?.id,
+      };
+    }),
+
+  hardDelete: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      const isAuthor = game.prompt.user?.id === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+
+      if (!isAuthor && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only delete your own games",
+        });
+      }
+
+      if (game.isSubmitted) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete a published game. Unpublish it first.",
+        });
+      }
+
+      const [existingRatings] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ratings)
+        .where(eq(ratings.gameId, input.gameId));
+
+      const [existingScores] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(gameScores)
+        .where(eq(gameScores.gameId, input.gameId));
+
+      if ((existingRatings?.count ?? 0) > 0 || (existingScores?.count ?? 0) > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete a game with ratings or scores",
+        });
+      }
+
+      await db.delete(games).where(eq(games.id, input.gameId));
+
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return {
+        success: true,
+        gameId: input.gameId,
+      };
+    }),
 });
 
 async function cacheDeletePattern(pattern: string): Promise<void> {

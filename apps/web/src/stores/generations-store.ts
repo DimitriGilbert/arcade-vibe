@@ -153,6 +153,14 @@ export const useGenerationCode = (id: string | null | undefined): string => {
 };
 
 /**
+ * Get only the game ID of a single generation.
+ * Use this when callers should not re-render for code/reasoning updates.
+ */
+export const useGenerationGameId = (id: string | null | undefined): string | null => {
+  return useGenerationsStore((state) => (id ? state.generations[id]?.gameId ?? null : null));
+};
+
+/**
  * Get all generation IDs.
  * Uses shallow comparison to avoid infinite loops.
  */

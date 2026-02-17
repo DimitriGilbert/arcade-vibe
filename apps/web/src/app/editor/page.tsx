@@ -35,9 +35,8 @@ import type {
 import { MAX_MODELS } from "../../components/editor/model-types";
 import {
   useGenerationsStore,
-  useGenerationById,
+  useGenerationGameId,
   useCompletedCount,
-  useTotalCount,
   type GenerationEntry,
 } from "@/stores/generations-store";
 
@@ -113,10 +112,16 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Use Zustand store for generations (must be after activeOutputTab declaration)
-  const { setGeneration, updateGenerationStatus, updateGenerationCode, updateGenerationReasoning, updateGenerationGameId, updateGenerationError, removeGeneration, clearGenerations, setMultipleGenerations } = useGenerationsStore();
-  const activeGeneration = useGenerationById(activeOutputTab);
+  const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
+  const updateGenerationCode = useGenerationsStore((state) => state.updateGenerationCode);
+  const updateGenerationReasoning = useGenerationsStore((state) => state.updateGenerationReasoning);
+  const updateGenerationGameId = useGenerationsStore((state) => state.updateGenerationGameId);
+  const updateGenerationError = useGenerationsStore((state) => state.updateGenerationError);
+  const removeGeneration = useGenerationsStore((state) => state.removeGeneration);
+  const clearGenerations = useGenerationsStore((state) => state.clearGenerations);
+  const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
+  const activeGameId = useGenerationGameId(activeOutputTab);
   const completedCount = useCompletedCount();
-  const totalCount = useTotalCount();
 
   // Version comparison state
   const [showComparison, setShowComparison] = useState(false);
@@ -347,6 +352,57 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       toast.error(error.message || "Failed to fork prompt");
     },
   });
+
+  // Soft delete prompt mutation
+  const [deletingPromptId, setDeletingPromptId] = useState<string | null>(null);
+  const softDeletePromptMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      setDeletingPromptId(input.id);
+      const result = await trpcClient.prompts.softDelete.mutate({
+        id: input.id,
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      if (selectedPromptId === data.promptId) {
+        setSelectedPromptId(null);
+        setPromptContent("");
+      }
+      setDeletingPromptId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete prompt");
+      setDeletingPromptId(null);
+    },
+  });
+
+  // Update prompt visibility mutation
+  const updatePromptVisibilityMutation = useMutation({
+    mutationFn: async (input: { id: string; visibility: "private" | "public" | "public_on_freeze" }) => {
+      const result = await trpcClient.prompts.updateVisibility.mutate({
+        id: input.id,
+        visibility: input.visibility,
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success(`Prompt is now ${data.visibility}`);
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update visibility");
+    },
+  });
+
+  const handleDeletePrompt = useCallback((promptId: string) => {
+    softDeletePromptMutation.mutate({ id: promptId });
+  }, [softDeletePromptMutation]);
+
+  const handleTogglePromptVisibility = useCallback((promptId: string, visibility: "private" | "public" | "public_on_freeze") => {
+    updatePromptVisibilityMutation.mutate({ id: promptId, visibility });
+  }, [updatePromptVisibilityMutation]);
 
   // Handle adding a model to the selection
   const handleAddModel = useCallback((selection: ModelSelection) => {
@@ -659,7 +715,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     existingPrompt ??
     (selectedPromptId ? { id: selectedPromptId, version: 1 } : null);
 
-  // activeGeneration is already defined from useGenerationById hook above
   const activeModel = selectedModels.find((m) => m.id === activeOutputTab);
 
   // completedCount and totalCount come from store hooks above
@@ -687,17 +742,22 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                 content: string;
                 version: number;
                 updatedAt: string;
+                visibility?: "private" | "public" | "public_on_freeze";
               }) => ({
                 id: p.id,
                 content: p.content,
                 version: p.version,
                 updatedAt: p.updatedAt,
+                visibility: p.visibility,
               }),
             )}
             promptsLoading={promptsLoading}
             selectedPromptId={selectedPromptId}
             onSelectPrompt={handleSelectPrompt}
             onNewPrompt={handleNewPrompt}
+            onDeletePrompt={handleDeletePrompt}
+            onTogglePromptVisibility={handleTogglePromptVisibility}
+            deletingPromptId={deletingPromptId}
           >
             {/* Selected Models List */}
             <div className="mb-4">
@@ -838,11 +898,11 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                   </>
                 )}
               </ArcadeButton>
-              {activeGeneration?.gameId && !isGenerating && (
+              {activeGameId && !isGenerating && (
                 <ArcadeButton
                   variant="glow"
                   onClick={() =>
-                    window.open(`/game/${activeGeneration.gameId}`, "_blank")
+                    window.open(`/game/${activeGameId}`, "_blank")
                   }
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />

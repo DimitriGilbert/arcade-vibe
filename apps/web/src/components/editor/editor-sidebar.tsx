@@ -13,10 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ArcadeButton } from "@/components/arcade";
 import { PromptListItem } from "./prompt-list-item";
 import { Plus, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Visibility } from "@/lib/trpc-types";
 
 interface Theme {
   id: string;
@@ -28,6 +37,7 @@ interface Prompt {
   content: string;
   version: number;
   updatedAt: string;
+  visibility?: Visibility;
 }
 
 interface EditorSidebarProps {
@@ -40,6 +50,9 @@ interface EditorSidebarProps {
   selectedPromptId: string | null;
   onSelectPrompt: (promptId: string) => void;
   onNewPrompt: () => void;
+  onDeletePrompt?: (promptId: string) => void;
+  onTogglePromptVisibility?: (promptId: string, visibility: Visibility) => void;
+  deletingPromptId?: string | null;
   children: ReactNode;
 }
 
@@ -60,15 +73,33 @@ export function EditorSidebar({
   selectedPromptId,
   onSelectPrompt,
   onNewPrompt,
+  onDeletePrompt,
+  onTogglePromptVisibility,
+  deletingPromptId,
   children,
 }: EditorSidebarProps) {
   const [mounted, setMounted] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const displayTheme = mounted && selectedTheme ? getThemeName(themes, selectedTheme) : "Select a theme";
+
+  const handleDeleteClick = (promptId: string) => {
+    setPromptToDelete(promptId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (promptToDelete && onDeletePrompt) {
+      onDeletePrompt(promptToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setPromptToDelete(null);
+  };
 
   return (
     <div className="h-full border border-[var(--border)] bg-[var(--card)] rounded-[var(--radius)] overflow-hidden">
@@ -149,8 +180,12 @@ export function EditorSidebar({
                         content={prompt.content}
                         version={prompt.version}
                         updatedAt={prompt.updatedAt}
+                        visibility={prompt.visibility}
                         isActive={selectedPromptId === prompt.id}
                         onClick={() => onSelectPrompt(prompt.id)}
+                        onDelete={onDeletePrompt ? handleDeleteClick : undefined}
+                        onToggleVisibility={onTogglePromptVisibility}
+                        isDeleting={deletingPromptId === prompt.id}
                       />
                     ))}
                   </div>
@@ -195,6 +230,39 @@ export function EditorSidebar({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Prompt</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this prompt? This will hide it from your list, but any games created from it will remain visible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ArcadeButton
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </ArcadeButton>
+            <ArcadeButton
+              onClick={handleConfirmDelete}
+              disabled={deletingPromptId === promptToDelete}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:bg-[var(--destructive)]/90"
+            >
+              {deletingPromptId === promptToDelete ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </ArcadeButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
