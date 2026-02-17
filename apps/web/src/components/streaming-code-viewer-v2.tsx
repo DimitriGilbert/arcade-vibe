@@ -5,7 +5,6 @@ import { Check, Copy, Download, Moon, Sun } from "lucide-react";
 import { highlightCode, initShiki, isShikiInitialized } from "@/lib/shiki";
 
 const shikiWarmupPromise = initShiki();
-const FRAME_MS = 33;
 
 export interface StreamingCodeViewerV2Props {
   code: string;
@@ -39,23 +38,19 @@ export function StreamingCodeViewerV2({
 }: StreamingCodeViewerV2Props) {
   const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
   const [isShikiReady, setIsShikiReady] = useState(false);
-  const [renderedCode, setRenderedCode] = useState("");
-  const [renderedReasoning, setRenderedReasoning] = useState("");
   const [highlightedCode, setHighlightedCode] = useState("");
+  const [highlightedReasoning, setHighlightedReasoning] = useState("");
   const [copied, setCopied] = useState(false);
 
   const onCompleteRef = useRef(onComplete);
   const targetCodeRef = useRef("");
   const targetReasoningRef = useRef("");
-  const renderedCodeRef = useRef("");
-  const renderedReasoningRef = useRef("");
-  const isStreamingRef = useRef(isStreaming);
   const highlightingRef = useRef(false);
-  const highlightedSignatureRef = useRef("");
-  const hasHighlightedCodeRef = useRef(false);
+  const highlightedCodeSignatureRef = useRef("");
+  const highlightedReasoningSignatureRef = useRef("");
+  const prevIsStreamingRef = useRef(false);
 
   onCompleteRef.current = onComplete;
-  isStreamingRef.current = isStreaming;
 
   const targetCode = clampLines(code, maxLines);
   const lineCount = code.split("\n").length;
@@ -81,98 +76,42 @@ export function StreamingCodeViewerV2({
 
   useEffect(() => {
     targetCodeRef.current = targetCode;
-
-    if (!isStreamingRef.current || targetCode.length < renderedCodeRef.current.length) {
-      setRenderedCode(targetCode);
-      renderedCodeRef.current = targetCode;
-    }
   }, [targetCode]);
 
   useEffect(() => {
     targetReasoningRef.current = reasoning ?? "";
-
-    if (!isStreamingRef.current) {
-      setRenderedReasoning(reasoning ?? "");
-      renderedReasoningRef.current = reasoning ?? "";
-    }
   }, [reasoning]);
 
   useEffect(() => {
-    if (!isStreaming) {
+    if (!isShikiReady) {
       return;
     }
 
-    const intervalId = setInterval(() => {
-      const target = targetCodeRef.current;
-      const current = renderedCodeRef.current;
+    if (highlightingRef.current) {
+      return;
+    }
 
-      if (current !== target) {
-        if (!isStreamingRef.current) {
-          renderedCodeRef.current = target;
-          setRenderedCode(target);
-        } else {
-          const remaining = target.length - current.length;
-          const step = Math.max(1, Math.ceil(remaining / 4));
-          const next = target.slice(0, Math.min(target.length, current.length + step));
-          renderedCodeRef.current = next;
-          setRenderedCode(next);
-        }
-      }
+    const codeSnapshot = targetCodeRef.current;
+    const reasoningSnapshot = targetReasoningRef.current;
 
-      const targetReason = targetReasoningRef.current;
-      const currentReason = renderedReasoningRef.current;
+    const codeSignature = `${language}|${theme}|${codeSnapshot}`;
+    const reasoningSignature = reasoningSnapshot;
 
-      if (currentReason !== targetReason) {
-        if (!isStreamingRef.current) {
-          renderedReasoningRef.current = targetReason;
-          setRenderedReasoning(targetReason);
-        } else {
-          const remainingReason = targetReason.length - currentReason.length;
-          const stepReason = Math.max(1, Math.ceil(remainingReason / 4));
-          const nextReason = targetReason.slice(0, Math.min(targetReason.length, currentReason.length + stepReason));
-          renderedReasoningRef.current = nextReason;
-          setRenderedReasoning(nextReason);
-        }
-      }
-    }, FRAME_MS);
+    const needsCodeHighlight = codeSnapshot && codeSignature !== highlightedCodeSignatureRef.current;
+    const needsReasoningUpdate = reasoningSignature !== highlightedReasoningSignatureRef.current;
 
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isStreaming]);
-
-  useEffect(() => {
-    if (!isStreaming) {
+    if (!needsCodeHighlight && !needsReasoningUpdate) {
       return;
     }
 
     let cancelled = false;
+    highlightingRef.current = true;
 
-    const workerId = setInterval(() => {
-      if (!isShikiReady || cancelled || highlightingRef.current) {
-        return;
-      }
-
-      const snapshot = renderedCodeRef.current;
-      if (!snapshot) {
-        if (hasHighlightedCodeRef.current) {
-          setHighlightedCode("");
-          highlightedSignatureRef.current = "";
-          hasHighlightedCodeRef.current = false;
-        }
-        return;
-      }
-
-      const signature = `${language}|${theme}|${snapshot}`;
-      if (signature === highlightedSignatureRef.current) {
-        return;
-      }
-
-      highlightingRef.current = true;
-      const run = async () => {
-        try {
+    const run = async () => {
+      try {
+        if (needsCodeHighlight) {
           const html = await highlightCode({
-            code: snapshot,
+            code: codeSnapshot,
             lang: language,
             theme,
           });
@@ -182,33 +121,63 @@ export function StreamingCodeViewerV2({
           }
 
           setHighlightedCode(html);
-          highlightedSignatureRef.current = signature;
-          hasHighlightedCodeRef.current = true;
-        } catch {
-          if (!cancelled) {
-            setHighlightedCode("");
-            highlightedSignatureRef.current = "";
-            hasHighlightedCodeRef.current = false;
-          }
-        } finally {
-          highlightingRef.current = false;
+          highlightedCodeSignatureRef.current = codeSignature;
         }
-      };
 
-      void run();
-    }, FRAME_MS);
+        if (needsReasoningUpdate) {
+          setHighlightedReasoning(reasoningSnapshot);
+          highlightedReasoningSignatureRef.current = reasoningSignature;
+        }
+      } catch {
+        // Silently fail on highlight errors
+      } finally {
+        highlightingRef.current = false;
+      }
+    };
+
+    void run();
 
     return () => {
       cancelled = true;
-      clearInterval(workerId);
     };
-  }, [isStreaming, isShikiReady, language, theme]);
+  }, [targetCode, reasoning, isShikiReady, language, theme]);
 
   useEffect(() => {
-    if (!isStreaming && renderedCodeRef.current === targetCodeRef.current && renderedCodeRef.current.length > 0) {
-      onCompleteRef.current?.();
+    if (prevIsStreamingRef.current && !isStreaming) {
+      if (targetCodeRef.current && highlightedCodeSignatureRef.current !== `${language}|${theme}|${targetCodeRef.current}`) {
+        const runFinalHighlight = async () => {
+          highlightingRef.current = true;
+          try {
+            const html = await highlightCode({
+              code: targetCodeRef.current,
+              lang: language,
+              theme,
+            });
+            setHighlightedCode(html);
+            highlightedCodeSignatureRef.current = `${language}|${theme}|${targetCodeRef.current}`;
+            if (onCompleteRef.current) {
+              onCompleteRef.current();
+            }
+          } catch {
+            // Silently fail
+          } finally {
+            highlightingRef.current = false;
+          }
+        };
+        void runFinalHighlight();
+      } else if (highlightedCode) {
+        if (onCompleteRef.current) {
+          onCompleteRef.current();
+        }
+      }
+
+      if (targetReasoningRef.current && highlightedReasoningSignatureRef.current !== targetReasoningRef.current) {
+        setHighlightedReasoning(targetReasoningRef.current);
+        highlightedReasoningSignatureRef.current = targetReasoningRef.current;
+      }
     }
-  }, [isStreaming]);
+    prevIsStreamingRef.current = isStreaming;
+  }, [isStreaming, language, theme, highlightedCode]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -236,7 +205,8 @@ export function StreamingCodeViewerV2({
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === "github-dark" ? "github-light" : "github-dark"));
-    highlightedSignatureRef.current = "";
+    highlightedCodeSignatureRef.current = "";
+    highlightedReasoningSignatureRef.current = "";
   }, []);
 
   return (
@@ -309,31 +279,23 @@ export function StreamingCodeViewerV2({
         style={{ maxHeight: "1000px" }}
       >
         <div className="inline-block min-w-full p-4 md:p-5">
-          {renderedReasoning ? (
+          {highlightedReasoning ? (
             <div className="mb-4 pb-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-medium text-blue-400">Reasoning</span>
               </div>
               <p className="text-xs text-blue-300/80 italic whitespace-pre-wrap font-mono leading-relaxed">
-                {renderedReasoning}
+                {highlightedReasoning}
               </p>
             </div>
           ) : null}
-          {isShikiReady && highlightedCode ? (
+          {highlightedCode ? (
             <div
               className="[&_pre]:m-0 [&_pre]:rounded-lg [&_.shiki]:!bg-transparent [&_.shiki]:m-0"
               // eslint-disable-next-line react/no-dangerously-set-inner-html -- Shiki generates trusted, safe HTML for syntax highlighting
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
-          ) : (
-            <div className="text-[var(--foreground)]/80">
-              {renderedCode.split("\n").map((line, index) => (
-                <div key={`${index}-${line.slice(0, 16)}`} className="whitespace-pre">
-                  {line || "\u00A0"}
-                </div>
-              ))}
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 

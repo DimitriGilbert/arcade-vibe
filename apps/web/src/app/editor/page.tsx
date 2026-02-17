@@ -442,6 +442,23 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         updateGenerationStatus(model.id, "reasoning");
 
         try {
+          let bufferedCodeDelta = "";
+          let bufferedReasoningDelta = "";
+
+          const flushBufferedDeltas = () => {
+            if (bufferedReasoningDelta.length > 0) {
+              updateGenerationReasoning(model.id, bufferedReasoningDelta);
+              bufferedReasoningDelta = "";
+            }
+
+            if (bufferedCodeDelta.length > 0) {
+              updateGenerationCode(model.id, bufferedCodeDelta);
+              bufferedCodeDelta = "";
+            }
+          };
+
+          const flushIntervalId = setInterval(flushBufferedDeltas, 33);
+
           const stream = await trpcClient.generate.streamGeneration.mutate({
             promptId,
             modelKey: model.modelKey,
@@ -452,24 +469,32 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             reasoningMaxTokens: model.reasoningMaxTokens,
           });
 
-          for await (const chunk of stream) {
-            if (generationAbortedRef.current) return;
+          try {
+            for await (const chunk of stream) {
+              if (generationAbortedRef.current) return;
 
-            if (chunk.type === "status" && "status" in chunk) {
-              updateGenerationStatus(model.id, chunk.status as GenerationStatus);
-            } else if (chunk.type === "reasoning-chunk" && "delta" in chunk) {
-              updateGenerationReasoning(model.id, chunk.delta as string);
-            } else if (chunk.type === "chunk" && "delta" in chunk) {
-              updateGenerationCode(model.id, chunk.delta as string);
-            } else if (chunk.type === "complete" && "gameId" in chunk) {
-              completionStats.completed++;
-              updateGenerationGameId(model.id, chunk.gameId as string);
-            } else if (chunk.type === "error") {
-              completionStats.errors++;
-              const errorMsg = "error" in chunk ? String(chunk.error) : "Generation failed";
-              toast.error(`${model.modelName}: ${errorMsg}`);
-              updateGenerationError(model.id, errorMsg);
+              if (chunk.type === "status" && "status" in chunk) {
+                flushBufferedDeltas();
+                updateGenerationStatus(model.id, chunk.status as GenerationStatus);
+              } else if (chunk.type === "reasoning-chunk" && "delta" in chunk) {
+                bufferedReasoningDelta += chunk.delta as string;
+              } else if (chunk.type === "chunk" && "delta" in chunk) {
+                bufferedCodeDelta += chunk.delta as string;
+              } else if (chunk.type === "complete" && "gameId" in chunk) {
+                flushBufferedDeltas();
+                completionStats.completed++;
+                updateGenerationGameId(model.id, chunk.gameId as string);
+              } else if (chunk.type === "error") {
+                flushBufferedDeltas();
+                completionStats.errors++;
+                const errorMsg = "error" in chunk ? String(chunk.error) : "Generation failed";
+                toast.error(`${model.modelName}: ${errorMsg}`);
+                updateGenerationError(model.id, errorMsg);
+              }
             }
+          } finally {
+            clearInterval(flushIntervalId);
+            flushBufferedDeltas();
           }
         } catch (error) {
           if (generationAbortedRef.current) return;

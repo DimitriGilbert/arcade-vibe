@@ -113,7 +113,6 @@ export function EditorOutputPanelV2({
   const panelRef = useRef<HTMLDivElement>(null);
   const userScrollIntentRef = useRef(false);
   const isAutoScrollingRef = useRef(true);
-  const lastScrollTimeRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   const generation = useGenerationById(activeOutputTab);
@@ -121,6 +120,8 @@ export function EditorOutputPanelV2({
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
     generation?.status === "reasoning" || generation?.status === "generating";
+  const codeLength = generation?.code.length ?? 0;
+  const reasoningLength = generation?.reasoning?.length ?? 0;
 
   const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
@@ -164,7 +165,6 @@ export function EditorOutputPanelV2({
   }, [getScrollElement]);
 
   useEffect(() => {
-    const tab = activeOutputTab;
     const scroller = getScrollElement();
     if (!scroller) return;
     scroller.scrollLeft = 0;
@@ -179,24 +179,19 @@ export function EditorOutputPanelV2({
 
   useEffect(() => {
     if (!isStreaming) return;
+    if (!isAutoScrollingRef.current) return;
 
-    const intervalId = setInterval(() => {
+    const frameId = requestAnimationFrame(() => {
       const scroller = getScrollElement();
-      if (!scroller) return;
-
-      const now = Date.now();
-      if (now - lastScrollTimeRef.current < 100) return;
-
-      if (isAutoScrollingRef.current) {
+      if (scroller && isAutoScrollingRef.current) {
         scroller.scrollTop = scroller.scrollHeight;
-        lastScrollTimeRef.current = now;
       }
-    }, 100);
+    });
 
     return () => {
-      clearInterval(intervalId);
+      cancelAnimationFrame(frameId);
     };
-  }, [isStreaming, getScrollElement]);
+  }, [isStreaming, codeLength, reasoningLength, getScrollElement]);
 
   const scrollToBottom = () => {
     const scroller = getScrollElement();
