@@ -1,5 +1,9 @@
 ALTER TABLE "games" RENAME COLUMN "model_tier" TO "tier_cost_id";--> statement-breakpoint
 ALTER TABLE "model_config" RENAME COLUMN "tier" TO "tier_cost_id";--> statement-breakpoint
+ALTER TABLE "games" ALTER COLUMN "tier_cost_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "games" ALTER COLUMN "tier_cost_id" SET DATA TYPE uuid USING NULL::uuid;--> statement-breakpoint
+ALTER TABLE "model_config" ALTER COLUMN "tier_cost_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "model_config" ALTER COLUMN "tier_cost_id" SET DATA TYPE uuid USING NULL::uuid;--> statement-breakpoint
 ALTER TABLE "tier_costs" DROP CONSTRAINT "tier_costs_tier_unique";--> statement-breakpoint
 DROP INDEX "idx_model_config_active";--> statement-breakpoint
 ALTER TABLE "tier_costs" ADD COLUMN "slug" varchar(50) NOT NULL;--> statement-breakpoint

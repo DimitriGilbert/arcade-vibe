@@ -1,9 +1,9 @@
 # ============================================
 # Stage 1: Dependencies (cached layer)
 # ============================================
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+RUN npm install -g pnpm@10.10.0
 
 WORKDIR /app
 
@@ -42,9 +42,9 @@ RUN pnpm run build --filter=web
 # ============================================
 # Stage 3: Production Runner
 # ============================================
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+RUN npm install -g pnpm@10.10.0
 
 WORKDIR /app
 
@@ -72,6 +72,7 @@ RUN chmod +x /entrypoint.sh
 # Set environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV TURBO_CACHE_DIR=/tmp/.turbo
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
@@ -81,6 +82,6 @@ USER nextjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/trpc/healthCheck || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/trpc/healthCheck || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

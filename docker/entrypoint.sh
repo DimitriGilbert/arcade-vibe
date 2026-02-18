@@ -5,7 +5,7 @@ echo "Starting application..."
 
 # Wait for database to be ready
 echo "Waiting for database..."
-until node -e "
+( cd /app/packages/db && until node -e "
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 pool.query('SELECT 1')
@@ -14,7 +14,7 @@ pool.query('SELECT 1')
 " 2>/dev/null; do
   echo "Database unavailable, retrying in 2 seconds..."
   sleep 2
-done
+done )
 echo "Database is ready!"
 
 # Wait for Redis if configured
@@ -36,7 +36,7 @@ fi
 # Run database migrations
 echo "Running database migrations..."
 cd /app
-pnpm run db:migrate
+pnpm --filter @arcade-vibe/db db:migrate
 echo "Migrations completed!"
 
 # Start the application

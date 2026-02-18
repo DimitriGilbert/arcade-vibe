@@ -173,7 +173,7 @@ CREATE TABLE "themes" (
 --> statement-breakpoint
 CREATE TABLE "prompts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"author_id" uuid NOT NULL,
+	"author_id" text NOT NULL,
 	"theme_id" uuid NOT NULL,
 	"parent_id" uuid,
 	"content" text NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE "prompts" (
 	"visibility" "visibility" DEFAULT 'private' NOT NULL,
 	"status" "prompt_status" DEFAULT 'draft' NOT NULL,
 	"hidden_at" timestamp,
-	"hidden_by" uuid,
+	"hidden_by" text,
 	"hidden_reason" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL

@@ -16,6 +16,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed-tier-costs": "tsx src/seed-tier-costs.ts",
     "db:seed-free-theme": "tsx src/seed-free-theme.ts",
+    "db:seed-dev": "pnpm run db:migrate && tsx src/seed-dev.ts",
     "db:start": "docker compose up -d",
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",

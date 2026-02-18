@@ -16,6 +16,7 @@
     "db:studio": "turbo -F @arcade-vibe/db db:studio",
     "db:generate": "turbo -F @arcade-vibe/db db:generate",
     "db:migrate": "turbo -F @arcade-vibe/db db:migrate",
+    "db:seed-dev": "turbo -F @arcade-vibe/db db:seed-dev",
     "db:start": "turbo -F @arcade-vibe/db db:start",
     "db:watch": "turbo -F @arcade-vibe/db db:watch",
     "db:stop": "turbo -F @arcade-vibe/db db:stop",

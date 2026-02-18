@@ -1,10 +1,10 @@
 # Development Dockerfile - Simple, fast, versatile
 # No multi-stage builds, optimized for iteration speed
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+RUN npm install -g pnpm@10.10.0
 
 WORKDIR /app
 

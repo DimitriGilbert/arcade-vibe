@@ -1,6 +1,9 @@
 ALTER TYPE "public"."moderation_target_type" ADD VALUE 'review';--> statement-breakpoint
-ALTER TABLE "user_extended" ALTER COLUMN "reputation" SET DATA TYPE integer;--> statement-breakpoint
-ALTER TABLE "user_extended" ALTER COLUMN "credits" SET DATA TYPE integer;--> statement-breakpoint
+ALTER TABLE "user_extended" ALTER COLUMN "reputation" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "user_extended" ALTER COLUMN "credits" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "user_extended" ALTER COLUMN "reputation" SET DATA TYPE integer USING CASE WHEN "reputation" ~ '^-?\d+$' THEN "reputation"::integer ELSE 0 END;--> statement-breakpoint
+ALTER TABLE "user_extended" ALTER COLUMN "credits" SET DATA TYPE integer USING CASE WHEN "credits" ~ '^-?\d+$' THEN "credits"::integer ELSE 0 END;--> statement-breakpoint
+ALTER TABLE "user_extended" ALTER COLUMN "reputation" SET DEFAULT 0;--> statement-breakpoint
 ALTER TABLE "user_extended" ALTER COLUMN "credits" SET DEFAULT 100;--> statement-breakpoint
 ALTER TABLE "prompts" ALTER COLUMN "author_id" SET DATA TYPE text;--> statement-breakpoint
 ALTER TABLE "prompts" ALTER COLUMN "hidden_by" SET DATA TYPE text;--> statement-breakpoint
