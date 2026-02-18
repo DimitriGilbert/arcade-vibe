@@ -56,7 +56,7 @@ RUN DATABASE_URL="${DATABASE_URL}" \
     REDIS_URL="${REDIS_URL}" \
     NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
     NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL}" \
-    pnpm run build --filter=web
+    pnpm --filter web build
 
 # ============================================
 # Stage 3: Production Runner
