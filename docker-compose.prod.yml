@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
       target: runner
       args:
-        DATABASE_URL: ${DATABASE_URL}
+        DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/arcade-vibe
         BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
         BETTER_AUTH_URL: ${BETTER_AUTH_URL}
         CORS_ORIGIN: ${CORS_ORIGIN}
@@ -22,7 +22,7 @@ services:
       - "38000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/arcade-vibe
       REDIS_URL: redis://redis:6379
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
@@ -115,6 +115,6 @@ networks:
 
 volumes:
   postgres_data:
-    name: arcade-vibe-prod-postgres-data
+    name: ${COMPOSE_PROJECT_NAME:-arcade-vibe}-prod-postgres-data
   redis_data:
-    name: arcade-vibe-prod-redis-data
+    name: ${COMPOSE_PROJECT_NAME:-arcade-vibe}-prod-redis-data
