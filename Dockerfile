@@ -35,9 +35,28 @@ COPY packages/config ./packages/config
 COPY apps/web ./apps/web
 COPY turbo.json ./
 
-# Build the application
-# Turbo will build dependencies in correct order
-RUN pnpm run build --filter=web
+# Build-time args passed from docker-compose.prod.yml (Dokploy envs)
+ARG DATABASE_URL
+ARG BETTER_AUTH_SECRET
+ARG BETTER_AUTH_URL
+ARG CORS_ORIGIN
+ARG ENCRYPTION_KEY
+ARG GAME_SDK_SECRET
+ARG REDIS_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL
+
+# Build the application with real Dokploy-provided values.
+RUN DATABASE_URL="${DATABASE_URL}" \
+    BETTER_AUTH_SECRET="${BETTER_AUTH_SECRET}" \
+    BETTER_AUTH_URL="${BETTER_AUTH_URL}" \
+    CORS_ORIGIN="${CORS_ORIGIN}" \
+    ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+    GAME_SDK_SECRET="${GAME_SDK_SECRET}" \
+    REDIS_URL="${REDIS_URL}" \
+    NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+    NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL}" \
+    pnpm run build --filter=web
 
 # ============================================
 # Stage 3: Production Runner

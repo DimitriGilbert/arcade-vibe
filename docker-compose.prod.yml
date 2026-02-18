@@ -7,6 +7,16 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+        BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+        CORS_ORIGIN: ${CORS_ORIGIN}
+        ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+        GAME_SDK_SECRET: ${GAME_SDK_SECRET}
+        REDIS_URL: redis://redis:6379
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     container_name: arcade-vibe-app
     ports:
       - "38000:3000"
