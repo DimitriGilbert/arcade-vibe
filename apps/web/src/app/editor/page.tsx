@@ -48,6 +48,7 @@ interface EditorPageProps {
 }
 
 const EDITOR_STORAGE_KEY = "arcade-vibe-editor-state";
+const GENERATION_CONCURRENCY_LIMIT = 2;
 
 interface PersistedEditorState {
   promptContent: string;
@@ -490,8 +491,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         setSelectedPromptId(promptId);
       }
 
-      // Launch all generations in parallel
-      const generationPromises = selectedModels.map(async (model) => {
+      const runGenerationForModel = async (model: ModelSelection): Promise<void> => {
         if (generationAbortedRef.current) return;
 
         // Update status to reasoning
@@ -561,9 +561,19 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           console.error(`Generation error for ${model.modelKey}:`, error);
           updateGenerationError(model.id, errorMsg);
         }
-      });
+      };
 
-      await Promise.all(generationPromises);
+      for (
+        let index = 0;
+        index < selectedModels.length;
+        index += GENERATION_CONCURRENCY_LIMIT
+      ) {
+        const batch = selectedModels.slice(
+          index,
+          index + GENERATION_CONCURRENCY_LIMIT,
+        );
+        await Promise.all(batch.map((model) => runGenerationForModel(model)));
+      }
       
       // Show aggregate toast based on tracked stats
       if (completionStats.completed === completionStats.total) {

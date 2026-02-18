@@ -617,10 +617,18 @@ export async function generateGame(
     messages,
   });
 
+  const configuredMaxCharsRaw = Number(
+    process.env.MAX_GENERATED_CODE_CHARS ?? "",
+  );
+  const maxGeneratedCodeChars =
+    Number.isFinite(configuredMaxCharsRaw) && configuredMaxCharsRaw > 0
+      ? configuredMaxCharsRaw
+      : null;
+
   // Create the async generator
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
-    let fullCode = "";
-    let fullReasoning = "";
+    const codeChunks: string[] = [];
+    let codeCharCount = 0;
     let hasEmittedGenerating = false;
 
     try {
@@ -636,7 +644,6 @@ export async function generateGame(
       // Stream chunks using fullStream to capture reasoning
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
-          fullReasoning += chunk.text;
           yield {
             type: "reasoning-chunk",
             gameId: confirmedGameId,
@@ -652,7 +659,18 @@ export async function generateGame(
             };
           }
 
-          fullCode += chunk.text;
+          codeChunks.push(chunk.text);
+          codeCharCount += chunk.text.length;
+          if (
+            maxGeneratedCodeChars !== null &&
+            codeCharCount > maxGeneratedCodeChars
+          ) {
+            throw new TRPCError({
+              code: "PAYLOAD_TOO_LARGE",
+              message:
+                "Generated output exceeded size limit. Try a shorter prompt or lower reasoning/output settings.",
+            });
+          }
 
           yield {
             type: "chunk",
@@ -664,6 +682,7 @@ export async function generateGame(
 
       // GL-008: Sanitize FIRST, then upload to CDN
       // 8. Sanitize the generated code
+      const fullCode = codeChunks.join("");
       const extractedCode = extractCodeFromMarkdown(fullCode);
       const sanitizationResult = sanitizeGameCode(
         extractedCode,
