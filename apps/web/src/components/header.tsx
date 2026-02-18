@@ -4,11 +4,6 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  ArcadeTabs,
-  ArcadeTabsList,
-  ArcadeTabsTrigger,
-} from "@/components/arcade";
 
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
@@ -16,9 +11,9 @@ import UserMenu from "./user-menu";
 // Main app navigation
 const MAIN_NAV_ITEMS = [
   { label: "Home", href: "/" },
-  { label: "Arcade", href: "/arcade" },
+  { label: "Leaderboard", href: "/arcade" },
+  { label: "Models", href: "/models" },
   { label: "Editor", href: "/editor" },
-  { label: "AI Chat", href: "/ai" },
 ] as const;
 
 export default function Header() {
@@ -36,46 +31,28 @@ export default function Header() {
   return (
     <div className="sticky top-0 z-50 bg-[var(--background)] border-b border-[var(--border)]">
       <div className="flex flex-row items-center justify-center px-4 py-2">
-        {/* Centered Menu Bar - Everything INSIDE */}
-        <ArcadeTabs
-          value={getActiveTab()}
-          className="w-auto"
-          orientation="horizontal"
-        >
-          <ArcadeTabsList
-            variant="default"
-            className="gap-1 bg-[var(--muted)]/40 px-2"
-          >
-            {/* Navigation Links */}
-            {MAIN_NAV_ITEMS.map((item) => {
-              const isActive = getActiveTab() === item.href;
-              return (
-                <Link key={item.href} href={item.href as Route}>
-                  <ArcadeTabsTrigger
-                    value={item.href}
-                    className={cn(
-                      "px-4 py-1.5 text-sm font-medium transition-all duration-200",
-                      isActive
-                        ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-                    )}
-                  >
-                    {item.label}
-                  </ArcadeTabsTrigger>
-                </Link>
-              );
-            })}
-
-            {/* Separator */}
-            <div className="w-px h-6 bg-[var(--border)] mx-1" />
-
-            {/* Theme Toggle - INSIDE menu bar */}
-            <ModeToggle />
-
-            {/* User Menu - INSIDE menu bar */}
-            <UserMenu />
-          </ArcadeTabsList>
-        </ArcadeTabs>
+        <nav className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-1">
+          {MAIN_NAV_ITEMS.map((item) => {
+            const isActive = getActiveTab() === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href as Route}
+                className={cn(
+                  "inline-flex cursor-pointer items-center justify-center rounded-[calc(var(--radius)-4px)] px-4 py-1.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <div className="mx-1 h-6 w-px bg-[var(--border)]" />
+          <ModeToggle />
+          <UserMenu />
+        </nav>
       </div>
     </div>
   );

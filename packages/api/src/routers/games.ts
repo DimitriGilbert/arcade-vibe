@@ -227,6 +227,19 @@ export const gamesRouter = router({
         });
       }
 
+      const canViewPromptContent =
+        isAuthor || isAdmin || game.prompt.visibility === "public";
+
+      if (!canViewPromptContent) {
+        return {
+          ...game,
+          prompt: {
+            ...game.prompt,
+            content: "",
+          },
+        };
+      }
+
       return game;
     }),
 

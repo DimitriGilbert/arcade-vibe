@@ -187,10 +187,13 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
+    const canSharePrompt = Boolean(game?.prompt?.content.trim());
     try {
       if (navigator.share) {
         await navigator.share({
-          title: game?.prompt?.content || "Play this game",
+          title:
+            game?.name ||
+            (canSharePrompt ? game?.prompt?.content : "Play this game"),
           url,
         });
       } else {
@@ -268,6 +271,8 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     );
   }
 
+  const canViewPrompt = Boolean(game.prompt?.content.trim());
+  const promptSnippet = canViewPrompt ? game.prompt.content : null;
   const canRate = playtime >= 60 && !myRating && isGameLoaded;
   const playtimeDisplay = `${Math.floor(playtime / 60)}:${(playtime % 60).toString().padStart(2, "0")}`;
 
@@ -284,10 +289,10 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
             </Link>
             <span className="text-[var(--border)]">/</span>
             <span className="text-sm text-[var(--foreground)] truncate max-w-[200px] sm:max-w-[400px]">
-              {game.name || game.prompt?.content?.slice(0, 60)}
+              {game.name || promptSnippet?.slice(0, 60) || "Untitled Game"}
               {!game.name &&
-              game.prompt?.content &&
-              game.prompt.content.length > 60
+              promptSnippet &&
+              promptSnippet.length > 60
                 ? "..."
                 : ""}
             </span>
@@ -305,14 +310,16 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
               <span className="font-mono">{playtimeDisplay}</span>
             </div>
             <div className="flex items-center gap-1 ml-2">
-              <button
-                type="button"
-                onClick={() => setShowPromptDialog(true)}
-                className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
-                title="View Prompt"
-              >
-                <Eye className="size-4" />
-              </button>
+              {canViewPrompt && (
+                <button
+                  type="button"
+                  onClick={() => setShowPromptDialog(true)}
+                  className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
+                  title="View Prompt"
+                >
+                  <Eye className="size-4" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleShare}
@@ -524,9 +531,9 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
       </div>
 
       <ViewPromptDialog
-        isOpen={showPromptDialog}
+        isOpen={canViewPrompt && showPromptDialog}
         onClose={() => setShowPromptDialog(false)}
-        promptContent={game.prompt?.content || ""}
+        promptContent={promptSnippet || ""}
       />
 
       <ReportDialog

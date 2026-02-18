@@ -6,11 +6,6 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, User, Key, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import {
-  ArcadeTabs,
-  ArcadeTabsList,
-  ArcadeTabsTrigger,
-} from "@/components/arcade";
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -71,37 +66,27 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
             </div>
 
             {/* Tab Navigation */}
-            <ArcadeTabs
-              value={getActiveTab()}
-              className="w-auto"
-              orientation="horizontal"
-            >
-              <ArcadeTabsList
-                variant="default"
-                className="gap-1 bg-[var(--muted)]/40"
-              >
-                {navigationItems.map((item) => {
-                  const isActive = getActiveTab() === item.href;
-                  const Icon = item.icon;
-                  return (
-                    <Link key={item.href} href={item.href as Route}>
-                      <ArcadeTabsTrigger
-                        value={item.href}
-                        className={cn(
-                          "gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200",
-                          isActive
-                            ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                            : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="hidden sm:inline">{item.name}</span>
-                      </ArcadeTabsTrigger>
-                    </Link>
-                  );
-                })}
-              </ArcadeTabsList>
-            </ArcadeTabs>
+            <nav className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted)]/40 p-1">
+              {navigationItems.map((item) => {
+                const isActive = getActiveTab() === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href as Route}
+                    className={cn(
+                      "inline-flex cursor-pointer items-center gap-2 rounded-[calc(var(--radius)-4px)] px-3 py-1.5 text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
 
             {/* User Info - Desktop */}
             {user && (

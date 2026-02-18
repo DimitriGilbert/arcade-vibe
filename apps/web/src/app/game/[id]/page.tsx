@@ -20,23 +20,25 @@ export async function generateMetadata({
       return { title: "Game Not Found" };
     }
 
+    const canExposePrompt =
+      game.prompt?.visibility === "public" && game.prompt.content.length > 0;
+    const promptTitle = canExposePrompt
+      ? `${game.prompt.content.slice(0, 50)}...`
+      : "Game";
+    const promptDescription = canExposePrompt
+      ? game.prompt.content
+      : "Play this AI-generated game on Arcade Vibe";
+
     return {
-      title: game.name
-        ? game.name
-        : game.prompt?.content
-          ? `${game.prompt.content.slice(0, 50)}...`
-          : "Game",
+      title: game.name || promptTitle,
       description: game.name
         ? `Play "${game.name}" on Arcade Vibe`
-        : game.prompt?.content || `Play this AI-generated game on Arcade Vibe`,
+        : promptDescription,
       openGraph: {
-        title:
-          game.name ||
-          game.prompt?.content?.slice(0, 100) ||
-          "AI-Generated Game",
+        title: game.name || (canExposePrompt ? game.prompt.content.slice(0, 100) : "AI-Generated Game"),
         description: game.name
           ? `Play "${game.name}" on Arcade Vibe`
-          : game.prompt?.content || "Play this AI-generated game",
+          : promptDescription,
       },
     };
   } catch {

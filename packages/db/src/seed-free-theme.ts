@@ -2,13 +2,15 @@ import { db } from "./index";
 import { themes } from "./schema/themes";
 import { eq } from "drizzle-orm";
 
-const FREE_THEME_SLUG = "Free Play";
+const FREE_THEME_SLUG = "Bring Your Own Theme";
 
 const FREE_FORM_SYSTEM_PROMPT = `## Your Mission
 
 Create a complete, self-contained browser game based on the theme or concept provided by the user.
 
 ## Controls
+
+Unless overriden by user :
 
 Implement both:
 - **Keyboard** — whichever keys fit the game (arrows, WASD, spacebar, etc.)
