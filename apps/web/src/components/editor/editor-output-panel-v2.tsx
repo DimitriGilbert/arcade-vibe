@@ -236,6 +236,7 @@ export function EditorOutputPanelV2({
             <div className="h-full min-h-0 flex flex-col gap-2">
               <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
+                  key={activeOutputTab ?? "no-active-output-tab"}
                   code={generation.code ?? ""}
                   reasoning={generation.reasoning}
                   language="html"

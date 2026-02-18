@@ -415,37 +415,29 @@ export type Rating = RatingByUserOutput[number];
 
 /**
  * Single leaderboard entry from top games
- * @source RouterOutput["leaderboard"]["getTop"] array item
+ * @source RouterOutput["leaderboard"]["getTop"]["entries"][number]
  */
-export type LeaderboardEntry = LeaderboardGetTopOutput extends (infer T)[]
-  ? T
-  : never;
+export type LeaderboardEntry = NonNullable<LeaderboardGetTopOutput>["entries"][number];
 
 /**
- * Game data nested within leaderboard entry
+ * Creator info within leaderboard entry
  */
-export type LeaderboardGame = LeaderboardEntry extends { game?: infer G }
-  ? NonNullable<G>
-  : never;
+export type LeaderboardCreator = LeaderboardEntry["creator"];
 
 /**
- * Prompt data nested within leaderboard game
+ * Tier info within leaderboard entry
  */
-export type LeaderboardPrompt = LeaderboardGame extends { prompt?: infer P }
-  ? NonNullable<P>
-  : never;
+export type LeaderboardTier = NonNullable<LeaderboardEntry["tier"]>;
 
 /**
- * Theme data nested within leaderboard game
+ * Theme info within leaderboard entry
  */
-export type LeaderboardTheme = LeaderboardGame extends { theme?: infer T }
-  ? NonNullable<T>
-  : never;
+export type LeaderboardThemeInfo = NonNullable<LeaderboardEntry["theme"]>;
 
 /**
- * Extract leaderboard entry array type
+ * Extract leaderboard result type (includes pagination info)
  */
-export type LeaderboardEntries = LeaderboardGetTopOutput;
+export type LeaderboardResult = LeaderboardGetTopOutput;
 
 // ============================================
 // HELPER/UTILITY TYPES

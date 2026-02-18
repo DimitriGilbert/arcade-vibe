@@ -97,10 +97,10 @@ export function StreamingCodeViewerV2({
     const codeSignature = `${language}|${theme}|${codeSnapshot}`;
     const reasoningSignature = reasoningSnapshot;
 
-    const needsCodeHighlight = codeSnapshot && codeSignature !== highlightedCodeSignatureRef.current;
+    const needsCodeSync = codeSignature !== highlightedCodeSignatureRef.current;
     const needsReasoningUpdate = reasoningSignature !== highlightedReasoningSignatureRef.current;
 
-    if (!needsCodeHighlight && !needsReasoningUpdate) {
+    if (!needsCodeSync && !needsReasoningUpdate) {
       return;
     }
 
@@ -109,19 +109,26 @@ export function StreamingCodeViewerV2({
 
     const run = async () => {
       try {
-        if (needsCodeHighlight) {
-          const html = await highlightCode({
-            code: codeSnapshot,
-            lang: language,
-            theme,
-          });
+        if (needsCodeSync) {
+          if (codeSnapshot.length === 0) {
+            if (!cancelled) {
+              setHighlightedCode("");
+              highlightedCodeSignatureRef.current = codeSignature;
+            }
+          } else {
+            const html = await highlightCode({
+              code: codeSnapshot,
+              lang: language,
+              theme,
+            });
 
-          if (cancelled) {
-            return;
+            if (cancelled) {
+              return;
+            }
+
+            setHighlightedCode(html);
+            highlightedCodeSignatureRef.current = codeSignature;
           }
-
-          setHighlightedCode(html);
-          highlightedCodeSignatureRef.current = codeSignature;
         }
 
         if (needsReasoningUpdate) {

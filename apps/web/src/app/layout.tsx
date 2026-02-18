@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 
 import { Orbitron, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 
@@ -64,6 +65,12 @@ export default function RootLayout({
             </main>
           </div>
         </Providers>
+        <Script
+          src="https://cdn.counter.dev/script.js"
+          strategy="lazyOnload"
+          data-id="154c6878-7558-4eff-90f9-bd4904015df1"
+          data-utcoffset="1"
+        />
       </body>
     </html>
   );

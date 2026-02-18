@@ -20,6 +20,7 @@ import { streamText } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { redis, isRedisAvailable } from "./redis";
 
 // ============================================================================
 // Types & Interfaces
@@ -627,11 +628,50 @@ export async function generateGame(
 
   // Create the async generator
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
-    const codeChunks: string[] = [];
+    const redisBufferKey = `generation:buffer:${confirmedGameId}`;
+    const redisBufferTtlSeconds = 60 * 60;
+    const redisFlushThresholdChars = 16_384;
+
+    const inMemoryCodeChunks: string[] = [];
     let codeCharCount = 0;
+    let redisChunkBuffer = "";
+    let redisBufferEnabled = isRedisAvailable();
+    let redisHasPersistedChunks = false;
     let hasEmittedGenerating = false;
 
     try {
+      const appendChunk = async (delta: string): Promise<void> => {
+        codeCharCount += delta.length;
+
+        if (!redisBufferEnabled) {
+          inMemoryCodeChunks.push(delta);
+          return;
+        }
+
+        redisChunkBuffer += delta;
+
+        if (redisChunkBuffer.length < redisFlushThresholdChars) {
+          return;
+        }
+
+        try {
+          await redis.rpush(redisBufferKey, redisChunkBuffer);
+          await redis.expire(redisBufferKey, redisBufferTtlSeconds);
+          redisHasPersistedChunks = true;
+          redisChunkBuffer = "";
+        } catch (redisError) {
+          console.warn(
+            "[generation] redis buffering failed, falling back to in-memory buffer",
+            redisError,
+          );
+          redisBufferEnabled = false;
+          if (redisChunkBuffer.length > 0) {
+            inMemoryCodeChunks.push(redisChunkBuffer);
+            redisChunkBuffer = "";
+          }
+        }
+      };
+
       // Emit reasoning status if enabled
       if (options.reasoningEnabled ?? true) {
         yield {
@@ -659,8 +699,7 @@ export async function generateGame(
             };
           }
 
-          codeChunks.push(chunk.text);
-          codeCharCount += chunk.text.length;
+          await appendChunk(chunk.text);
           if (
             maxGeneratedCodeChars !== null &&
             codeCharCount > maxGeneratedCodeChars
@@ -682,7 +721,22 @@ export async function generateGame(
 
       // GL-008: Sanitize FIRST, then upload to CDN
       // 8. Sanitize the generated code
-      const fullCode = codeChunks.join("");
+      let fullCode = "";
+
+      if (redisBufferEnabled && redisChunkBuffer.length > 0) {
+        await redis.rpush(redisBufferKey, redisChunkBuffer);
+        await redis.expire(redisBufferKey, redisBufferTtlSeconds);
+        redisHasPersistedChunks = true;
+        redisChunkBuffer = "";
+      }
+
+      if (redisHasPersistedChunks) {
+        const persistedChunks = await redis.lrange(redisBufferKey, 0, -1);
+        fullCode = persistedChunks.join("") + inMemoryCodeChunks.join("");
+      } else {
+        fullCode = inMemoryCodeChunks.join("");
+      }
+
       const extractedCode = extractCodeFromMarkdown(fullCode);
       const sanitizationResult = sanitizeGameCode(
         extractedCode,
@@ -786,6 +840,14 @@ export async function generateGame(
         gameId: confirmedGameId,
         error: errorMessage,
       };
+    } finally {
+      if (redisHasPersistedChunks || redisBufferEnabled) {
+        try {
+          await redis.del(redisBufferKey);
+        } catch (redisError) {
+          console.warn("[generation] failed to cleanup redis buffer", redisError);
+        }
+      }
     }
   }
 
