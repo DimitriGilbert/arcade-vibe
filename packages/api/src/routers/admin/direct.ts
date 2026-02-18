@@ -123,7 +123,7 @@ export const directActionsRouter = router({
         });
       }
 
-      if (input.role !== undefined) {
+      if (input.role !== undefined && input.role !== targetUser.role) {
         if (input.userId === ctx.user.id) {
           throw new TRPCError({
             code: "BAD_REQUEST",
