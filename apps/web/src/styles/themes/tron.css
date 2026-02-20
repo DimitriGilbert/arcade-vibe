@@ -86,6 +86,22 @@
   --animation-grid-speed: 20s;
   --animation-spin-speed: 20s;
   --animation-glow-pulse: 2s;
+
+  /* Vertical corridor gradient - very gradual subtle glow using near-black colors */
+  --bg-gradient-perspective: linear-gradient(
+    90deg,
+    #000000 0%,
+    #000000 38%,
+    #010508 42%,
+    #020a10 46%,
+    #031018 49%,
+    #041420 50%,
+    #031018 51%,
+    #020a10 54%,
+    #010508 58%,
+    #000000 62%,
+    #000000 100%
+  );
 }
 
 /* Custom keyframes for Tron theme */
@@ -215,9 +231,24 @@
   color: var(--background);
 }
 
+/* Global perspective gradient background - applied to all pages */
+:is(.tron, .theme-tron) {
+  background: var(--bg-gradient-perspective);
+}
+
+:is(.tron, .theme-tron) html,
+:is(.tron, .theme-tron) body {
+  background: var(--bg-gradient-perspective);
+}
+
+:is(.tron, .theme-tron) .min-h-screen.bg-background,
+:is(.tron, .theme-tron) .min-h-svh.bg-background {
+  background: transparent;
+}
+
 /* Homepage rendering */
 :is(.tron, .theme-tron) .home-sky {
-  background: oklch(0.03 0.01 240);
+  background: transparent;
 }
 
 :is(.tron, .theme-tron) .home-grid {

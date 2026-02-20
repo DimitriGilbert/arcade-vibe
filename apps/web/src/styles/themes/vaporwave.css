@@ -104,6 +104,10 @@
   --animation-float-speed-3: 12s;
   --animation-grid-scroll: 15s;
   --animation-glow-pulse: 2s;
+  --animation-triangle-orbit-1: 20s;
+  --animation-triangle-orbit-2: 28s;
+  --animation-triangle-scale-1: 5s;
+  --animation-triangle-scale-2: 7s;
 
   /* Fonts */
   --font-display: var(--font-orbitron);
@@ -160,6 +164,80 @@
   50% {
     opacity: 0.8;
     filter: blur(30px);
+  }
+}
+
+@keyframes vaporwave-triangle-orbit-1 {
+  0% {
+    transform: rotate(0deg) translateX(8px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(8px) rotate(-360deg);
+  }
+}
+
+@keyframes vaporwave-triangle-orbit-2 {
+  0% {
+    transform: rotate(0deg) translateX(12px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg) translateX(12px) rotate(360deg);
+  }
+}
+
+@keyframes vaporwave-triangle-scale-1 {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes vaporwave-triangle-scale-2 {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes vaporwave-triangle-1-combined {
+  0% {
+    transform: rotate(0deg) translateX(8px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) translateX(8px) rotate(-90deg) scale(1.12);
+  }
+  50% {
+    transform: rotate(180deg) translateX(8px) rotate(-180deg) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) translateX(8px) rotate(-270deg) scale(0.88);
+  }
+  100% {
+    transform: rotate(360deg) translateX(8px) rotate(-360deg) scale(1);
+  }
+}
+
+@keyframes vaporwave-triangle-2-combined {
+  0% {
+    transform: rotate(0deg) translateX(10px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-90deg) translateX(10px) rotate(90deg) scale(0.9);
+  }
+  50% {
+    transform: rotate(-180deg) translateX(10px) rotate(180deg) scale(1.18);
+  }
+  75% {
+    transform: rotate(-270deg) translateX(10px) rotate(270deg) scale(1);
+  }
+  100% {
+    transform: rotate(-360deg) translateX(10px) rotate(360deg) scale(1);
   }
 }
 
@@ -314,6 +392,7 @@
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   background: linear-gradient(135deg, #ff006e, transparent);
   opacity: 0.2;
+  animation: vaporwave-triangle-1-combined 20s ease-in-out infinite;
 }
 
 :is(.vaporwave, .theme-vaporwave) .home-decor-2 {
@@ -325,6 +404,7 @@
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   background: linear-gradient(135deg, #00f5d4, transparent);
   opacity: 0.2;
+  animation: vaporwave-triangle-2-combined 28s ease-in-out infinite;
 }
 
 :is(.vaporwave, .theme-vaporwave) .home-title {
