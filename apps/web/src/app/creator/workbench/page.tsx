@@ -611,7 +611,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   const currentPrompt = existingPrompt ?? (selectedPromptId ? { id: selectedPromptId, version: 1 } : null);
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--background)] overflow-hidden">
+    <div className="min-h-screen h-screen flex flex-col bg-[var(--background)] overflow-hidden">
       {/* Header with actions */}
       <WorkbenchHeader
         promptName={promptName}

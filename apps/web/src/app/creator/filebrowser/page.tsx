@@ -110,7 +110,7 @@ export default function FilebrowserPage() {
   const hasActiveGame = !!activeGameId;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
+    <div className="min-h-screen h-screen flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <HeaderBar
         selection={selection}
