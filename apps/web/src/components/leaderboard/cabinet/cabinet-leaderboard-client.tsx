@@ -357,7 +357,7 @@ export default function CabinetLeaderboardClient() {
                   <p className="text-[var(--muted-foreground)] mb-4">
                     Be the first to create a game and claim the top spot!
                   </p>
-                  <ArcadeButton variant="primary" onClick={() => { window.location.href = "/arcade"; }}>
+                  <ArcadeButton variant="primary" onClick={() => { window.location.href = "/leaderboard"; }}>
                     <Play className="h-4 w-4 mr-2" />
                     Start Playing
                   </ArcadeButton>

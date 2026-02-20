@@ -15,5 +15,6 @@ export * from "./moderation";
 export * from "./security";
 export * from "./relations";
 export * from "./library-patterns";
+export * from "./feedback";
 
 export type { PlaytimeBucket } from "./scores";

@@ -16,6 +16,7 @@ import { adminRouter } from "./admin";
 import { modelsRouter } from "./models";
 import { userRouter } from "./user";
 import { stripeRouter } from "./stripe";
+import { feedbackRouter } from "./feedback";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -54,6 +55,9 @@ export const appRouter = router({
 
   // Payments
   stripe: stripeRouter,
+
+  // Feedback
+  feedback: feedbackRouter,
 });
 
 export type AppRouter = typeof appRouter;

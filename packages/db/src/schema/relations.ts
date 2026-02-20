@@ -20,6 +20,7 @@ import {
   allowedLibraryPatterns,
   themeAllowedPatterns,
 } from "./library-patterns";
+import { feedback } from "./feedback";
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -39,6 +40,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   ratings: many(ratings),
   scores: many(scores),
   gameScores: many(gameScores),
+  feedback: many(feedback),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -332,3 +334,10 @@ export const themeAllowedPatternsRelations = relations(
     }),
   }),
 );
+
+export const feedbackRelations = relations(feedback, ({ one }) => ({
+  user: one(user, {
+    fields: [feedback.userId],
+    references: [user.id],
+  }),
+}));

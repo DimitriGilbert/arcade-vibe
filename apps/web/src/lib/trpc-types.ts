@@ -240,6 +240,15 @@ export type AdminStatsGetActionsOutput = AdminOutput["stats"]["getActions"];
 
 export type AdminDirectGetGamesOutput = AdminOutput["direct"]["getGames"];
 
+// --- Feedback Router ---
+
+export type FeedbackOutput = RouterOutput["feedback"];
+export type FeedbackInput = RouterInput["feedback"];
+
+export type FeedbackListOutput = FeedbackOutput["list"];
+export type FeedbackGetByIdOutput = FeedbackOutput["getById"];
+export type FeedbackDeleteOutput = FeedbackOutput["delete"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -466,3 +475,11 @@ export type AdminStats = AdminStatsGetStatsOutput;
 export type AdminAction = AdminStatsGetActionsOutput["actions"][number];
 
 export type GameAdminView = AdminDirectGetGamesOutput[number];
+
+// --- Feedback Entity Types ---
+
+/**
+ * Feedback entity from feedback list
+ * @source RouterOutput["feedback"]["list"][number]
+ */
+export type Feedback = FeedbackListOutput[number];

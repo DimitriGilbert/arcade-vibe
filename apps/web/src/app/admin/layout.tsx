@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Gamepad2,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -41,6 +42,7 @@ const navigationItems = [
   { name: "Themes", href: "/admin/themes", icon: Archive },
   { name: "Games", href: "/admin/games", icon: Gamepad2 },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Feedback", href: "/admin/feedback", icon: MessageSquare },
   { name: "Audit Log", href: "/admin/audit", icon: History },
 ];
 

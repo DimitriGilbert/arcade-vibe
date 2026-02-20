@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Copy } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
+import { FeedbackButton } from "@/components/feedback";
 import {
   WorkbenchHeader,
   WorkbenchEditor,
@@ -24,6 +25,7 @@ import {
   type GenerationEntry,
 } from "@/stores/generations-store";
 import type { Visibility, PromptVersion } from "@/lib/trpc-types";
+import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
 
 interface WorkbenchPageProps {
   searchParams?: Promise<{
@@ -683,6 +685,18 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
             onVisibilityChange={handleVisibilityChange}
           />
         </div>
+      </div>
+
+      {/* Floating Feedback Button */}
+      <div className="absolute bottom-4 right-4 z-50">
+        <FeedbackButton
+          schema={editorFeedbackSchema}
+          fields={editorFeedbackFields}
+          subject="Workbench Editor Feedback"
+          label="Feedback"
+          variant="outline"
+          description="Help us improve the Workbench editor. Share your thoughts on the layout and features."
+        />
       </div>
     </div>
   );

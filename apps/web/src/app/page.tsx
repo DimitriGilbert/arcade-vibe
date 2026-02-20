@@ -69,13 +69,13 @@ function Masthead() {
               A chill place to test your prompting skills, play some fun games, and see how different AI models stack up.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href={"/arcade" as Route}>
+              <Link href={"/leaderboard" as Route}>
                 <ArcadeButton variant="glow" size="lg">
                   <Play className="size-5" />
                   Play Games
                 </ArcadeButton>
               </Link>
-              <Link href={"/arcade" as Route}>
+              <Link href={"/leaderboard" as Route}>
                 <ArcadeButton variant="outline" size="lg">
                   <Trophy className="size-5" />
                   Leaderboard
@@ -157,7 +157,7 @@ function FeaturedArticle() {
                       </div>
                     </div>
 
-                    <Link href={"/arcade" as Route}>
+                    <Link href={"/leaderboard" as Route}>
                       <ArcadeButton variant="primary">
                         Join Challenge
                         <ArrowRight className="size-4" />
@@ -207,7 +207,7 @@ function FeaturedArticle() {
                 )}
               </div>
               <div className="p-4 border-t border-[var(--border)]">
-                <Link href={"/arcade" as Route}>
+                <Link href={"/leaderboard" as Route}>
                   <ArcadeButton variant="outline" className="w-full">
                     View Full Board
                   </ArcadeButton>
@@ -339,7 +339,7 @@ function Outro() {
               Sign Up
             </ArcadeButton>
           </Link>
-          <Link href={"/arcade" as Route}>
+          <Link href={"/leaderboard" as Route}>
             <ArcadeButton variant="secondary" size="lg">
               Browse Games
             </ArcadeButton>

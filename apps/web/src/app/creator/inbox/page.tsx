@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
 import { Loader2, Play, Save, Copy, ExternalLink, Pencil, Check, X } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
+import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
 import type { Visibility, Game } from "@/lib/trpc-types";
 import {
@@ -27,6 +28,7 @@ import {
   useCompletedCount,
   type GenerationEntry,
 } from "@/stores/generations-store";
+import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
 
 interface InboxPageProps {
   searchParams?: Promise<{
@@ -935,6 +937,18 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             </div>
           </div>
         </main>
+      </div>
+
+      {/* Floating Feedback Button */}
+      <div className="absolute bottom-4 right-4 z-50">
+        <FeedbackButton
+          schema={editorFeedbackSchema}
+          fields={editorFeedbackFields}
+          subject="Inbox Editor Feedback"
+          label="Feedback"
+          variant="outline"
+          description="Help us improve the Inbox editor. Share your thoughts on the layout and features."
+        />
       </div>
     </div>
   );

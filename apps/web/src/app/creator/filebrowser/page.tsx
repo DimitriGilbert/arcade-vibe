@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import type { FilebrowserSelection } from "@/components/creator/filebrowser";
+import { FeedbackButton } from "@/components/feedback";
 import { Loader2 } from "lucide-react";
 import {
   FileTree,
@@ -9,6 +10,7 @@ import {
   CenterPanel,
   useFilebrowserState,
 } from "@/components/creator/filebrowser";
+import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
 
 export default function FilebrowserPage() {
   const state = useFilebrowserState();
@@ -188,6 +190,18 @@ export default function FilebrowserPage() {
             canEdit={!isGenerating}
           />
         </main>
+      </div>
+
+      {/* Floating Feedback Button */}
+      <div className="absolute bottom-4 right-4 z-50">
+        <FeedbackButton
+          schema={editorFeedbackSchema}
+          fields={editorFeedbackFields}
+          subject="File Browser Editor Feedback"
+          label="Feedback"
+          variant="outline"
+          description="Help us improve the File Browser editor. Share your thoughts on the layout and features."
+        />
       </div>
     </div>
   );

@@ -250,7 +250,7 @@ export default function LeaderboardMagazineClient() {
             <Calendar className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-6 opacity-50" />
             <h1 className="text-2xl font-bold mb-4">No Active Theme</h1>
             <p className="text-[var(--muted-foreground)] mb-8">Check back soon for the next exciting theme!</p>
-            <Link href="/arcade">
+            <Link href="/leaderboard">
               <ArcadeButton variant="primary">
                 <Gamepad2 className="h-4 w-4" />
                 Browse Past Games
@@ -279,7 +279,7 @@ export default function LeaderboardMagazineClient() {
             <p className="text-[var(--muted-foreground)] mb-8">
               No games submitted yet. Why not create one and take the top spot?
             </p>
-            <Link href="/arcade">
+            <Link href="/leaderboard">
               <ArcadeButton variant="glow">
                 <Gamepad2 className="h-4 w-4" />
                 Create a Game
@@ -333,7 +333,7 @@ export default function LeaderboardMagazineClient() {
             <p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
               Write a prompt, pick your AI model, and see what you can create. It's that simple.
             </p>
-            <Link href="/arcade">
+            <Link href="/leaderboard">
               <ArcadeButton variant="glow" size="lg">
                 <Gamepad2 className="h-5 w-5" />
                 Start Creating
