@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, MoreHorizontal, Trash2, Globe, Lock, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, Globe, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Visibility } from "@/lib/trpc-types";
 
 interface InboxPrompt {
@@ -49,6 +49,8 @@ interface InboxSidebarProps {
   themesLoading: boolean;
   selectedTheme: string;
   onSelectTheme: (themeId: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function formatRelativeTime(date: Date | string): string {
@@ -85,9 +87,27 @@ export function InboxSidebar({
   themesLoading,
   selectedTheme,
   onSelectTheme,
+  isCollapsed = false,
+  onToggleCollapse,
 }: InboxSidebarProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
+
+  // Collapsed state - show minimal strip with expand button
+  if (isCollapsed) {
+    return (
+      <div className="h-full w-[28px] bg-[var(--card)] border-r border-[var(--border)] flex flex-col items-center py-2">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+        </button>
+      </div>
+    );
+  }
 
   const handleDeleteClick = (promptId: string) => {
     setPromptToDelete(promptId);
@@ -109,7 +129,29 @@ export function InboxSidebar({
   };
 
   return (
-    <div className="h-full flex flex-col bg-[var(--card)] border-r border-[var(--border)]">
+    <div className="h-full w-[250px] flex flex-col bg-[var(--card)] border-r border-[var(--border)]">
+      {/* Header with collapse button */}
+      <div className="p-3 border-b border-[var(--border)] shrink-0 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          Prompts
+        </span>
+        <div className="flex items-center gap-1">
+          <ArcadeButton variant="outline" size="sm" onClick={onNewPrompt}>
+            <Plus className="h-3 w-3" />
+          </ArcadeButton>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Theme Selector */}
       <div className="p-3 border-b border-[var(--border)] shrink-0">
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)] mb-2 block">
@@ -137,16 +179,6 @@ export function InboxSidebar({
             )}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Prompts List Header */}
-      <div className="p-3 border-b border-[var(--border)] flex items-center justify-between shrink-0">
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-          Prompts
-        </span>
-        <ArcadeButton variant="outline" size="sm" onClick={onNewPrompt}>
-          <Plus className="h-3 w-3" />
-        </ArcadeButton>
       </div>
 
       {/* Prompts List */}

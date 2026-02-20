@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
+import { ArcadeButton } from "@/components/arcade";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe } from "lucide-react";
+import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import type { Game, GameStatus } from "@/lib/trpc-types";
 
 interface InboxGenerationHistoryProps {
   promptId: string | null;
+  onSelectGame?: (game: Game) => void;
+  selectedGameId?: string | null;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function formatDate(date: Date | string): string {
@@ -37,12 +41,33 @@ function formatDate(date: Date | string): string {
   });
 }
 
+function getStatusIcon(status: GameStatus): React.ReactNode {
+  switch (status) {
+    case "generating":
+      return <Sparkles className="h-3 w-3 animate-spin text-blue-400" />;
+    case "completed":
+      return <Check className="h-3 w-3 text-green-400" />;
+    case "failed":
+      return <AlertCircle className="h-3 w-3 text-red-400" />;
+    case "hidden":
+      return <EyeOff className="h-3 w-3 text-[var(--muted-foreground)]" />;
+    default:
+      return null;
+  }
+}
+
 function getStatusVariant(status: GameStatus): "default" | "neon" {
   if (status === "completed") return "neon";
   return "default";
 }
 
-export function InboxGenerationHistory({ promptId }: InboxGenerationHistoryProps) {
+export function InboxGenerationHistory({ 
+  promptId, 
+  onSelectGame, 
+  selectedGameId,
+  isCollapsed = false,
+  onToggleCollapse,
+}: InboxGenerationHistoryProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
@@ -124,56 +149,165 @@ export function InboxGenerationHistory({ promptId }: InboxGenerationHistoryProps
     unpublishMutation.mutate(gameId);
   };
 
+  // Collapsed state - show minimal strip with expand button (after all hooks)
+  if (isCollapsed) {
+    return (
+      <div className="h-full w-[28px] bg-[var(--card)] border-x border-[var(--border)] flex flex-col items-center py-2">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+          aria-label="Expand history sidebar"
+        >
+          <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
+        </button>
+      </div>
+    );
+  }
+
   if (!promptId) {
     return (
-      <div className="h-full border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
-        <p className="text-[var(--muted-foreground)] text-xs">
-          Select a prompt to view history
-        </p>
+      <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            History
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+              aria-label="Collapse history sidebar"
+            >
+              <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[var(--muted-foreground)] text-xs">
+            Select a prompt to view history
+          </p>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="h-full border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
-        <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />
+      <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            History
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+              aria-label="Collapse history sidebar"
+            >
+              <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="h-full border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
-        <p className="text-[var(--muted-foreground)] text-xs">Failed to load</p>
+      <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            History
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+              aria-label="Collapse history sidebar"
+            >
+              <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[var(--muted-foreground)] text-xs">Failed to load</p>
+        </div>
       </div>
     );
   }
 
   if (!games || games.length === 0) {
     return (
-      <div className="h-full border border-[var(--border)] rounded-md flex items-center justify-center bg-[var(--muted)]/10">
-        <p className="text-[var(--muted-foreground)] text-xs">No games yet</p>
+      <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            History
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+              aria-label="Collapse history sidebar"
+            >
+              <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[var(--muted-foreground)] text-xs">No games yet</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="h-full border border-[var(--border)] rounded-md overflow-y-auto bg-[var(--muted)]/10">
+    <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+      {/* Header with collapse button */}
+      <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+          History
+        </span>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+            aria-label="Collapse history sidebar"
+          >
+            <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
+          </button>
+        )}
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <ul className="divide-y divide-[var(--border)]">
-          {games.map((game: Game) => {
+          {/* Sort by most recent first */}
+          {[...games].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((game: Game) => {
             const canSubmit = game.status === "completed" && !game.isSubmitted;
             const isSubmitting = submitMutation.isPending && submitMutation.variables === game.id;
             const isUnpublishing = unpublishingGameId === game.id;
             const isDeleting = deletingGameId === game.id;
+            const isSelected = selectedGameId === game.id;
 
             return (
-              <li
+              <button
+                type="button"
                 key={game.id}
-                className="flex items-center justify-between p-2 hover:bg-[var(--muted)]/20 transition-colors group"
+                className={`w-full text-left flex items-center justify-between p-2 transition-colors group cursor-pointer ${
+                  isSelected 
+                    ? "bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]" 
+                    : "hover:bg-[var(--muted)]/20"
+                }`}
+                onClick={() => onSelectGame?.(game)}
               >
                 <div className="flex items-center gap-2 min-w-0">
+                  {getStatusIcon(game.status)}
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-[var(--foreground)] truncate">
@@ -187,12 +321,8 @@ export function InboxGenerationHistory({ promptId }: InboxGenerationHistoryProps
                       {formatDate(game.createdAt)}
                     </span>
                   </div>
-                  <ArcadeBadge
-                    text={game.status}
-                    variant={getStatusVariant(game.status)}
-                  />
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <ArcadeButton
                     variant="outline"
                     size="sm"
@@ -245,7 +375,7 @@ export function InboxGenerationHistory({ promptId }: InboxGenerationHistoryProps
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </li>
+              </button>
             );
           })}
         </ul>
@@ -276,6 +406,6 @@ export function InboxGenerationHistory({ promptId }: InboxGenerationHistoryProps
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

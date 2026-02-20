@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
-import { Loader2, Play, Save, Copy, ExternalLink, ChevronDown } from "lucide-react";
+import { Loader2, Play, Save, Copy, ExternalLink, Pencil, Check, X } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { trpcClient } from "@/utils/trpc";
-import type { Visibility } from "@/lib/trpc-types";
+import type { Visibility, Game } from "@/lib/trpc-types";
 import {
   InboxSidebar,
   InboxModelSelector,
@@ -40,6 +40,7 @@ const GENERATION_CONCURRENCY_LIMIT = 2;
 
 interface PersistedInboxState {
   promptContent: string;
+  gameName: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];
   timestamp: number;
@@ -96,6 +97,11 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [gameName, setGameName] = useState("");
+  const [isEditingGameName, setIsEditingGameName] = useState(false);
+  const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<Game | null>(null);
 
   // Generations store hooks
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -114,6 +120,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     const persistedState = loadPersistedState();
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
+      setGameName(persistedState.gameName);
       setSelectedTheme(persistedState.selectedTheme);
       setSelectedModels(persistedState.selectedModels);
     }
@@ -211,11 +218,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
     persistState({
       promptContent,
+      gameName,
       selectedTheme,
       selectedModels,
     });
   }, [
     promptContent,
+    gameName,
     selectedTheme,
     selectedModels,
     resolvedSearchParams?.promptId,
@@ -461,6 +470,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             promptId,
             modelKey: model.modelKey,
             apiKeyId: model.apiKeyId ?? undefined,
+            name: gameName.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
             reasoningMaxTokens: model.reasoningMaxTokens,
           });
@@ -532,6 +542,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
   }, [
     promptContent,
+    gameName,
     existingPrompt,
     selectedTheme,
     selectedModels,
@@ -587,6 +598,10 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
         setPromptContent(prompt.content);
         setSelectedPromptId(prompt.id);
         setSelectedTheme(prompt.themeId);
+        // Auto-collapse left sidebar and expand right sidebar when prompt is selected
+        setLeftSidebarCollapsed(true);
+        setRightSidebarCollapsed(false);
+        setSelectedGameFromHistory(null);
       }
     } catch (error) {
       toast.error("Failed to load prompt");
@@ -596,10 +611,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
+    setGameName("");
     setSelectedPromptId(null);
     setSelectedModels([]);
     clearGenerations();
     setActiveOutputTab(null);
+    setSelectedGameFromHistory(null);
+    setRightSidebarCollapsed(true);
   }, [clearGenerations]);
 
   // Generation status getters for components
@@ -611,6 +629,11 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const getGenerationStatus = useCallback((id: string | null | undefined): GenerationStatus | undefined => {
     if (!id) return undefined;
     return useGenerationsStore.getState().generations[id]?.status;
+  }, []);
+
+  // Handler for selecting a game from history - must be defined before any conditional code
+  const handleSelectGameFromHistory = useCallback((game: Game) => {
+    setSelectedGameFromHistory(game);
   }, []);
 
   if (!mounted || promptLoading) {
@@ -625,11 +648,57 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const totalCredits = selectedModels.reduce((sum, m) => sum + m.creditCost, 0);
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden min-h-screen">
       {/* Header */}
       <header className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--card)]">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold">Inbox</h1>
+          {/* Action buttons moved to header */}
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={handleNewPrompt}
+            disabled={isGenerating}
+          >
+            New
+          </ArcadeButton>
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={
+              !promptContent.trim() ||
+              createPromptMutation.isPending ||
+              updatePromptMutation.isPending
+            }
+          >
+            {createPromptMutation.isPending || updatePromptMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3" />
+            )}
+            Save
+          </ArcadeButton>
+          <ArcadeButton
+            size="sm"
+            onClick={handleGenerate}
+            disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {selectedModels.length > 1 ? `${completedCount}/${selectedModels.length}` : "..."}
+              </>
+            ) : (
+              <>
+                <Play className="h-3 w-3" />
+                Generate
+                {selectedModels.length > 0 && (
+                  <span className="ml-1 opacity-80">({totalCredits}cr)</span>
+                )}
+              </>
+            )}
+          </ArcadeButton>
           {isForking && (
             <ArcadeButton
               variant="outline"
@@ -637,7 +706,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
               onClick={handleFork}
               disabled={forkPromptMutation.isPending}
             >
-              <Copy className="h-3 w-3 mr-1" />
+              <Copy className="h-3 w-3" />
               {forkPromptMutation.isPending ? "Forking..." : "Fork"}
             </ArcadeButton>
           )}
@@ -656,33 +725,45 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
       {/* Main Layout */}
       <div className="flex-1 min-h-0 flex">
-        {/* Sidebar - ~250px */}
-        <aside className="w-[250px] shrink-0 min-h-0">
-          <InboxSidebar
-            selectedTheme={selectedTheme}
-            onSelectTheme={setSelectedTheme}
-            themes={themes?.map((t) => ({ id: t.id, title: t.title }))}
-            themesLoading={themesLoading}
-            prompts={myPrompts?.map((p) => ({
-              id: p.id,
-              content: p.content,
-              version: p.version,
-              updatedAt: p.updatedAt,
-              visibility: p.visibility,
-            }))}
-            promptsLoading={promptsLoading}
-            selectedPromptId={selectedPromptId}
-            onSelectPrompt={handleSelectPrompt}
-            onNewPrompt={handleNewPrompt}
-            onDeletePrompt={handleDeletePrompt}
-            onTogglePromptVisibility={handleTogglePromptVisibility}
-            deletingPromptId={deletingPromptId}
+        {/* Left Sidebar - Theme/Prompts - Collapsible */}
+        <InboxSidebar
+          selectedTheme={selectedTheme}
+          onSelectTheme={setSelectedTheme}
+          themes={themes?.map((t) => ({ id: t.id, title: t.title }))}
+          themesLoading={themesLoading}
+          prompts={myPrompts?.map((p) => ({
+            id: p.id,
+            content: p.content,
+            version: p.version,
+            updatedAt: p.updatedAt,
+            visibility: p.visibility,
+          }))}
+          promptsLoading={promptsLoading}
+          selectedPromptId={selectedPromptId}
+          onSelectPrompt={handleSelectPrompt}
+          onNewPrompt={handleNewPrompt}
+          onDeletePrompt={handleDeletePrompt}
+          onTogglePromptVisibility={handleTogglePromptVisibility}
+          deletingPromptId={deletingPromptId}
+          isCollapsed={leftSidebarCollapsed}
+          onToggleCollapse={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)}
+        />
+
+        {/* History Sidebar - Between prompts and main content */}
+        {selectedPromptId && (
+          <InboxGenerationHistory
+            promptId={selectedPromptId}
+            onSelectGame={handleSelectGameFromHistory}
+            selectedGameId={selectedGameFromHistory?.id}
+            isCollapsed={rightSidebarCollapsed}
+            onToggleCollapse={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
           />
-        </aside>
+        )}
 
         {/* Main Content - Compose Area */}
         <main className="flex-1 min-h-0 flex flex-col min-w-0">
-          {/* Top Bar - Model Chips, Theme, Visibility */}
+
+          {/* Model Selection Area */}
           <div className="shrink-0 px-4 py-3 border-b border-[var(--border)] space-y-3">
             {/* Model Chips Row */}
             <div className="flex items-center gap-3">
@@ -723,7 +804,48 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             {/* Left: Prompt Editor */}
             <div className="flex-1 min-h-[200px] lg:min-h-0 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
               <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
-                <span className="text-xs font-medium">Prompt</span>
+                {/* Game Name - Editable */}
+                <div className="flex items-center gap-2">
+                  {isEditingGameName ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={gameName}
+                        onChange={(e) => setGameName(e.target.value)}
+                        className="px-2 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                        placeholder="Game name"
+                        autoFocus
+                        maxLength={100}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingGameName(false)}
+                        className="p-1 hover:bg-[var(--muted)] rounded"
+                      >
+                        <Check className="h-3 w-3 text-green-500" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingGameName(false);
+                          setGameName("");
+                        }}
+                        className="p-1 hover:bg-[var(--muted)] rounded"
+                      >
+                        <X className="h-3 w-3 text-[var(--destructive)]" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingGameName(true)}
+                      className="group flex items-center gap-1.5 text-xs font-medium hover:text-[var(--primary)] transition-colors"
+                    >
+                      <span>{gameName || "Prompt"}</span>
+                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  )}
+                </div>
                 <ArcadeButton
                   variant="outline"
                   size="sm"
@@ -768,8 +890,19 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             {/* Right: Output Panel */}
             <div className="flex-1 min-h-[200px] lg:min-h-0 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
               <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center gap-2">
-                <span className="text-xs font-medium">Output</span>
-                {activeGameId && !isGenerating && (
+                <span className="text-xs font-medium">
+                  {selectedGameFromHistory ? `Game: ${selectedGameFromHistory.name ?? "Untitled"}` : "Output"}
+                </span>
+                {selectedGameFromHistory ? (
+                  <ArcadeButton
+                    variant="glow"
+                    size="sm"
+                    onClick={() => window.open(`/game/${selectedGameFromHistory.id}`, "_blank")}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Play
+                  </ArcadeButton>
+                ) : activeGameId && !isGenerating ? (
                   <ArcadeButton
                     variant="glow"
                     size="sm"
@@ -777,6 +910,15 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                   >
                     <ExternalLink className="h-3 w-3" />
                     Play
+                  </ArcadeButton>
+                ) : null}
+                {selectedGameFromHistory && (
+                  <ArcadeButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedGameFromHistory(null)}
+                  >
+                    <X className="h-3 w-3" />
                   </ArcadeButton>
                 )}
               </div>
@@ -787,76 +929,10 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                   onOutputTabChange={setActiveOutputTab}
                   getGenerationById={getGenerationById}
                   getGenerationStatus={getGenerationStatus}
+                  selectedGameFromHistory={selectedGameFromHistory}
                 />
               </div>
             </div>
-          </div>
-
-          {/* Generation History Thread */}
-          <div className="shrink-0 h-[120px] border-t border-[var(--border)] p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <ChevronDown className="h-3 w-3 text-[var(--muted-foreground)]" />
-              <span className="text-xs font-medium text-[var(--muted-foreground)]">Generation History</span>
-            </div>
-            <div className="h-[calc(100%-24px)]">
-              <InboxGenerationHistory promptId={selectedPromptId} />
-            </div>
-          </div>
-
-          {/* Bottom Toolbar */}
-          <div className="shrink-0 p-3 border-t border-[var(--border)] flex items-center gap-3">
-            <ArcadeButton
-              variant="outline"
-              onClick={handleNewPrompt}
-              disabled={isGenerating}
-            >
-              New
-            </ArcadeButton>
-            <ArcadeButton
-              variant="outline"
-              onClick={handleSave}
-              disabled={
-                !promptContent.trim() ||
-                createPromptMutation.isPending ||
-                updatePromptMutation.isPending
-              }
-            >
-              {createPromptMutation.isPending || updatePromptMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save
-            </ArcadeButton>
-            <div className="flex-1" />
-            <ArcadeButton
-              onClick={handleGenerate}
-              disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {selectedModels.length > 1 ? `Generating ${completedCount}/${selectedModels.length}...` : "Generating..."}
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Generate
-                  {selectedModels.length > 0 && (
-                    <span className="ml-2 text-xs opacity-80">({totalCredits}cr)</span>
-                  )}
-                </>
-              )}
-            </ArcadeButton>
-            {activeGameId && !isGenerating && (
-              <ArcadeButton
-                variant="glow"
-                onClick={() => window.open(`/game/${activeGameId}`, "_blank")}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Play Game
-              </ArcadeButton>
-            )}
           </div>
         </main>
       </div>

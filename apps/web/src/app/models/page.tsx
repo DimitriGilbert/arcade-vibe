@@ -42,8 +42,10 @@ export default function ModelsPage() {
 
     const normalized = query.trim().toLowerCase();
 
+    const withGames = models.filter((model) => model.gameCount > 0);
+
     const result = normalized.length
-      ? models.filter((model) => {
+      ? withGames.filter((model) => {
           const haystack = [
             model.modelName,
             model.tier,
@@ -55,7 +57,7 @@ export default function ModelsPage() {
 
           return haystack.includes(normalized);
         })
-      : models;
+      : withGames;
 
     return [...result].sort((a, b) => {
       if (sortBy === "name") {
@@ -83,10 +85,12 @@ export default function ModelsPage() {
       };
     }
 
+    const withGames = models.filter((model) => model.gameCount > 0);
+
     return {
-      models: models.length,
-      games: models.reduce((sum, model) => sum + model.gameCount, 0),
-      ratedModels: models.filter((model) => model.ratingCount > 0).length,
+      models: withGames.length,
+      games: withGames.reduce((sum, model) => sum + model.gameCount, 0),
+      ratedModels: withGames.filter((model) => model.ratingCount > 0).length,
     };
   }, [models]);
 

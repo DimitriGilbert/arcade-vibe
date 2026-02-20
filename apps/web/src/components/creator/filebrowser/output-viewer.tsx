@@ -4,12 +4,12 @@ import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "
 import { ArrowDown, AlertCircle, Check, Sparkles, Brain } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
-import type { GenerationStatus } from "./types";
+import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
 import {
   useGenerationById,
   useGenerationStatus,
 } from "@/stores/generations-store";
-import type { ModelSelection } from "./types";
+import type { RunNode } from "./types";
 
 function OutputStatusCard({
   title,
@@ -29,9 +29,9 @@ function OutputStatusCard({
 
   return (
     <div
-      className={`h-full min-h-0 rounded-lg border ${toneClass} flex items-center justify-center p-4`}
+      className={`h-full min-h-0 rounded-xl border ${toneClass} flex items-center justify-center p-6`}
     >
-      <div className="max-w-sm text-center space-y-2">
+      <div className="max-w-md text-center space-y-2">
         {icon ? <div className="mx-auto w-fit">{icon}</div> : null}
         <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
         <p className="text-xs text-[var(--muted-foreground)]">{description}</p>
@@ -42,7 +42,7 @@ function OutputStatusCard({
 
 function WaitingState({ status }: { status: "reasoning" | "generating" }) {
   return (
-    <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
       <div className="flex items-center gap-3">
         {status === "reasoning" ? (
           <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
@@ -50,7 +50,7 @@ function WaitingState({ status }: { status: "reasoning" | "generating" }) {
           <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
         )}
         <span className="text-sm text-[var(--muted-foreground)]">
-          {status === "reasoning" ? "Thinking..." : "Generating code..."}
+          {status === "reasoning" ? "Waiting for reasoning..." : "Waiting for code..."}
         </span>
       </div>
     </div>
@@ -90,29 +90,31 @@ const ModelOutputTab = memo(function ModelOutputTab({
       type="button"
       onClick={onSelect}
       className={[
-        "group inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors",
+        "group inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
         isActive
           ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--foreground)]"
           : "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)] hover:bg-[var(--muted)]/60",
       ].join(" ")}
     >
       <ModelStatusIcon status={status} />
-      <span className="truncate max-w-[10rem]">{modelName}</span>
+      <span className="truncate max-w-[11rem]">{modelName}</span>
     </button>
   );
 });
 
-interface WorkbenchOutputTabProps {
-  activeOutputTab: string | null;
+interface OutputViewerProps {
   selectedModels: ModelSelection[];
+  activeOutputTab: string | null;
   onOutputTabChange: (id: string) => void;
+  selectedRun: RunNode | undefined;
 }
 
-export function WorkbenchOutputTab({
-  activeOutputTab,
+export function OutputViewer({
   selectedModels,
+  activeOutputTab,
   onOutputTabChange,
-}: WorkbenchOutputTabProps) {
+  selectedRun,
+}: OutputViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const userScrollIntentRef = useRef(false);
   const isAutoScrollingRef = useRef(true);
@@ -204,20 +206,48 @@ export function WorkbenchOutputTab({
     setShowScrollButton(false);
   };
 
+  // If we have a selected run from history, show that game's code
+  if (selectedRun && selectedRun.gameId && selectedModels.length === 0) {
+    return (
+      <div className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
+        <div className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{selectedRun.name ?? selectedRun.modelName}</span>
+            <ArcadeButton
+              variant="glow"
+              size="sm"
+              onClick={() => window.open(`/game/${selectedRun.gameId}`, "_blank")}
+            >
+              Play Game
+            </ArcadeButton>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Game created on {new Date(selectedRun.createdAt).toLocaleString()}
+          </p>
+          <p className="text-xs text-[var(--muted-foreground)] mt-2">
+            Click "Play Game" to view the game in a new tab.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedModels.length === 0) {
     return (
       <OutputStatusCard
-        title="No models selected"
-        description="Pick models to start generating"
+        title="No model selected"
+        description="Select models to generate or view run history."
       />
     );
   }
 
   return (
-    <div className="h-full min-h-0 flex flex-col gap-2 overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
       {hasMultipleModels ? (
-        <div className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+        <div className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
+          <div className="flex items-center gap-2 overflow-x-auto">
             {selectedModels.map((model) => (
               <ModelOutputTab
                 key={model.id}
@@ -233,7 +263,7 @@ export function WorkbenchOutputTab({
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
         {generation?.code || generation?.reasoning ? (
-          <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
+          <div className="h-full min-h-0 overflow-hidden relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
             <div className="h-full min-h-0 flex flex-col gap-2">
               <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
@@ -252,10 +282,10 @@ export function WorkbenchOutputTab({
                 variant="outline"
                 size="sm"
                 onClick={scrollToBottom}
-                className="absolute bottom-3 right-3 shadow-md"
+                className="absolute bottom-4 right-4 shadow-md"
               >
-                <ArrowDown className="h-3 w-3 mr-1" />
-                Follow
+                <ArrowDown className="h-4 w-4 mr-2" />
+                Follow stream
               </ArcadeButton>
             ) : null}
           </div>
@@ -272,9 +302,9 @@ export function WorkbenchOutputTab({
         {generation?.status === "error" ? (
           <OutputStatusCard
             tone="error"
-            icon={<AlertCircle className="h-6 w-6 text-[var(--destructive)]" />}
+            icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
             title="Generation failed"
-            description={generation.error ?? "An error occurred"}
+            description={generation.error ?? "An unknown error occurred during generation."}
           />
         ) : null}
 
@@ -284,8 +314,12 @@ export function WorkbenchOutputTab({
         generation?.status !== "reasoning" &&
         generation?.status !== "generating" ? (
           <OutputStatusCard
-            title={currentModel ? `Ready: ${currentModel.modelName}` : "Ready"}
-            description="Click Generate to create your game"
+            title={
+              currentModel
+                ? `No output yet for ${currentModel.modelName}`
+                : "No output yet"
+            }
+            description="Run generation to see code stream here."
           />
         ) : null}
       </div>

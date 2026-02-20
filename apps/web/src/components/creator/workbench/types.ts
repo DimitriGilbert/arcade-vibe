@@ -66,7 +66,7 @@ export interface PersistedWorkbenchState {
   timestamp: number;
 }
 
-export type RightPanelTab = "output" | "history" | "models" | "settings";
+export type RightPanelTab = "history" | "models" | "settings";
 
 export const MAX_MODELS = 4;
 export const GENERATION_CONCURRENCY_LIMIT = 2;

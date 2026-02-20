@@ -1,39 +1,33 @@
 "use client";
 
-import { Code, History, Cpu, Settings } from "lucide-react";
+import { History, Cpu, Settings } from "lucide-react";
 import {
   ArcadeTabs,
   ArcadeTabsList,
   ArcadeTabsTrigger,
   ArcadeTabsContent,
 } from "@/components/arcade";
-import { WorkbenchOutputTab } from "./workbench-output-tab";
 import { WorkbenchHistoryTab } from "./workbench-history-tab";
 import { WorkbenchModelsTab } from "./workbench-models-tab";
 import { WorkbenchSettingsTab } from "./workbench-settings-tab";
 import type { ModelSelection, ModelMetadata, ApiKey, RightPanelTab } from "./types";
-import type { ThemeList, Visibility } from "@/lib/trpc-types";
+import type { Visibility } from "@/lib/trpc-types";
 
 interface WorkbenchRightPanelProps {
   activeTab: RightPanelTab;
   onTabChange: (tab: RightPanelTab) => void;
-  // Output tab props
-  activeOutputTab: string | null;
-  selectedModels: ModelSelection[];
-  onOutputTabChange: (id: string) => void;
-  // History tab props
+  // History tab props (now includes output functionality)
   promptId: string | null;
+  selectedModels: ModelSelection[];
+  activeOutputTab: string | null;
+  onOutputTabChange: (id: string) => void;
   // Models tab props
   modelMetadata: ModelMetadata | null | undefined;
   onAddModel: (selection: ModelSelection) => void;
   onRemoveModel: (id: string) => void;
   apiKeys: ApiKey[] | undefined;
   disabled: boolean;
-  // Settings tab props
-  themes: ThemeList[] | undefined;
-  themesLoading: boolean;
-  selectedTheme: string;
-  onSelectTheme: (themeId: string) => void;
+  // Settings tab props (only visibility now)
   visibility: Visibility;
   onVisibilityChange: (visibility: Visibility) => void;
 }
@@ -41,12 +35,11 @@ interface WorkbenchRightPanelProps {
 export function WorkbenchRightPanel({
   activeTab,
   onTabChange,
-  // Output
-  activeOutputTab,
-  selectedModels,
-  onOutputTabChange,
-  // History
+  // History/Output
   promptId,
+  selectedModels,
+  activeOutputTab,
+  onOutputTabChange,
   // Models
   modelMetadata,
   onAddModel,
@@ -54,10 +47,6 @@ export function WorkbenchRightPanel({
   apiKeys,
   disabled,
   // Settings
-  themes,
-  themesLoading,
-  selectedTheme,
-  onSelectTheme,
   visibility,
   onVisibilityChange,
 }: WorkbenchRightPanelProps) {
@@ -68,10 +57,6 @@ export function WorkbenchRightPanel({
       className="h-full min-h-0 flex flex-col overflow-hidden"
     >
       <ArcadeTabsList variant="line" className="shrink-0">
-        <ArcadeTabsTrigger variant="line" value="output">
-          <Code className="h-3.5 w-3.5" />
-          Output
-        </ArcadeTabsTrigger>
         <ArcadeTabsTrigger variant="line" value="history">
           <History className="h-3.5 w-3.5" />
           History
@@ -86,16 +71,14 @@ export function WorkbenchRightPanel({
         </ArcadeTabsTrigger>
       </ArcadeTabsList>
 
-      <ArcadeTabsContent value="output" className="flex-1 min-h-0 overflow-hidden mt-0">
-        <WorkbenchOutputTab
-          activeOutputTab={activeOutputTab}
-          selectedModels={selectedModels}
-          onOutputTabChange={onOutputTabChange}
-        />
-      </ArcadeTabsContent>
-
       <ArcadeTabsContent value="history" className="flex-1 min-h-0 overflow-hidden mt-0">
-        <WorkbenchHistoryTab promptId={promptId} />
+        <WorkbenchHistoryTab
+          promptId={promptId}
+          selectedModels={selectedModels}
+          activeOutputTab={activeOutputTab}
+          onOutputTabChange={onOutputTabChange}
+          disabled={disabled}
+        />
       </ArcadeTabsContent>
 
       <ArcadeTabsContent value="models" className="flex-1 min-h-0 overflow-auto mt-0 p-3">
@@ -111,10 +94,6 @@ export function WorkbenchRightPanel({
 
       <ArcadeTabsContent value="settings" className="flex-1 min-h-0 overflow-auto mt-0 p-3">
         <WorkbenchSettingsTab
-          themes={themes}
-          themesLoading={themesLoading}
-          selectedTheme={selectedTheme}
-          onSelectTheme={onSelectTheme}
           visibility={visibility}
           onVisibilityChange={onVisibilityChange}
         />

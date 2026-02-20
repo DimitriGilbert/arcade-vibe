@@ -1,10 +1,13 @@
 "use client";
 
 import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { ArrowDown, AlertCircle, Check, Sparkles, Brain } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, AlertCircle, Check, Sparkles, Brain, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
+import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection, GenerationStatus } from "./inbox-types";
+import type { Game } from "@/lib/trpc-types";
 
 interface GenerationEntry {
   modelSelectionId: string;
@@ -115,6 +118,7 @@ export interface InboxOutputPanelProps {
   onOutputTabChange?: (id: string) => void;
   getGenerationById: (id: string | null | undefined) => GenerationEntry | undefined;
   getGenerationStatus: (id: string | null | undefined) => GenerationStatus | undefined;
+  selectedGameFromHistory?: Game | null;
 }
 
 export function InboxOutputPanel({
@@ -123,11 +127,23 @@ export function InboxOutputPanel({
   onOutputTabChange,
   getGenerationById,
   getGenerationStatus,
+  selectedGameFromHistory,
 }: InboxOutputPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const userScrollIntentRef = useRef(false);
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // Fetch game code if viewing a historical game
+  const { data: historicalGameCode, isLoading: isLoadingHistorical } = useQuery({
+    queryKey: ["game-code", selectedGameFromHistory?.id],
+    queryFn: async () => {
+      if (!selectedGameFromHistory?.id) return null;
+      const result = await trpcClient.games.getCode.query({ gameId: selectedGameFromHistory.id });
+      return result.html;
+    },
+    enabled: !!selectedGameFromHistory?.id,
+  });
 
   const generation = getGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
@@ -136,6 +152,15 @@ export function InboxOutputPanel({
     generation?.status === "reasoning" || generation?.status === "generating";
   const codeLength = generation?.code.length ?? 0;
   const reasoningLength = generation?.reasoning?.length ?? 0;
+
+  // Determine what code to show
+  const displayCode = selectedGameFromHistory
+    ? (historicalGameCode ?? "")
+    : (generation?.code ?? "");
+  const displayReasoning = selectedGameFromHistory
+    ? undefined
+    : generation?.reasoning;
+  const isViewingHistory = !!selectedGameFromHistory;
 
   const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
@@ -246,14 +271,40 @@ export function InboxOutputPanel({
       ) : null}
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
-        {generation?.code || generation?.reasoning ? (
+        {/* Historical game loading state */}
+        {isViewingHistory && isLoadingHistorical ? (
+          <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+          </div>
+        ) : null}
+
+        {/* Historical game view */}
+        {isViewingHistory && !isLoadingHistorical && displayCode ? (
+          <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
+            <div className="h-full min-h-0 flex flex-col gap-2">
+              <div className="flex-1 h-0 min-h-0">
+                <StreamingCodeViewerV2
+                  key={selectedGameFromHistory?.id ?? "historical-game"}
+                  code={displayCode}
+                  reasoning={undefined}
+                  language="html"
+                  isStreaming={false}
+                  fileName="game.html"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Current generation view */}
+        {!isViewingHistory && (generation?.code || generation?.reasoning) ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
             <div className="h-full min-h-0 flex flex-col gap-2">
               <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
                   key={activeOutputTab ?? "no-active-output-tab"}
-                  code={generation.code ?? ""}
-                  reasoning={generation.reasoning}
+                  code={displayCode}
+                  reasoning={displayReasoning}
                   language="html"
                   isStreaming={isStreaming}
                   fileName="game.html"
@@ -275,15 +326,15 @@ export function InboxOutputPanel({
           </div>
         ) : null}
 
-        {generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
+        {!isViewingHistory && generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
           <WaitingState status="reasoning" />
         ) : null}
 
-        {generation?.status === "generating" && !generation?.code ? (
+        {!isViewingHistory && generation?.status === "generating" && !generation?.code ? (
           <WaitingState status="generating" />
         ) : null}
 
-        {generation?.status === "error" ? (
+        {!isViewingHistory && generation?.status === "error" ? (
           <OutputStatusCard
             tone="error"
             icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
@@ -292,7 +343,8 @@ export function InboxOutputPanel({
           />
         ) : null}
 
-        {!generation?.code &&
+        {!isViewingHistory &&
+        !generation?.code &&
         !generation?.reasoning &&
         generation?.status !== "error" &&
         generation?.status !== "reasoning" &&

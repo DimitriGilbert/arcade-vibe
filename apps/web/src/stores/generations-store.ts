@@ -190,6 +190,16 @@ export const useTotalCount = (): number => {
 };
 
 /**
+ * Get all generations as an array.
+ * Uses shallow comparison to avoid unnecessary re-renders.
+ */
+export const useAllGenerations = (): GenerationEntry[] => {
+  return useGenerationsStore(
+    useShallow((state) => Object.values(state.generations)),
+  );
+};
+
+/**
  * Convert GenerationEntry to GenerationResult for type compatibility.
  */
 export function toGenerationResult(entry: GenerationEntry): GenerationResult {

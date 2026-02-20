@@ -1,11 +1,9 @@
 export { WorkbenchHeader } from "./workbench-header";
 export { WorkbenchEditor } from "./workbench-editor";
-export { WorkbenchOutputTab } from "./workbench-output-tab";
 export { WorkbenchHistoryTab } from "./workbench-history-tab";
 export { WorkbenchModelsTab } from "./workbench-models-tab";
 export { WorkbenchSettingsTab } from "./workbench-settings-tab";
 export { WorkbenchVersionBar } from "./workbench-version-bar";
-export { WorkbenchActionBar } from "./workbench-action-bar";
 export { WorkbenchRightPanel } from "./workbench-right-panel";
 
 export type {

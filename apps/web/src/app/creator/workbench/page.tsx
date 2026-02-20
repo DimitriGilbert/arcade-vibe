@@ -9,8 +9,6 @@ import {
   WorkbenchHeader,
   WorkbenchEditor,
   WorkbenchRightPanel,
-  WorkbenchVersionBar,
-  WorkbenchActionBar,
   type ModelSelection,
   type ModelMetadata,
   type ApiKey,
@@ -258,6 +256,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.success("Prompt created!");
       void queryClient.invalidateQueries({ queryKey: ["prompt"] });
       void queryClient.invalidateQueries({ queryKey: ["prompt-versions"] });
+      void queryClient.invalidateQueries({ queryKey: ["prompts-for-selector"] });
       if (data.promptId) {
         setSelectedPromptId(data.promptId);
         setSelectedVersionId(data.promptId);
@@ -282,6 +281,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.success("Prompt saved!");
       void queryClient.invalidateQueries({ queryKey: ["prompt"] });
       void queryClient.invalidateQueries({ queryKey: ["prompt-versions"] });
+      void queryClient.invalidateQueries({ queryKey: ["prompts-for-selector"] });
       if (data.promptId) {
         setSelectedPromptId(data.promptId);
         setSelectedVersionId(data.promptId);
@@ -373,7 +373,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     }
 
     setIsGenerating(true);
-    setActiveRightTab("output");
+    setActiveRightTab("history");
     generationAbortedRef.current = false;
 
     const completionStats = { completed: 0, errors: 0, total: selectedModels.length };
@@ -477,6 +477,9 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         await Promise.all(batch.map((model) => runGenerationForModel(model)));
       }
 
+      // Invalidate games list after generation completes
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+
       // Show aggregate toast
       if (completionStats.completed === completionStats.total) {
         toast.success(`All ${completionStats.total} games generated!`);
@@ -499,6 +502,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     promptName,
     visibility,
     createPromptMutation,
+    queryClient,
     setMultipleGenerations,
     updateGenerationStatus,
     updateGenerationCode,
@@ -557,6 +561,42 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     }
   }, [activeGameId]);
 
+  // Handler for selecting an existing prompt from header dropdown
+  const handleSelectPrompt = useCallback(async (promptId: string) => {
+    try {
+      const prompt = await trpcClient.prompts.getById.query({ id: promptId });
+      if (prompt) {
+        setPromptContent(prompt.content);
+        setSelectedPromptId(prompt.id);
+        setSelectedVersionId(prompt.id);
+        setSelectedTheme(prompt.themeId);
+        setPromptName(`Prompt v${prompt.version}`);
+        if (prompt.visibility) {
+          setVisibility(prompt.visibility);
+        }
+        // Clear generations when switching prompts
+        clearGenerations();
+        setActiveOutputTab(null);
+        setSelectedModels([]);
+      }
+    } catch (error) {
+      toast.error("Failed to load prompt");
+      console.error(error);
+    }
+  }, [clearGenerations]);
+
+  // Handler for creating a new prompt
+  const handleNewPrompt = useCallback(() => {
+    setPromptContent("");
+    setSelectedPromptId(null);
+    setSelectedVersionId(null);
+    setPromptName("Untitled Prompt");
+    setActiveRightTab("models");
+    setSelectedModels([]);
+    clearGenerations();
+    setActiveOutputTab(null);
+  }, [clearGenerations]);
+
   if (!mounted || promptLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
@@ -570,12 +610,33 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--background)] overflow-hidden">
-      {/* Header */}
+      {/* Header with actions */}
       <WorkbenchHeader
         promptName={promptName}
         onPromptNameChange={setPromptName}
         credits={credits}
         isLoading={modelsLoading}
+        themes={themes}
+        themesLoading={themesLoading}
+        selectedTheme={selectedTheme}
+        onSelectTheme={setSelectedTheme}
+        selectedPromptId={selectedPromptId}
+        onSelectPrompt={handleSelectPrompt}
+        onNewPrompt={handleNewPrompt}
+        versions={versions}
+        currentVersion={currentPrompt?.version ?? null}
+        selectedVersionId={selectedVersionId}
+        onSelectVersion={handleSelectVersion}
+        onNewVersion={handleNewVersion}
+        selectedModels={selectedModels}
+        promptContent={promptContent}
+        isGenerating={isGenerating}
+        isSaving={createPromptMutation.isPending || updatePromptMutation.isPending}
+        completedCount={completedCount}
+        activeGameId={activeGameId}
+        onGenerate={handleGenerate}
+        onSave={handleSave}
+        onPlayGame={handlePlayGame}
       />
 
       {/* Fork Button (if forking) */}
@@ -591,17 +652,6 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
             {forkPromptMutation.isPending ? "Forking..." : "Fork this prompt to edit"}
           </button>
         </div>
-      )}
-
-      {/* Version Bar (if editing existing) */}
-      {currentPrompt && versions && versions.length > 0 && (
-        <WorkbenchVersionBar
-          versions={versions}
-          currentVersion={currentPrompt.version}
-          selectedVersionId={selectedVersionId}
-          onSelectVersion={handleSelectVersion}
-          onNewVersion={handleNewVersion}
-        />
       )}
 
       {/* Main Content - Horizontal Split */}
@@ -629,28 +679,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
             onRemoveModel={handleRemoveModel}
             apiKeys={apiKeys as ApiKey[] | undefined}
             disabled={isGenerating}
-            themes={themes}
-            themesLoading={themesLoading}
-            selectedTheme={selectedTheme}
-            onSelectTheme={setSelectedTheme}
             visibility={visibility}
             onVisibilityChange={handleVisibilityChange}
           />
         </div>
       </div>
-
-      {/* Bottom Action Bar */}
-      <WorkbenchActionBar
-        selectedModels={selectedModels}
-        promptContent={promptContent}
-        isGenerating={isGenerating}
-        isSaving={createPromptMutation.isPending || updatePromptMutation.isPending}
-        completedCount={completedCount}
-        activeGameId={activeGameId}
-        onGenerate={handleGenerate}
-        onSave={handleSave}
-        onPlayGame={handlePlayGame}
-      />
     </div>
   );
 }
