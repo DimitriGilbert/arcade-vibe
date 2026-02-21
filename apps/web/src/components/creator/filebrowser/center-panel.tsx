@@ -3,7 +3,7 @@
 import type { ModelSelection } from "@/components/editor/model-types";
 import type { ThemeNode, PromptNode, RunNode, FilebrowserSelection } from "./types";
 import { ThemeGrid } from "./theme-grid";
-import { PromptEditor } from "./prompt-editor";
+import { PromptEditorWithOutput } from "./prompt-editor-with-output";
 import { OutputViewer } from "./output-viewer";
 
 interface CenterPanelProps {
@@ -26,6 +26,7 @@ interface CenterPanelProps {
   onNewPrompt: () => void;
   promptsLoading: boolean;
   canEdit: boolean;
+  isGenerating: boolean;
 }
 
 export function CenterPanel({
@@ -48,12 +49,12 @@ export function CenterPanel({
   onNewPrompt,
   promptsLoading,
   canEdit,
+  isGenerating,
 }: CenterPanelProps) {
   const theme = themes?.find((t) => t.id === selection.themeId);
   const prompt = prompts?.find((p) => p.id === selection.promptId);
   const run = runs?.find((r) => r.id === selection.runId);
 
-  // When theme is selected, show grid of prompts
   if (selection.type === "theme" && theme && !selection.promptId) {
     return (
       <ThemeGrid
@@ -68,10 +69,9 @@ export function CenterPanel({
     );
   }
 
-  // When prompt is selected, show editor
   if (selection.type === "prompt" && prompt) {
     return (
-      <PromptEditor
+      <PromptEditorWithOutput
         promptContent={promptContent}
         onPromptContentChange={onPromptContentChange}
         gameName={gameName}
@@ -79,16 +79,18 @@ export function CenterPanel({
         selectedModels={selectedModels}
         onAddModel={onAddModel}
         onRemoveModel={onRemoveModel}
+        activeOutputTab={activeOutputTab}
+        onOutputTabChange={onOutputTabChange}
         visibility={prompt.visibility}
         version={prompt.version}
         versions={versions}
         onSelectVersion={onSelectVersion}
         canEdit={canEdit}
+        isGenerating={isGenerating}
       />
     );
   }
 
-  // When run is selected, show output
   if (selection.type === "run") {
     return (
       <OutputViewer
@@ -100,7 +102,6 @@ export function CenterPanel({
     );
   }
 
-  // Default: show placeholder
   return (
     <div className="h-full flex items-center justify-center text-center p-8">
       <div>

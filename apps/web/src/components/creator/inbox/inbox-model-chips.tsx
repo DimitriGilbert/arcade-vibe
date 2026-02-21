@@ -4,6 +4,7 @@ import { memo } from "react";
 import { X, Check, AlertCircle, Brain, Sparkles, Plus } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import type { GenerationStatus, ModelSelection } from "./inbox-types";
+import { useGenerationStatus } from "@/stores/generations-store";
 
 interface ModelChipProps {
   model: ModelSelection;
@@ -11,7 +12,6 @@ interface ModelChipProps {
   disabled: boolean;
   isActive: boolean;
   onClick: () => void;
-  status: GenerationStatus;
 }
 
 function StatusIndicator({ status }: { status: GenerationStatus }) {
@@ -35,8 +35,8 @@ const ModelChip = memo(function ModelChip({
   disabled,
   isActive,
   onClick,
-  status,
 }: ModelChipProps) {
+  const status = useGenerationStatus(model.id) ?? "idle";
   const isActiveGeneration = status === "reasoning" || status === "generating";
 
   return (
@@ -80,7 +80,6 @@ interface InboxModelChipsProps {
   activeModelId: string | null;
   onModelClick: (id: string) => void;
   disabled?: boolean;
-  getGenerationStatus: (id: string | null | undefined) => GenerationStatus | undefined;
 }
 
 export function InboxModelChips({
@@ -90,7 +89,6 @@ export function InboxModelChips({
   activeModelId,
   onModelClick,
   disabled = false,
-  getGenerationStatus,
 }: InboxModelChipsProps) {
   const totalCredits = models.reduce((sum, m) => sum + m.creditCost, 0);
 
@@ -104,7 +102,6 @@ export function InboxModelChips({
           disabled={disabled}
           isActive={model.id === activeModelId}
           onClick={() => onModelClick(model.id)}
-          status={getGenerationStatus(model.id) ?? "idle"}
         />
       ))}
 

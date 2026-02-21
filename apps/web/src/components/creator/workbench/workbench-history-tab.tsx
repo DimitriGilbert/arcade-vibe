@@ -341,7 +341,7 @@ export function WorkbenchHistoryTab({
     const scroller = getScrollElement();
     if (!scroller) return;
     scroller.scrollLeft = 0;
-  }, [activeOutputTab, getScrollElement]);
+  }, [getScrollElement]);
 
   useEffect(() => {
     if (isStreaming) {
@@ -354,17 +354,11 @@ export function WorkbenchHistoryTab({
     if (!isStreaming) return;
     if (!isAutoScrollingRef.current) return;
 
-    const frameId = requestAnimationFrame(() => {
-      const scroller = getScrollElement();
-      if (scroller && isAutoScrollingRef.current) {
-        scroller.scrollTop = scroller.scrollHeight;
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [isStreaming, codeLength, reasoningLength, getScrollElement]);
+    const scroller = getScrollElement();
+    if (scroller && isAutoScrollingRef.current) {
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+  }, [isStreaming, getScrollElement]);
 
   const scrollToBottom = () => {
     const scroller = getScrollElement();
@@ -378,85 +372,7 @@ export function WorkbenchHistoryTab({
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
-      {/* Running Generations / Output Section */}
-      {selectedModels.length > 0 && (
-        <div className="border-b border-[var(--border)] shrink-0">
-          {/* Model Tabs */}
-          {hasMultipleModels ? (
-            <div className="p-2 bg-[var(--card)] border-b border-[var(--border)]">
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                {selectedModels.map((model) => (
-                  <ModelOutputTab
-                    key={model.id}
-                    modelId={model.id}
-                    modelName={model.modelName}
-                    isActive={model.id === activeOutputTab}
-                    onSelect={() => onOutputTabChange(model.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {/* Output Display */}
-          <div className="h-48 min-h-48 overflow-hidden relative" ref={panelRef}>
-            {generation?.code || generation?.reasoning ? (
-              <div className="h-full min-h-0 overflow-hidden relative p-1.5">
-                <StreamingCodeViewerV2
-                  key={activeOutputTab ?? "no-active-output-tab"}
-                  code={generation.code ?? ""}
-                  reasoning={generation.reasoning}
-                  language="html"
-                  isStreaming={isStreaming}
-                  fileName="game.html"
-                />
-
-                {showScrollButton && isStreaming ? (
-                  <ArcadeButton
-                    variant="outline"
-                    size="sm"
-                    onClick={scrollToBottom}
-                    className="absolute bottom-3 right-3 shadow-md"
-                  >
-                    <ArrowDown className="h-3 w-3 mr-1" />
-                    Follow
-                  </ArcadeButton>
-                ) : null}
-              </div>
-            ) : null}
-
-            {generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
-              <WaitingState status="reasoning" />
-            ) : null}
-
-            {generation?.status === "generating" && !generation?.code ? (
-              <WaitingState status="generating" />
-            ) : null}
-
-            {generation?.status === "error" ? (
-              <OutputStatusCard
-                tone="error"
-                icon={<AlertCircle className="h-6 w-6 text-[var(--destructive)]" />}
-                title="Generation failed"
-                description={generation.error ?? "An error occurred"}
-              />
-            ) : null}
-
-            {!generation?.code &&
-            !generation?.reasoning &&
-            generation?.status !== "error" &&
-            generation?.status !== "reasoning" &&
-            generation?.status !== "generating" ? (
-              <OutputStatusCard
-                title={currentModel ? `Ready: ${currentModel.modelName}` : "Ready"}
-                description="Click Generate to create your game"
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      {/* History List */}
+      {/* History List with inline output */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {!promptId ? (
           <div className="h-full flex items-center justify-center p-4">
@@ -481,47 +397,73 @@ export function WorkbenchHistoryTab({
         ) : (
           <ul className="divide-y divide-[var(--border)]">
             {historyItems.map((item) => {
+              const isExpanded = item.id === activeOutputTab;
+
               if (item.type === "running") {
-                // Running generation item - clickable to show output
-                const isActive = item.id === activeOutputTab;
                 return (
-                  <li
-                    key={`running-${item.id}`}
-                    className={[
-                      "flex items-center justify-between p-2.5 transition-colors",
-                      isActive
-                        ? "bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]"
-                        : "",
-                    ].join(" ")}
-                  >
+                  <li key={`running-${item.id}`}>
                     <button
                       type="button"
-                      className="flex items-center justify-between w-full text-left cursor-pointer hover:bg-[var(--muted)]/20 rounded -m-2.5 p-2.5"
-                      onClick={() => onOutputTabChange(item.id)}
+                      className="w-full flex items-center justify-between p-2.5 hover:bg-[var(--muted)]/20 transition-colors text-left"
+                      onClick={() => onOutputTabChange(isExpanded ? "" : item.id)}
                     >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex flex-col min-w-0">
                           <span className="text-xs text-[var(--foreground)] truncate font-medium">
                             {item.modelName}
                           </span>
+                          <span className="text-[10px] text-[var(--primary)]">Generating...</span>
                         </div>
-                        <span className="text-[10px] text-[var(--primary)]">Generating...</span>
+                        <ArcadeBadge text={item.status} variant="default" className="animate-pulse" />
                       </div>
-                      <ArcadeBadge
-                        text={item.status}
-                        variant="default"
-                        className="animate-pulse"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {item.status === "reasoning" ? (
-                        <Brain className="h-3.5 w-3.5 text-blue-400 animate-pulse" />
-                      ) : (
-                        <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
-                      )}
-                    </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.status === "reasoning" ? (
+                          <Brain className="h-3.5 w-3.5 text-blue-400 animate-pulse" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
+                        )}
+                      </div>
                     </button>
+                    {isExpanded && generation && (
+                      <div className="border-t border-[var(--border)] bg-[var(--card)]">
+                        <div className="h-[50vh] min-h-[300px] max-h-[60vh] overflow-hidden relative p-1.5" ref={panelRef}>
+                          {generation.code || generation.reasoning ? (
+                            <>
+                              <StreamingCodeViewerV2
+                                key={activeOutputTab ?? "no-active"}
+                                code={generation.code ?? ""}
+                                reasoning={generation.reasoning}
+                                language="html"
+                                isStreaming={isStreaming}
+                                fileName="game.html"
+                              />
+                              {showScrollButton && isStreaming && (
+                                <ArcadeButton
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={scrollToBottom}
+                                  className="absolute bottom-3 right-3 shadow-md"
+                                >
+                                  <ArrowDown className="h-3 w-3 mr-1" />
+                                  Follow
+                                </ArcadeButton>
+                              )}
+                            </>
+                          ) : generation.status === "reasoning" ? (
+                            <WaitingState status="reasoning" />
+                          ) : generation.status === "generating" ? (
+                            <WaitingState status="generating" />
+                          ) : generation.status === "error" ? (
+                            <OutputStatusCard
+                              tone="error"
+                              icon={<AlertCircle className="h-6 w-6 text-[var(--destructive)]" />}
+                              title="Generation failed"
+                              description={generation.error ?? "An error occurred"}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
                   </li>
                 );
               }
@@ -529,88 +471,96 @@ export function WorkbenchHistoryTab({
               // Completed game item
               const game = item.game;
               const canSubmit = game.status === "completed" && !game.isSubmitted;
-              const isSubmitting =
-                submitMutation.isPending && submitMutation.variables === game.id;
+              const isSubmitting = submitMutation.isPending && submitMutation.variables === game.id;
               const isUnpublishing = unpublishingGameId === game.id;
               const isDeleting = deletingGameId === game.id;
 
               return (
-                <li
-                  key={`game-${game.id}`}
-                  className="flex items-center justify-between p-2.5 hover:bg-[var(--muted)]/20 transition-colors group"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-[var(--foreground)] truncate">
-                          {(game.name || game.modelName) ?? "Unknown"}
-                        </span>
-                        {game.isSubmitted && (
-                          <Globe className="h-3 w-3 text-green-500 shrink-0" />
-                        )}
-                      </div>
-                      <span className="text-[10px] text-[var(--muted-foreground)]">
-                        {formatDate(game.createdAt)}
-                      </span>
-                    </div>
-                    <ArcadeBadge
-                      text={game.status}
-                      variant={getStatusVariant(game.status)}
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <ArcadeButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`/game/${game.id}`, "_blank")}
+                <li key={`game-${game.id}`}>
+                  <div className="flex items-center justify-between p-2.5 hover:bg-[var(--muted)]/20 transition-colors group">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                      onClick={() => onOutputTabChange(isExpanded ? "" : game.id)}
                     >
-                      <Play className="h-3 w-3" />
-                    </ArcadeButton>
-                    {canSubmit && (
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-[var(--foreground)] truncate">
+                            {(game.name || game.modelName) ?? "Unknown"}
+                          </span>
+                          {game.isSubmitted && (
+                            <Globe className="h-3 w-3 text-green-500 shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[var(--muted-foreground)]">
+                          {formatDate(game.createdAt)}
+                        </span>
+                      </div>
+                      <ArcadeBadge text={game.status} variant={getStatusVariant(game.status)} />
+                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <ArcadeButton
+                        variant="outline"
                         size="sm"
-                        onClick={() => submitMutation.mutate(game.id)}
-                        disabled={isSubmitting}
+                        onClick={() => window.open(`/game/${game.id}`, "_blank")}
                       >
-                        {isSubmitting ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Send className="h-3 w-3" />
-                        )}
+                        <Play className="h-3 w-3" />
                       </ArcadeButton>
-                    )}
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--muted)] focus:opacity-100"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                        {game.isSubmitted && (
-                          <DropdownMenuItem
-                            onClick={() => handleUnpublish(game.id)}
-                            disabled={isUnpublishing}
-                          >
-                            <EyeOff className="h-3.5 w-3.5 mr-2" />
-                            {isUnpublishing ? "Unpublishing..." : "Unpublish"}
-                          </DropdownMenuItem>
-                        )}
-                        {game.isSubmitted && <DropdownMenuSeparator />}
-                        {!game.isSubmitted && (
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteClick(game)}
-                            disabled={isDeleting}
-                            variant="destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-2" />
-                            {isDeleting ? "Deleting..." : "Delete"}
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      {canSubmit && (
+                        <ArcadeButton
+                          size="sm"
+                          onClick={() => submitMutation.mutate(game.id)}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                        </ArcadeButton>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--muted)] focus:opacity-100"
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                          {game.isSubmitted && (
+                            <DropdownMenuItem
+                              onClick={() => handleUnpublish(game.id)}
+                              disabled={isUnpublishing}
+                            >
+                              <EyeOff className="h-3.5 w-3.5 mr-2" />
+                              {isUnpublishing ? "Unpublishing..." : "Unpublish"}
+                            </DropdownMenuItem>
+                          )}
+                          {game.isSubmitted && <DropdownMenuSeparator />}
+                          {!game.isSubmitted && (
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteClick(game)}
+                              disabled={isDeleting}
+                              variant="destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              {isDeleting ? "Deleting..." : "Delete"}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
+                  {isExpanded && (
+                    <div className="border-t border-[var(--border)] bg-[var(--card)]">
+                      <div className="h-[50vh] min-h-[300px] max-h-[60vh] overflow-hidden relative p-1.5">
+                        <OutputStatusCard
+                          title={game.name ?? game.modelName ?? "Game"}
+                          description={`Created on ${formatDate(game.createdAt)}. Click Play to view.`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}

@@ -8,6 +8,7 @@ import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection, GenerationStatus } from "./inbox-types";
 import type { Game } from "@/lib/trpc-types";
+import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 
 interface GenerationEntry {
   modelSelectionId: string;
@@ -85,15 +86,13 @@ const ModelOutputTab = memo(function ModelOutputTab({
   modelName,
   isActive,
   onSelect,
-  getGenerationStatus,
 }: {
   modelId: string;
   modelName: string;
   isActive: boolean;
   onSelect: () => void;
-  getGenerationStatus: (id: string) => GenerationStatus | undefined;
 }) {
-  const status = getGenerationStatus(modelId) ?? "idle";
+  const status = useGenerationStatus(modelId) ?? "idle";
 
   return (
     <button
@@ -116,8 +115,6 @@ export interface InboxOutputPanelProps {
   activeOutputTab: string | null | undefined;
   selectedModels: ModelSelection[];
   onOutputTabChange?: (id: string) => void;
-  getGenerationById: (id: string | null | undefined) => GenerationEntry | undefined;
-  getGenerationStatus: (id: string | null | undefined) => GenerationStatus | undefined;
   selectedGameFromHistory?: Game | null;
 }
 
@@ -125,8 +122,6 @@ export function InboxOutputPanel({
   activeOutputTab,
   selectedModels,
   onOutputTabChange,
-  getGenerationById,
-  getGenerationStatus,
   selectedGameFromHistory,
 }: InboxOutputPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -145,7 +140,8 @@ export function InboxOutputPanel({
     enabled: !!selectedGameFromHistory?.id,
   });
 
-  const generation = getGenerationById(activeOutputTab);
+  // Use Zustand hooks directly for reactive updates
+  const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
@@ -263,7 +259,6 @@ export function InboxOutputPanel({
                 modelName={model.modelName}
                 isActive={model.id === activeOutputTab}
                 onSelect={() => onOutputTabChange?.(model.id)}
-                getGenerationStatus={getGenerationStatus}
               />
             ))}
           </div>

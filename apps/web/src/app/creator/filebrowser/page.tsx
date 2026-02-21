@@ -188,6 +188,7 @@ export default function FilebrowserPage() {
             onNewPrompt={handleNewPrompt}
             promptsLoading={promptsLoading}
             canEdit={!isGenerating}
+            isGenerating={isGenerating}
           />
         </main>
       </div>

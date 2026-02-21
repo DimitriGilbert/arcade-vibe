@@ -622,17 +622,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     setRightSidebarCollapsed(true);
   }, [clearGenerations]);
 
-  // Generation status getters for components
-  const getGenerationById = useCallback((id: string | null | undefined) => {
-    if (!id) return undefined;
-    return useGenerationsStore.getState().generations[id];
-  }, []);
-
-  const getGenerationStatus = useCallback((id: string | null | undefined): GenerationStatus | undefined => {
-    if (!id) return undefined;
-    return useGenerationsStore.getState().generations[id]?.status;
-  }, []);
-
   // Handler for selecting a game from history - must be defined before any conditional code
   const handleSelectGameFromHistory = useCallback((game: Game) => {
     setSelectedGameFromHistory(game);
@@ -777,7 +766,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                 activeModelId={activeOutputTab}
                 onModelClick={setActiveOutputTab}
                 disabled={isGenerating}
-                getGenerationStatus={getGenerationStatus}
               />
             </div>
 
@@ -816,7 +804,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                         onChange={(e) => setGameName(e.target.value)}
                         className="px-2 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                         placeholder="Game name"
-                        autoFocus
                         maxLength={100}
                       />
                       <button
@@ -929,8 +916,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                   activeOutputTab={activeOutputTab}
                   selectedModels={selectedModels}
                   onOutputTabChange={setActiveOutputTab}
-                  getGenerationById={getGenerationById}
-                  getGenerationStatus={getGenerationStatus}
                   selectedGameFromHistory={selectedGameFromHistory}
                 />
               </div>
