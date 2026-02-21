@@ -866,7 +866,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                     fontSize: 13,
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
-                    padding: { top: 10, bottom: 10 },
+                    padding: { top: 16, bottom: 16 },
                     folding: false,
                     glyphMargin: false,
                     lineDecorationsWidth: 0,

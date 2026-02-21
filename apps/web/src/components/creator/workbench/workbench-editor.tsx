@@ -24,7 +24,7 @@ export function WorkbenchEditor({ value, onChange, disabled }: WorkbenchEditorPr
           fontSize: 13,
           scrollBeyondLastLine: false,
           automaticLayout: true,
-          padding: { top: 12, bottom: 12 },
+          padding: { top: 16, bottom: 16 },
           readOnly: disabled,
           fontFamily: "JetBrains Mono, Menlo, Monaco, monospace",
           fontLigatures: true,

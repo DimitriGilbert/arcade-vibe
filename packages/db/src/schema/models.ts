@@ -44,7 +44,7 @@ export const modelConfig = pgTable(
     maxTokens: integer("max_tokens").notNull(),
     supportsImages: boolean("supports_images").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
-    modelCreatedAt: timestamp("model_created_at").notNull(),
+    modelCreatedAt: timestamp("model_created_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

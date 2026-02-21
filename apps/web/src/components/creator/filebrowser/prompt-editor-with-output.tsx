@@ -571,7 +571,7 @@ export function PromptEditorWithOutput({
                 fontSize: 14,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
-                padding: { top: 10, bottom: 10 },
+                padding: { top: 16, bottom: 16 },
                 readOnly: !canEdit,
               }}
             />

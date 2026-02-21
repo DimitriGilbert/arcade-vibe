@@ -618,6 +618,18 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
           promptId: prompt.id,
           runId: null,
         }));
+        setExpandedThemes((prev) => {
+          if (!prev.includes(prompt.themeId)) {
+            return [...prev, prompt.themeId];
+          }
+          return prev;
+        });
+        setExpandedPrompts((prev) => {
+          if (!prev.includes(prompt.id)) {
+            return [...prev, prompt.id];
+          }
+          return prev;
+        });
       }
     } catch {
       toast.error("Failed to load prompt");
