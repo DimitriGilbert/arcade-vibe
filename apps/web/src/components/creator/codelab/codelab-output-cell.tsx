@@ -1,9 +1,11 @@
 "use client";
 
 import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { ArrowDown, AlertCircle, Check, Sparkles, Brain, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, AlertCircle, Check, Sparkles, Brain, ExternalLink, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
+import { trpcClient } from "@/utils/trpc";
 import type { CodelabOutput } from "./types";
 import type { GenerationStatus } from "@/components/editor/model-types";
 
@@ -135,9 +137,31 @@ export function CodelabOutputCell({
   const currentModelName = currentOutput?.modelName ?? "Unknown";
   const isStreaming =
     currentOutput?.status === "reasoning" || currentOutput?.status === "generating";
+  const isComplete = currentOutput?.status === "complete";
+  const hasCodeInMemory = !!currentOutput?.code;
   const codeLength = currentOutput?.code.length ?? 0;
   const reasoningLength = currentOutput?.reasoning?.length ?? 0;
   const activeGameId = currentOutput?.gameId;
+
+  // Fetch raw code for completed outputs that don't have code in memory
+  const { data: completedGameCode, isLoading: isLoadingCompleted } = useQuery({
+    queryKey: ["game-raw-code", activeGameId],
+    queryFn: async () => {
+      if (!activeGameId) return null;
+      const result = await trpcClient.games.getRawCode.query({ gameId: activeGameId });
+      return result.html;
+    },
+    enabled: !!activeGameId && isComplete && !hasCodeInMemory,
+  });
+
+  // Determine what code to show
+  const displayCode = isComplete && !hasCodeInMemory
+    ? (completedGameCode ?? "")
+    : (currentOutput?.code ?? "");
+  const displayReasoning = isComplete && !hasCodeInMemory
+    ? undefined
+    : currentOutput?.reasoning;
+  const isLoadingCode = isComplete && !hasCodeInMemory && isLoadingCompleted;
 
   const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
@@ -251,14 +275,22 @@ export function CodelabOutputCell({
 
       {/* Output Content */}
       <div className="flex-1 min-h-0 overflow-hidden" ref={panelRef}>
-        {currentOutput?.code || currentOutput?.reasoning ? (
+        {/* Loading state for completed games being fetched */}
+        {isLoadingCode ? (
+          <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+          </div>
+        ) : null}
+
+        {/* Code display - streaming or completed */}
+        {!isLoadingCode && displayCode ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)]">
             <div className="h-full min-h-0 flex flex-col">
               <div className="flex-1 min-h-0">
                 <StreamingCodeViewerV2
                   key={activeOutputTab ?? "no-active-output-tab"}
-                  code={currentOutput.code ?? ""}
-                  reasoning={currentOutput.reasoning}
+                  code={displayCode}
+                  reasoning={displayReasoning}
                   language="html"
                   isStreaming={isStreaming}
                   fileName="game.html"
@@ -282,16 +314,16 @@ export function CodelabOutputCell({
         ) : null}
 
         {/* Waiting States */}
-        {currentOutput?.status === "reasoning" && !currentOutput?.reasoning && !currentOutput?.code && (
+        {!isLoadingCode && currentOutput?.status === "reasoning" && !currentOutput?.reasoning && !currentOutput?.code && (
           <WaitingState status="reasoning" />
         )}
 
-        {currentOutput?.status === "generating" && !currentOutput?.code && (
+        {!isLoadingCode && currentOutput?.status === "generating" && !currentOutput?.code && (
           <WaitingState status="generating" />
         )}
 
         {/* Error State */}
-        {currentOutput?.status === "error" && (
+        {!isLoadingCode && currentOutput?.status === "error" && (
           <OutputStatusCard
             tone="error"
             icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
@@ -301,11 +333,13 @@ export function CodelabOutputCell({
         )}
 
         {/* Idle State */}
-        {!currentOutput?.code &&
+        {!isLoadingCode &&
+          !displayCode &&
           !currentOutput?.reasoning &&
           currentOutput?.status !== "error" &&
           currentOutput?.status !== "reasoning" &&
-          currentOutput?.status !== "generating" && (
+          currentOutput?.status !== "generating" &&
+          currentOutput?.status !== "complete" && (
             <OutputStatusCard
               title={`No output for ${currentModelName}`}
               description="Run generation to see code"

@@ -57,29 +57,19 @@ export function WorkbenchRightPanel({
       className="h-full min-h-0 flex flex-col overflow-hidden"
     >
       <ArcadeTabsList variant="line" className="shrink-0">
-        <ArcadeTabsTrigger variant="line" value="history">
-          <History className="h-3.5 w-3.5" />
-          History
-        </ArcadeTabsTrigger>
         <ArcadeTabsTrigger variant="line" value="models">
           <Cpu className="h-3.5 w-3.5" />
           Models
+        </ArcadeTabsTrigger>
+        <ArcadeTabsTrigger variant="line" value="history">
+          <History className="h-3.5 w-3.5" />
+          History
         </ArcadeTabsTrigger>
         <ArcadeTabsTrigger variant="line" value="settings">
           <Settings className="h-3.5 w-3.5" />
           Settings
         </ArcadeTabsTrigger>
       </ArcadeTabsList>
-
-      <ArcadeTabsContent value="history" className="flex-1 min-h-0 overflow-hidden mt-0">
-        <WorkbenchHistoryTab
-          promptId={promptId}
-          selectedModels={selectedModels}
-          activeOutputTab={activeOutputTab}
-          onOutputTabChange={onOutputTabChange}
-          disabled={disabled}
-        />
-      </ArcadeTabsContent>
 
       <ArcadeTabsContent value="models" className="flex-1 min-h-0 overflow-auto mt-0 p-3">
         <WorkbenchModelsTab
@@ -88,6 +78,16 @@ export function WorkbenchRightPanel({
           onAddModel={onAddModel}
           onRemoveModel={onRemoveModel}
           apiKeys={apiKeys}
+          disabled={disabled}
+        />
+      </ArcadeTabsContent>
+
+      <ArcadeTabsContent value="history" className="flex-1 min-h-0 overflow-hidden mt-0">
+        <WorkbenchHistoryTab
+          promptId={promptId}
+          selectedModels={selectedModels}
+          activeOutputTab={activeOutputTab}
+          onOutputTabChange={onOutputTabChange}
           disabled={disabled}
         />
       </ArcadeTabsContent>

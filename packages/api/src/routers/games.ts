@@ -958,6 +958,82 @@ export const gamesRouter = router({
       };
     }),
 
+  /**
+   * Get raw game data (generated code without SDK template)
+   * Used by creator editors to display the model's output
+   * Requires authentication (owner or public completed game)
+   */
+  getRawCode: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      // Check access permissions
+      const isPublic = game.status === "completed" && !game.isHidden;
+      const isAuthor = ctx.user.id === game.prompt.user?.id;
+      const isAdmin =
+        ctx.user.role === "admin" || ctx.user.role === "moderator";
+
+      if (!isPublic && !isAuthor && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to access this game",
+        });
+      }
+
+      // Get raw game data
+      if (!game.gameData) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Game data not available",
+        });
+      }
+
+      return {
+        html: game.gameData,
+        gameId: game.id,
+      };
+    }),
+
   softDelete: protectedProcedure
     .input(
       z.object({

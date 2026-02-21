@@ -464,7 +464,7 @@ export default function LeaderboardDashboardPage() {
   const isLoading = themeLoading || leaderboardLoading;
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-background">
       <DashboardHeader
         theme={currentTheme ? { title: currentTheme.title ?? "Current Theme", endDate: currentTheme.endDate } : null}
         entriesCount={allEntries.length}

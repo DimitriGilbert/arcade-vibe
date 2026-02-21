@@ -161,6 +161,49 @@ const ModelOutputTab = memo(function ModelOutputTab({
   );
 });
 
+interface CompletedGameOutputProps {
+  game: Game;
+}
+
+function CompletedGameOutput({ game }: CompletedGameOutputProps) {
+  const { data: rawCode, isLoading } = useQuery({
+    queryKey: ["game-raw-code", game.id],
+    queryFn: async () => {
+      const result = await trpcClient.games.getRawCode.query({ gameId: game.id });
+      return result.html;
+    },
+    enabled: !!game.id && game.status === "completed",
+  });
+
+  if (isLoading) {
+    return (
+      <div className="h-full min-h-0 flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+      </div>
+    );
+  }
+
+  if (!rawCode) {
+    return (
+      <OutputStatusCard
+        title={game.name ?? game.modelName ?? "Game"}
+        description={`Created on ${formatDate(game.createdAt)}. No code available.`}
+      />
+    );
+  }
+
+  return (
+    <StreamingCodeViewerV2
+      key={game.id}
+      code={rawCode}
+      reasoning={undefined}
+      language="html"
+      isStreaming={false}
+      fileName="game.html"
+    />
+  );
+}
+
 export function WorkbenchHistoryTab({
   promptId,
   selectedModels,
@@ -554,10 +597,7 @@ export function WorkbenchHistoryTab({
                   {isExpanded && (
                     <div className="border-t border-[var(--border)] bg-[var(--card)]">
                       <div className="h-[50vh] min-h-[300px] max-h-[60vh] overflow-hidden relative p-1.5">
-                        <OutputStatusCard
-                          title={game.name ?? game.modelName ?? "Game"}
-                          description={`Created on ${formatDate(game.createdAt)}. Click Play to view.`}
-                        />
+                        <CompletedGameOutput game={game} />
                       </div>
                     </div>
                   )}

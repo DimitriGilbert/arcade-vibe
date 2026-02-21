@@ -1,9 +1,11 @@
 "use client";
 
 import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { ArrowDown, AlertCircle, Check, Sparkles, Brain } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, AlertCircle, Check, Sparkles, Brain, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
+import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
 import {
   useGenerationById,
@@ -125,8 +127,30 @@ export function OutputViewer({
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
     generation?.status === "reasoning" || generation?.status === "generating";
+  const isComplete = generation?.status === "complete";
+  const hasCodeInMemory = !!generation?.code;
   const codeLength = generation?.code.length ?? 0;
   const reasoningLength = generation?.reasoning?.length ?? 0;
+
+  // Fetch raw code for completed generations that don't have code in memory
+  const { data: completedGameCode, isLoading: isLoadingCompleted } = useQuery({
+    queryKey: ["game-raw-code", generation?.gameId],
+    queryFn: async () => {
+      if (!generation?.gameId) return null;
+      const result = await trpcClient.games.getRawCode.query({ gameId: generation.gameId });
+      return result.html;
+    },
+    enabled: !!generation?.gameId && isComplete && !hasCodeInMemory,
+  });
+
+  // Determine what code to show
+  const displayCode = isComplete && !hasCodeInMemory
+    ? (completedGameCode ?? "")
+    : (generation?.code ?? "");
+  const displayReasoning = isComplete && !hasCodeInMemory
+    ? undefined
+    : generation?.reasoning;
+  const isLoadingCode = isComplete && !hasCodeInMemory && isLoadingCompleted;
 
   const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
@@ -206,7 +230,18 @@ export function OutputViewer({
     setShowScrollButton(false);
   };
 
-  // If we have a selected run from history, show that game's code
+  // Fetch raw code for selected run from history
+  const { data: historicalRunCode, isLoading: isLoadingHistoricalRun } = useQuery({
+    queryKey: ["game-raw-code", selectedRun?.gameId],
+    queryFn: async () => {
+      if (!selectedRun?.gameId) return null;
+      const result = await trpcClient.games.getRawCode.query({ gameId: selectedRun.gameId });
+      return result.html;
+    },
+    enabled: !!selectedRun?.gameId && selectedModels.length === 0,
+  });
+
+  // If we have a selected run from history with no models, show that game's code
   if (selectedRun && selectedRun.gameId && selectedModels.length === 0) {
     return (
       <div className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
@@ -216,20 +251,36 @@ export function OutputViewer({
             <ArcadeButton
               variant="glow"
               size="sm"
-              onClick={() => window.open(`/game/${selectedRun.gameId}`, "_blank")}
+              onClick={() => {
+                if (selectedRun.gameId) {
+                  window.open(`/game/${selectedRun.gameId}`, "_blank");
+                }
+              }}
             >
               Play Game
             </ArcadeButton>
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Game created on {new Date(selectedRun.createdAt).toLocaleString()}
-          </p>
-          <p className="text-xs text-[var(--muted-foreground)] mt-2">
-            Click "Play Game" to view the game in a new tab.
-          </p>
-        </div>
+        {isLoadingHistoricalRun ? (
+          <div className="flex-1 min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+          </div>
+        ) : historicalRunCode ? (
+          <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]">
+            <StreamingCodeViewerV2
+              key={selectedRun.gameId}
+              code={historicalRunCode}
+              reasoning={undefined}
+              language="html"
+              isStreaming={false}
+              fileName="game.html"
+            />
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center p-4">
+            <p className="text-sm text-[var(--muted-foreground)]">No code available</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -262,14 +313,22 @@ export function OutputViewer({
       ) : null}
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
-        {generation?.code || generation?.reasoning ? (
+        {/* Loading state for completed games being fetched */}
+        {isLoadingCode ? (
+          <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+          </div>
+        ) : null}
+
+        {/* Code display - streaming or completed */}
+        {!isLoadingCode && displayCode ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
             <div className="h-full min-h-0 flex flex-col gap-2">
               <div className="flex-1 h-0 min-h-0">
                 <StreamingCodeViewerV2
                   key={activeOutputTab ?? "no-active-output-tab"}
-                  code={generation.code ?? ""}
-                  reasoning={generation.reasoning}
+                  code={displayCode}
+                  reasoning={displayReasoning}
                   language="html"
                   isStreaming={isStreaming}
                   fileName="game.html"
@@ -291,15 +350,15 @@ export function OutputViewer({
           </div>
         ) : null}
 
-        {generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
+        {!isLoadingCode && generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
           <WaitingState status="reasoning" />
         ) : null}
 
-        {generation?.status === "generating" && !generation?.code ? (
+        {!isLoadingCode && generation?.status === "generating" && !generation?.code ? (
           <WaitingState status="generating" />
         ) : null}
 
-        {generation?.status === "error" ? (
+        {!isLoadingCode && generation?.status === "error" ? (
           <OutputStatusCard
             tone="error"
             icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
@@ -308,11 +367,13 @@ export function OutputViewer({
           />
         ) : null}
 
-        {!generation?.code &&
+        {!isLoadingCode &&
+        !displayCode &&
         !generation?.reasoning &&
         generation?.status !== "error" &&
         generation?.status !== "reasoning" &&
-        generation?.status !== "generating" ? (
+        generation?.status !== "generating" &&
+        generation?.status !== "complete" ? (
           <OutputStatusCard
             title={
               currentModel

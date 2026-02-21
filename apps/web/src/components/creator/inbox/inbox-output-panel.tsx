@@ -129,34 +129,52 @@ export function InboxOutputPanel({
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Fetch game code if viewing a historical game
-  const { data: historicalGameCode, isLoading: isLoadingHistorical } = useQuery({
-    queryKey: ["game-code", selectedGameFromHistory?.id],
-    queryFn: async () => {
-      if (!selectedGameFromHistory?.id) return null;
-      const result = await trpcClient.games.getCode.query({ gameId: selectedGameFromHistory.id });
-      return result.html;
-    },
-    enabled: !!selectedGameFromHistory?.id,
-  });
-
   // Use Zustand hooks directly for reactive updates
   const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
     generation?.status === "reasoning" || generation?.status === "generating";
+  const isComplete = generation?.status === "complete";
+  const hasCodeInMemory = !!generation?.code;
   const codeLength = generation?.code.length ?? 0;
   const reasoningLength = generation?.reasoning?.length ?? 0;
 
+  // Fetch game code if viewing a historical game (use raw code without SDK template)
+  const { data: historicalGameCode, isLoading: isLoadingHistorical } = useQuery({
+    queryKey: ["game-raw-code", selectedGameFromHistory?.id],
+    queryFn: async () => {
+      if (!selectedGameFromHistory?.id) return null;
+      const result = await trpcClient.games.getRawCode.query({ gameId: selectedGameFromHistory.id });
+      return result.html;
+    },
+    enabled: !!selectedGameFromHistory?.id,
+  });
+
+  // Fetch raw code for completed generations that don't have code in memory
+  // (e.g., after page reload or when navigating back to a completed generation)
+  const { data: completedGameCode, isLoading: isLoadingCompleted } = useQuery({
+    queryKey: ["game-raw-code", generation?.gameId],
+    queryFn: async () => {
+      if (!generation?.gameId) return null;
+      const result = await trpcClient.games.getRawCode.query({ gameId: generation.gameId });
+      return result.html;
+    },
+    enabled: !!generation?.gameId && isComplete && !hasCodeInMemory,
+  });
+
   // Determine what code to show
+  // Priority: history game > completed game from API > in-memory code
   const displayCode = selectedGameFromHistory
     ? (historicalGameCode ?? "")
-    : (generation?.code ?? "");
-  const displayReasoning = selectedGameFromHistory
+    : isComplete && !hasCodeInMemory
+      ? (completedGameCode ?? "")
+      : (generation?.code ?? "");
+  const displayReasoning = selectedGameFromHistory || (isComplete && !hasCodeInMemory)
     ? undefined
     : generation?.reasoning;
   const isViewingHistory = !!selectedGameFromHistory;
+  const isLoadingCode = isLoadingHistorical || (isComplete && !hasCodeInMemory && isLoadingCompleted);
 
   const getScrollElement = useCallback((): HTMLElement | null => {
     const root = panelRef.current;
@@ -238,6 +256,35 @@ export function InboxOutputPanel({
     setShowScrollButton(false);
   };
 
+  // If viewing a historical game (even without models selected), show the code
+  if (selectedGameFromHistory) {
+    return (
+      <div className="h-full min-h-0 overflow-hidden">
+        {isLoadingHistorical ? (
+          <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+          </div>
+        ) : historicalGameCode ? (
+          <div className="h-full min-h-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
+            <StreamingCodeViewerV2
+              key={selectedGameFromHistory.id}
+              code={historicalGameCode}
+              reasoning={undefined}
+              language="html"
+              isStreaming={false}
+              fileName="game.html"
+            />
+          </div>
+        ) : (
+          <OutputStatusCard
+            title="No code available"
+            description="This game's code could not be loaded."
+          />
+        )}
+      </div>
+    );
+  }
+
   if (selectedModels.length === 0) {
     return (
       <OutputStatusCard
@@ -266,33 +313,15 @@ export function InboxOutputPanel({
       ) : null}
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
-        {/* Historical game loading state */}
-        {isViewingHistory && isLoadingHistorical ? (
+        {/* Loading state for completed games being fetched */}
+        {isLoadingCode ? (
           <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
           </div>
         ) : null}
 
-        {/* Historical game view */}
-        {isViewingHistory && !isLoadingHistorical && displayCode ? (
-          <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
-            <div className="h-full min-h-0 flex flex-col gap-2">
-              <div className="flex-1 h-0 min-h-0">
-                <StreamingCodeViewerV2
-                  key={selectedGameFromHistory?.id ?? "historical-game"}
-                  code={displayCode}
-                  reasoning={undefined}
-                  language="html"
-                  isStreaming={false}
-                  fileName="game.html"
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Current generation view */}
-        {!isViewingHistory && (generation?.code || generation?.reasoning) ? (
+        {/* Current generation view - streaming or completed with code in memory */}
+        {!isLoadingCode && displayCode ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
             <div className="h-full min-h-0 flex flex-col gap-2">
               <div className="flex-1 h-0 min-h-0">
@@ -321,15 +350,15 @@ export function InboxOutputPanel({
           </div>
         ) : null}
 
-        {!isViewingHistory && generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
+        {!isLoadingCode && generation?.status === "reasoning" && !generation?.reasoning && !generation?.code ? (
           <WaitingState status="reasoning" />
         ) : null}
 
-        {!isViewingHistory && generation?.status === "generating" && !generation?.code ? (
+        {!isLoadingCode && generation?.status === "generating" && !generation?.code ? (
           <WaitingState status="generating" />
         ) : null}
 
-        {!isViewingHistory && generation?.status === "error" ? (
+        {!isLoadingCode && generation?.status === "error" ? (
           <OutputStatusCard
             tone="error"
             icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
@@ -338,12 +367,13 @@ export function InboxOutputPanel({
           />
         ) : null}
 
-        {!isViewingHistory &&
-        !generation?.code &&
+        {!isLoadingCode &&
+        !displayCode &&
         !generation?.reasoning &&
         generation?.status !== "error" &&
         generation?.status !== "reasoning" &&
-        generation?.status !== "generating" ? (
+        generation?.status !== "generating" &&
+        generation?.status !== "complete" ? (
           <OutputStatusCard
             title={
               currentModel
