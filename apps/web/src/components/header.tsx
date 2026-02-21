@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { ModeToggle } from "./mode-toggle";
+import { MusicPlayer } from "./music-player";
 import UserMenu from "./user-menu";
 
 // Navigation item types
@@ -132,6 +133,7 @@ export default function Header() {
           })}
           <div className="mx-1 h-6 w-px bg-[var(--border)]" />
           <ModeToggle />
+          <MusicPlayer />
           <UserMenu />
         </nav>
       </div>

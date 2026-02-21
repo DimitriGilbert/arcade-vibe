@@ -1,0 +1,9 @@
+{
+  "tracks": [
+    { "id": "synthwave", "name": "Neon Horizon", "file": "synthwave.js" },
+    { "id": "tron", "name": "Boss Run", "file": "tron.js" },
+    { "id": "pixel", "name": "Hyper Pixel Sprint", "file": "pixel.js" },
+    { "id": "cabinet", "name": "Pixel Bounce", "file": "cabinet.js" },
+    { "id": "vaporwave", "name": "Midnight Drift", "file": "vaporwave.js" }
+  ]
+}
