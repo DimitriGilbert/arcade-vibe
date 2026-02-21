@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Swords, BarChart3, BookOpen } from "lucide-react";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
+import { LeaderboardFeedback } from "@/components/feedback/LeaderboardFeedback";
 
 export const metadata: Metadata = {
   title: "Leaderboard - Arcade Vibe",
@@ -96,16 +97,7 @@ export default function LeaderboardLandingPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="mt-12 text-center">
-          <p className="text-sm text-[var(--muted-foreground)] mb-4">
-            Just want to play? Jump straight into the action.
-          </p>
-          <Link href="/login">
-            <ArcadeButton variant="primary">
-              Start Creating
-            </ArcadeButton>
-          </Link>
-        </div>
+        <LeaderboardFeedback />
       </div>
     </main>
   );

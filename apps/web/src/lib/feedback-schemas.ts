@@ -55,6 +55,61 @@ export const creatorPageFeedbackFields: FieldConfig[] = [
  * Schema for the individual editor feedback forms.
  * Collects rating, layout preference, missing features, and bug reports.
  */
+export const leaderboardPageFeedbackSchema = z.object({
+  preferredView: z.enum(["arena", "dashboard", "magazine"]).optional(),
+  rating: z.number().min(1).max(5),
+  whatYouLiked: z.string().optional(),
+  improvements: z.string().optional(),
+});
+
+export type LeaderboardPageFeedbackValues = z.infer<typeof leaderboardPageFeedbackSchema>;
+
+export const leaderboardPageFeedbackFields: FieldConfig[] = [
+  {
+    name: "preferredView",
+    type: "select",
+    label: "Which view style do you prefer?",
+    placeholder: "Select a view",
+    options: [
+      { value: "arena", label: "Arena (Competitive)" },
+      { value: "dashboard", label: "Dashboard (Analytics)" },
+      { value: "magazine", label: "Magazine (Curated)" },
+    ],
+  },
+  {
+    name: "rating",
+    type: "rating",
+    label: "How excited are you about this feature?",
+    ratingConfig: {
+      max: 5,
+      allowHalf: false,
+      showValue: true,
+    },
+  },
+  {
+    name: "whatYouLiked",
+    type: "textarea",
+    label: "What resonated with you?",
+    placeholder: "Tell us what caught your eye...",
+    textareaConfig: {
+      rows: 3,
+      showWordCount: true,
+      maxLength: 300,
+    },
+  },
+  {
+    name: "improvements",
+    type: "textarea",
+    label: "What would make this better?",
+    placeholder: "Ideas, features, or changes you'd love to see...",
+    textareaConfig: {
+      rows: 3,
+      showWordCount: true,
+      maxLength: 300,
+    },
+  },
+];
+
 export const editorFeedbackSchema = z.object({
   rating: z.number().min(1).max(5),
   layout: z.enum(["love_it", "its_ok", "needs_work"]).optional(),

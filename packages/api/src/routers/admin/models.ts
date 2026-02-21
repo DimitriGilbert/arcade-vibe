@@ -185,13 +185,15 @@ async function seedModelsFromOpenRouter() {
   const tierAssignments = calculateTierAssignments(recentModels, allTierCosts);
 
   const existingModels = await db.query.modelConfig.findMany();
-  if (existingModels.length > 0) {
-    await db.delete(modelConfig);
-  }
+  const existingModelNames = new Set(existingModels.map((m) => m.modelName));
 
   let insertedCount = 0;
 
   for (const model of recentModels) {
+    if (existingModelNames.has(model.id)) {
+      continue;
+    }
+
     const primaryProvider = getProviderFromId(model.id);
     const tierSlug = tierAssignments.get(model.id) ?? "normal";
     const tierCostId = tierCostMap.get(tierSlug);
@@ -221,6 +223,7 @@ async function seedModelsFromOpenRouter() {
         maxTokens: model.context_length,
         supportsImages: model.architecture.input_modalities.includes("image"),
         isActive: true,
+        modelCreatedAt: new Date(model.created * 1000),
       })
       .returning();
 
@@ -250,7 +253,7 @@ async function seedModelsFromOpenRouter() {
 export const modelConfigRouter = router({
   getModels: adminProcedure.query(async () => {
     const models = await db.query.modelConfig.findMany({
-      orderBy: [desc(modelConfig.createdAt)],
+      orderBy: [desc(modelConfig.modelCreatedAt)],
       with: {
         tierCost: true,
         providers: true,
@@ -370,6 +373,7 @@ export const modelConfigRouter = router({
         maxTokens: z.number().int().positive(),
         supportsImages: z.boolean().default(false),
         isActive: z.boolean().default(true),
+        modelCreatedAt: z.coerce.date().default(() => new Date()),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -404,6 +408,7 @@ export const modelConfigRouter = router({
           maxTokens: input.maxTokens,
           supportsImages: input.supportsImages,
           isActive: input.isActive,
+          modelCreatedAt: input.modelCreatedAt,
         })
         .returning();
 

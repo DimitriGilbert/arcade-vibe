@@ -382,6 +382,7 @@ async function seedDev(): Promise<void> {
           maxTokens: model.maxTokens,
           supportsImages: model.supportsImages,
           isActive: true,
+          modelCreatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: modelConfig.modelName,

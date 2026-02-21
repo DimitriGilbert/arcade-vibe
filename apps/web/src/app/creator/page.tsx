@@ -103,16 +103,16 @@ export default function CreatorPage() {
 
         {/* Footer note */}
         <div className="mt-8 flex flex-col items-center gap-4">
-          <p className="text-xs text-[var(--muted-foreground)]">
-            All editors connect to the same prompts and games. Switch anytime.
+          <p className="text-xs text-[var(--muted-foreground)] text-center max-w-md">
+            Can't pick a favorite? Neither can we! Your feedback shapes which editor gets the most love.
           </p>
           <FeedbackButton
             schema={creatorPageFeedbackSchema}
             fields={creatorPageFeedbackFields}
             subject="Creator Page Feedback"
-            label="Give Feedback"
+            label="Help Us Decide"
             variant="outline"
-            description="Help us improve the creator experience. Share your thoughts about the editors and what could be better."
+            description="Your input drives what gets built. Tell us which editor feels right and what would make it better."
           />
         </div>
       </div>

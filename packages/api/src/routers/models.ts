@@ -12,7 +12,7 @@ export const modelsRouter = router({
   listActive: publicProcedure.query(async () => {
     const activeModels = await db.query.modelConfig.findMany({
       where: eq(modelConfig.isActive, true),
-      orderBy: [desc(modelConfig.createdAt)],
+      orderBy: [desc(modelConfig.modelCreatedAt)],
       with: {
         tierCost: true,
         providers: true,
@@ -34,7 +34,7 @@ export const modelsRouter = router({
     const [activeModels, allTierCosts] = await Promise.all([
       db.query.modelConfig.findMany({
         where: eq(modelConfig.isActive, true),
-        orderBy: [desc(modelConfig.createdAt)],
+        orderBy: [desc(modelConfig.modelCreatedAt)],
         with: {
           tierCost: true,
           providers: true,
@@ -121,7 +121,7 @@ export const modelsRouter = router({
     const [activeModels, statsRows] = await Promise.all([
       db.query.modelConfig.findMany({
         where: eq(modelConfig.isActive, true),
-        orderBy: [asc(modelConfig.modelName)],
+        orderBy: [desc(modelConfig.modelCreatedAt)],
         with: {
           tierCost: true,
           providers: true,

@@ -47,11 +47,12 @@ type Model = {
   maxTokens: number;
   supportsImages: boolean;
   isActive: boolean;
+  modelCreatedAt: string;
   createdAt: string;
   updatedAt: string;
 };
 
-type SortField = "providers" | "modelName" | "tier" | "cost";
+type SortField = "providers" | "modelName" | "tier" | "cost" | "modelCreatedAt";
 type SortOrder = "asc" | "desc";
 
 const PROVIDER_OPTIONS = [
@@ -68,8 +69,8 @@ const PROVIDER_OPTIONS = [
 
 export default function AdminModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState<SortField>("modelName");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortField, setSortField] = useState<SortField>("modelCreatedAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [addingModel, setAddingModel] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -85,6 +86,21 @@ export default function AdminModelsPage() {
       return await trpcClient.admin.models.getModels.query();
     },
   });
+
+  const { data: tierCosts } = useQuery({
+    queryKey: ["admin-tier-costs"],
+    queryFn: async () => {
+      return await trpcClient.admin.tierCosts.list.query();
+    },
+  });
+
+  const tierCostOptions = useMemo(() => {
+    if (!tierCosts) return [];
+    return tierCosts.map((tc) => ({
+      value: tc.id,
+      label: `${tc.name} (${tc.slug}) - ${tc.creditCost} credits`,
+    }));
+  }, [tierCosts]);
 
   const toggleModelMutation = useMutation({
     mutationFn: async (input: { id: string; isActive: boolean }) => {
@@ -252,6 +268,12 @@ export default function AdminModelsPage() {
             parseFloat(a.costPer1kTokens) - parseFloat(b.costPer1kTokens);
           break;
         }
+        case "modelCreatedAt": {
+          comparison =
+            new Date(a.modelCreatedAt).getTime() -
+            new Date(b.modelCreatedAt).getTime();
+          break;
+        }
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
@@ -346,7 +368,13 @@ export default function AdminModelsPage() {
           options: PROVIDER_OPTIONS,
         },
         { name: "modelName", type: "text", label: "Model Name" },
-        { name: "tierCostId", type: "text", label: "Tier Cost ID (UUID)" },
+        {
+          name: "tierCostId",
+          type: "select",
+          label: "Tier",
+          options: tierCostOptions,
+          placeholder: tierCostOptions.length === 0 ? "Loading tiers..." : "Select a tier",
+        },
         { name: "costPer1kTokens", type: "text", label: "Cost per 1k Tokens" },
         { name: "maxTokens", type: "number", label: "Max Tokens", min: 1 },
         { name: "supportsImages", type: "switch", label: "Supports Images" },
@@ -552,6 +580,7 @@ export default function AdminModelsPage() {
                     />
                   </th>
                   {[
+                    { field: "modelCreatedAt" as SortField, label: "Created" },
                     { field: "providers" as SortField, label: "Providers" },
                     { field: "modelName" as SortField, label: "Model Name" },
                     { field: "tier" as SortField, label: "Tier" },
@@ -586,7 +615,7 @@ export default function AdminModelsPage() {
                 {filteredModels.length === 0 ? (
                   <EmptyState
                     variant="table"
-                    colSpan={9}
+                    colSpan={10}
                     message="No models found"
                   />
                 ) : (
@@ -595,14 +624,17 @@ export default function AdminModelsPage() {
                       key={model.id}
                       className={`border-b border-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors ${selectedIds.has(model.id) ? "bg-[var(--accent)]/5" : ""}`}
                     >
-                      <td className="px-4 py-3">
-                        <Checkbox
-                          checked={selectedIds.has(model.id)}
-                          onCheckedChange={() => toggleSelect(model.id)}
-                          aria-label={`Select ${model.modelName}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
+                       <td className="px-4 py-3">
+                         <Checkbox
+                           checked={selectedIds.has(model.id)}
+                           onCheckedChange={() => toggleSelect(model.id)}
+                           aria-label={`Select ${model.modelName}`}
+                         />
+                       </td>
+                       <td className="px-4 py-3 text-sm text-[var(--muted-foreground)]">
+                         {new Date(model.modelCreatedAt).toLocaleDateString()}
+                       </td>
+                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {model.providers.map((provider) => (
                             <ArcadeBadge
