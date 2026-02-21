@@ -142,6 +142,15 @@
   }
 }
 
+@keyframes pixel-cloud-drift-4 {
+  0% {
+    transform: translateX(calc(-100% - 600px));
+  }
+  100% {
+    transform: translateX(calc(100vw + 100% + 600px));
+  }
+}
+
 /* Utility classes for Pixel theme */
 :is(.pixel, .theme-pixel) .pixel-bg {
   background-color: var(--pixel-blue);
@@ -356,9 +365,8 @@
   box-shadow: var(--hard-shadow);
 }
 
-/* Additional cloud for parallax effect */
-:is(.pixel, .theme-pixel) .home-scanlines::before,
-:is(.pixel, .theme-pixel) .home-sun::before {
+/* Additional clouds for parallax effect */
+:is(.pixel, .theme-pixel) .home-scanlines::before {
   content: "";
   position: absolute;
   width: 100px;
@@ -371,6 +379,21 @@
   animation: pixel-cloud-drift-3 55s linear infinite;
   animation-delay: -30s;
   opacity: 0.9;
+}
+
+:is(.pixel, .theme-pixel) .home-sun::before {
+  content: "";
+  position: absolute;
+  width: 120px;
+  height: 42px;
+  top: 22%;
+  left: 0;
+  background: var(--pixel-white);
+  border: 3px solid var(--pixel-black);
+  border-radius: 999px;
+  animation: pixel-cloud-drift-4 70s linear infinite;
+  animation-delay: -45s;
+  opacity: 0.85;
 }
 
 /* Button styles */

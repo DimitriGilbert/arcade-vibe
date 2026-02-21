@@ -1,9 +1,9 @@
 /**
  * Synthwave Sunset Theme
- * 
+ *
  * 80s retro sunset aesthetic with perspective grid, chrome gradients, and palm silhouettes.
  * Inspired by the neo-retro wave aesthetic of the 2010s.
- * 
+ *
  * Key characteristics:
  * - Deep purple to orange sunset gradient background
  * - Neon pink/magenta accent colors
@@ -71,6 +71,46 @@
     oklch(0.8 0.22 60) 40%,
     oklch(0.7 0.26 42) 70%,
     oklch(0.65 0.28 345) 100%
+  );
+
+  --sun-stripes-mask: linear-gradient(
+    180deg,
+    black 0%,
+    black 12%,
+    transparent 12%,
+    transparent 13%,
+    black 13%,
+    black 24%,
+    transparent 24%,
+    transparent 26%,
+    black 26%,
+    black 35%,
+    transparent 35%,
+    transparent 38%,
+    black 38%,
+    black 46%,
+    transparent 46%,
+    transparent 49%,
+    black 49%,
+    black 56%,
+    transparent 56%,
+    transparent 59%,
+    black 59%,
+    black 65%,
+    transparent 65%,
+    transparent 70%,
+    black 70%,
+    black 74%,
+    transparent 75%,
+    transparent 79%,
+    black 80%,
+    black 83%,
+    transparent 85%,
+    transparent 89%,
+    black 91%,
+    black 92%,
+    transparent 94%,
+    transparent 100%
   );
 
   --gradient-chrome: linear-gradient(
@@ -164,13 +204,7 @@
 
 :is(.synthwave, .theme-synthwave) .synthwave-sun {
   background: var(--bg-gradient-sun);
-  mask-image: repeating-linear-gradient(
-    180deg,
-    black 0px,
-    black 6px,
-    transparent 6px,
-    transparent 12px
-  );
+  mask-image: var(--sun-stripes-mask);
 }
 
 :is(.synthwave, .theme-synthwave) .synthwave-grid-floor {
@@ -273,13 +307,7 @@
   transform: translateX(-50%);
   background: var(--bg-gradient-sun);
   z-index: 2;
-  mask-image: repeating-linear-gradient(
-    180deg,
-    black 0px,
-    black 6px,
-    transparent 6px,
-    transparent 12px
-  );
+  mask-image: var(--sun-stripes-mask);
   box-shadow: 0 0 80px oklch(0.8 0.22 60 / 0.35);
 }
 
