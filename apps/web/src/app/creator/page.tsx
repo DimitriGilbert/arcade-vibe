@@ -19,7 +19,9 @@ interface EditorInfo {
   icon: LucideIcon;
   href: Route;
   badge: string;
-  badgeVariant: "neon" | "default" | "pixel";
+  color: string;
+  bgColor: string;
+  borderColor: string;
 }
 
 const EDITORS: EditorInfo[] = [
@@ -31,7 +33,9 @@ const EDITORS: EditorInfo[] = [
     icon: Layers,
     href: "/creator/workbench" as Route,
     badge: "Full Featured",
-    badgeVariant: "neon",
+    color: "text-cyan-400",
+    bgColor: "bg-cyan-400/10",
+    borderColor: "hover:border-cyan-400/50",
   },
   {
     id: "inbox",
@@ -41,7 +45,9 @@ const EDITORS: EditorInfo[] = [
     icon: Inbox,
     href: "/creator/inbox" as Route,
     badge: "Fast & Clean",
-    badgeVariant: "default",
+    color: "text-lime-400",
+    bgColor: "bg-lime-400/10",
+    borderColor: "hover:border-lime-400/50",
   },
   {
     id: "filebrowser",
@@ -51,59 +57,69 @@ const EDITORS: EditorInfo[] = [
     icon: FolderTree,
     href: "/creator/filebrowser" as Route,
     badge: "Power User",
-    badgeVariant: "pixel",
+    color: "text-orange-400",
+    bgColor: "bg-orange-400/10",
+    borderColor: "hover:border-orange-400/50",
   },
 ];
 
 export default function CreatorPage() {
   return (
-    <div className="min-h-screen bg-background px-4 py-8">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">
-            Choose Your Editor
+    <main className="min-h-screen bg-background py-16 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--muted)] text-xs font-medium text-[var(--muted-foreground)] mb-6">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+            </span>
+            CHOOSE YOUR EDITOR
+          </div>
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-5 bg-gradient-to-r from-cyan-400 via-lime-400 to-orange-400 bg-clip-text text-transparent">
+            CREATOR
           </h1>
-          <p className="text-[var(--muted-foreground)] max-w-md mx-auto">
-            Three ways to create games. Pick the one that matches your workflow.
+          <p className="text-lg text-[var(--muted-foreground)] max-w-xl mx-auto leading-relaxed">
+            Three ways to create games. Pick the one that matches your workflow—we're curious which wins your heart.
           </p>
         </div>
 
-        {/* Editor Grid */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {EDITORS.map((editor) => {
             const Icon = editor.icon;
             return (
-              <ArcadeCard
-                key={editor.id}
-                variant="default"
-                className="flex flex-col h-full hover:border-[var(--primary)] transition-colors"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">
-                    <Icon className="h-5 w-5" />
+              <Link key={editor.id} href={editor.href}>
+                <ArcadeCard
+                  variant="default"
+                  className={`group h-full cursor-pointer ${editor.borderColor} transition-all duration-300 hover:scale-[1.02] hover:shadow-lg`}
+                >
+                  <div className="p-6 flex flex-col h-full">
+                    <div className="flex items-center justify-between mb-5">
+                      <div className={`p-3 rounded-xl ${editor.bgColor} transition-transform duration-300 group-hover:scale-110`}>
+                        <Icon className={`h-6 w-6 ${editor.color}`} />
+                      </div>
+                      <ArcadeBadge text={editor.badge} variant="default" />
+                    </div>
+
+                    <h2 className="text-xl font-bold mb-2 group-hover:text-[var(--primary)] transition-colors">
+                      {editor.name}
+                    </h2>
+
+                    <p className="text-sm text-[var(--muted-foreground)] flex-1 mb-5 leading-relaxed">
+                      {editor.description}
+                    </p>
+
+                    <ArcadeButton variant="outline" className="w-full group-hover:bg-[var(--primary)] group-hover:text-[var(--primary-foreground)] group-hover:border-[var(--primary)] transition-all">
+                      Try {editor.name}
+                    </ArcadeButton>
                   </div>
-                  <ArcadeBadge text={editor.badge} variant={editor.badgeVariant} />
-                </div>
-                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-                  {editor.name}
-                </h3>
-                <p className="text-sm text-[var(--muted-foreground)] flex-1 mb-4">
-                  {editor.description}
-                </p>
-                <Link href={editor.href}>
-                  <ArcadeButton variant="primary" size="sm" className="w-full">
-                    Try {editor.name}
-                  </ArcadeButton>
-                </Link>
-              </ArcadeCard>
+                </ArcadeCard>
+              </Link>
             );
           })}
         </div>
 
-        {/* Footer note */}
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <p className="text-xs text-[var(--muted-foreground)] text-center max-w-md">
+        <div className="mt-12 flex flex-col items-center gap-6">
+          <p className="text-sm text-[var(--muted-foreground)] text-center max-w-md">
             Can't pick a favorite? Neither can we! Your feedback shapes which editor gets the most love.
           </p>
           <FeedbackButton
@@ -116,6 +132,6 @@ export default function CreatorPage() {
           />
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -253,6 +253,15 @@ export type FeedbackListOutput = FeedbackOutput["list"];
 export type FeedbackGetByIdOutput = FeedbackOutput["getById"];
 export type FeedbackDeleteOutput = FeedbackOutput["delete"];
 
+// --- Models Router ---
+
+export type ModelsOutput = RouterOutput["models"];
+export type ModelsInput = RouterInput["models"];
+
+export type ModelsListWithStatsOutput = ModelsOutput["listWithStats"];
+export type ModelsGetByIdWithStatsOutput = ModelsOutput["getByIdWithStats"];
+export type ModelsListGamesByModelOutput = ModelsOutput["listGamesByModel"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -532,3 +541,9 @@ export type SortField = SortConfigInput["field"];
  * Sort order options
  */
 export type SortOrder = SortConfigInput["order"];
+
+// --- Models Entity Types ---
+
+export type ModelWithStats = ModelsListWithStatsOutput[number];
+export type ModelDetail = ModelsGetByIdWithStatsOutput;
+export type ModelGame = ModelsListGamesByModelOutput[number];

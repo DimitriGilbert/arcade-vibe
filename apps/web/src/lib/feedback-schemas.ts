@@ -110,6 +110,61 @@ export const leaderboardPageFeedbackFields: FieldConfig[] = [
   },
 ];
 
+export const promptsPageFeedbackSchema = z.object({
+  preferredView: z.enum(["document", "gallery", "dashboard"]).optional(),
+  rating: z.number().min(1).max(5),
+  whatYouLiked: z.string().optional(),
+  improvements: z.string().optional(),
+});
+
+export type PromptsPageFeedbackValues = z.infer<typeof promptsPageFeedbackSchema>;
+
+export const promptsPageFeedbackFields: FieldConfig[] = [
+  {
+    name: "preferredView",
+    type: "select",
+    label: "Which view style do you prefer?",
+    placeholder: "Select a view",
+    options: [
+      { value: "document", label: "Document Editor" },
+      { value: "gallery", label: "Gallery Showcase" },
+      { value: "dashboard", label: "Split Panel" },
+    ],
+  },
+  {
+    name: "rating",
+    type: "rating",
+    label: "How useful are these views?",
+    ratingConfig: {
+      max: 5,
+      allowHalf: false,
+      showValue: true,
+    },
+  },
+  {
+    name: "whatYouLiked",
+    type: "textarea",
+    label: "What resonated with you?",
+    placeholder: "Tell us what caught your eye...",
+    textareaConfig: {
+      rows: 3,
+      showWordCount: true,
+      maxLength: 300,
+    },
+  },
+  {
+    name: "improvements",
+    type: "textarea",
+    label: "What would make this better?",
+    placeholder: "Ideas, features, or changes you'd love to see...",
+    textareaConfig: {
+      rows: 3,
+      showWordCount: true,
+      maxLength: 300,
+    },
+  },
+];
+
 export const editorFeedbackSchema = z.object({
   rating: z.number().min(1).max(5),
   layout: z.enum(["love_it", "its_ok", "needs_work"]).optional(),
