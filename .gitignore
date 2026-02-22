@@ -49,3 +49,14 @@ coverage
 tmp
 temp
 apps/web/public/games
+telemetry-id
+music/
+models.json
+bak/
+.task-o-matic/bak/
+.task-o-matic/plans/frontend-review-implementation-plan.md
+.task-o-matic/review/
+apps/web/src/app/home/
+apps/web/src/app/page.backup.tsx
+plans/
+review/

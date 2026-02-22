@@ -257,6 +257,7 @@ export const modelsRouter = router({
           eq(games.status, "completed"),
           eq(games.isHidden, false),
           isNull(games.deletedAt),
+          eq(games.isSubmitted, true),
         ),
         orderBy: [desc(games.createdAt)],
         limit: input.limit,
@@ -264,6 +265,7 @@ export const modelsRouter = router({
         with: {
           prompt: {
             columns: {
+              id: true,
               content: true,
               visibility: true,
             },
@@ -308,6 +310,7 @@ export const modelsRouter = router({
           author: game.prompt?.user ?? null,
           ratingCount,
           avgRating,
+          promptId: game.prompt?.id ?? null,
           promptContent: isPromptPublic ? game.prompt?.content ?? null : null,
           promptVisibility: game.prompt?.visibility ?? null,
         };

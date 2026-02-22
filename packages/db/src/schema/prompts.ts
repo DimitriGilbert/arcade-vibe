@@ -10,8 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { themes } from "./themes";
-import { visibilityEnum } from "./enums";
-import { promptStatusEnum } from "./enums";
+import { visibilityEnum, promptStatusEnum, promptRelationEnum } from "./enums";
 
 export const prompts = pgTable(
   "prompts",
@@ -31,6 +30,7 @@ export const prompts = pgTable(
     version: integer("version").notNull().default(1),
     visibility: visibilityEnum("visibility").default("private").notNull(),
     status: promptStatusEnum("status").default("draft").notNull(),
+    relationType: promptRelationEnum("relation_type").default("version").notNull(),
     hiddenAt: timestamp("hidden_at"),
     hiddenBy: text("hidden_by").references(() => user.id),
     hiddenReason: text("hidden_reason"),

@@ -1,9 +1,11 @@
 "use client";
 
+import { useCallback } from "react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
+import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import {
   ArcadeCard,
@@ -20,7 +22,13 @@ import {
   Gamepad2,
   Calendar,
   ArrowRight,
+  GitFork,
+  Code,
+  FileText,
+  User,
+  Play,
 } from "lucide-react";
+import { generateEmbedCode } from "@/lib/embed-utils";
 
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
@@ -32,10 +40,44 @@ function formatTimeRemaining(endDate: Date): string {
   return `${hours}h`;
 }
 
+function formatPlayTime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${mins}m`;
+}
+
 function CoverStoryCard({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   const gameName = entry.gameName ?? "Untitled Game";
   const creator = entry.creator;
   const score = parseFloat(entry.finalScore) || 0;
+
+  const forkMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.prompts.fork.mutate({ promptId: entry.promptId });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked successfully");
+      window.location.href = `/editor?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  const handleCopyEmbed = useCallback(async () => {
+    const embedCode = generateEmbedCode({
+      gameId: entry.gameId,
+      gameName: entry.gameName ?? undefined,
+    });
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      toast.success("Embed code copied to clipboard");
+    } catch {
+      toast.error("Failed to copy embed code");
+    }
+  }, [entry]);
 
   const rankStyles = {
     1: {
@@ -74,7 +116,15 @@ function CoverStoryCard({ entry, rank }: { entry: LeaderboardEntry; rank: number
 
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-bold mb-1 line-clamp-1">{gameName}</h3>
-              <p className="text-sm text-[var(--muted-foreground)]">by {creator.name ?? "Anonymous"}</p>
+              <div className="flex items-center gap-1 text-sm text-[var(--muted-foreground)]">
+                <User className="h-3 w-3" />
+                <Link
+                  href={`/profile/${creator.name}`}
+                  className="hover:text-[var(--primary)] transition-colors"
+                >
+                  {creator.name ?? "Anonymous"}
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -87,23 +137,63 @@ function CoverStoryCard({ entry, rank }: { entry: LeaderboardEntry; rank: number
             )}
           </div>
 
-          <div className="flex items-center gap-6 mt-6">
+          <div className="flex items-center gap-6 mt-4">
             <div>
               <p className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Score</p>
               <p className="text-2xl font-black text-[var(--primary)]">{score.toLocaleString()}</p>
             </div>
             <div>
               <p className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Model</p>
-              <p className="text-sm font-medium">{entry.modelName}</p>
+              <Link
+                href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+                className="text-sm font-medium hover:text-[var(--primary)] transition-colors"
+              >
+                {entry.modelName}
+              </Link>
             </div>
           </div>
 
-          <Link href={`/game/${entry.gameId}`} className="block mt-6">
-            <ArcadeButton variant="primary" className="w-full">
-              <Gamepad2 className="h-4 w-4" />
-              Play This Game
+          <div className="flex items-center gap-4 mt-4 text-xs text-[var(--muted-foreground)]">
+            <div className="flex items-center gap-1">
+              <Gamepad2 className="h-3 w-3" />
+              <span>{entry.playCount} plays</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{formatPlayTime(entry.totalPlayTimeSeconds)}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-6">
+            <Link href={`/game/${entry.gameId}`} className="flex-1">
+              <ArcadeButton variant="primary" className="w-full">
+                <Play className="h-4 w-4" />
+                Play This Game
+              </ArcadeButton>
+            </Link>
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={() => forkMutation.mutate()}
+              disabled={forkMutation.isPending}
+            >
+              <GitFork className="h-4 w-4" />
             </ArcadeButton>
-          </Link>
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={handleCopyEmbed}
+            >
+              <Code className="h-4 w-4" />
+            </ArcadeButton>
+            {entry.promptVisibility === "public" && (
+              <Link href={`/prompts/document/${entry.promptId}`}>
+                <ArcadeButton variant="outline" size="sm">
+                  <FileText className="h-4 w-4" />
+                </ArcadeButton>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </ArcadeCard>
@@ -116,7 +206,7 @@ function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank:
   const score = parseFloat(entry.finalScore) || 0;
 
   return (
-    <Link href={`/game/${entry.gameId}`} className="flex items-center gap-4 p-4 hover:bg-[var(--muted)]/20 transition-colors group">
+    <div className="flex items-center gap-4 p-4 hover:bg-[var(--muted)]/20 transition-colors group">
       <div
         className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
           rank === 1
@@ -132,8 +222,29 @@ function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank:
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate group-hover:text-[var(--primary)] transition-colors">{gameName}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{creator.name ?? "Anonymous"}</p>
+        <Link
+          href={`/game/${entry.gameId}`}
+          className="font-medium truncate group-hover:text-[var(--primary)] transition-colors block"
+        >
+          {gameName}
+        </Link>
+        <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+          <Link
+            href={`/profile/${creator.name}`}
+            className="hover:text-[var(--primary)] transition-colors"
+          >
+            {creator.name ?? "Anonymous"}
+          </Link>
+          <span className="text-[var(--muted)]">|</span>
+          <Link
+            href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+            className="hover:text-[var(--primary)] transition-colors"
+          >
+            {entry.modelName}
+          </Link>
+          <span className="text-[var(--muted)]">|</span>
+          <span>{entry.playCount} plays</span>
+        </div>
       </div>
 
       {entry.tier && (
@@ -142,11 +253,15 @@ function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank:
 
       <div className="text-right shrink-0">
         <p className="font-bold">{score.toLocaleString()}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{entry.modelName}</p>
+        <p className="text-xs text-[var(--muted-foreground)]">pts</p>
       </div>
 
-      <ArrowRight className="h-4 w-4 text-[var(--muted-foreground)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-    </Link>
+      <Link href={`/game/${entry.gameId}`}>
+        <ArcadeButton variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <Play className="h-4 w-4" />
+        </ArcadeButton>
+      </Link>
+    </div>
   );
 }
 
@@ -197,6 +312,13 @@ function ThemeHero({
               <p className="text-xl font-bold">{entryCount}</p>
             </div>
           </div>
+
+          <Link href="/creator">
+            <ArcadeButton variant="primary">
+              <Gamepad2 className="h-4 w-4" />
+              Create Game
+            </ArcadeButton>
+          </Link>
         </div>
       </div>
     </div>
@@ -250,10 +372,10 @@ export default function LeaderboardMagazineClient() {
             <Calendar className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-6 opacity-50" />
             <h1 className="text-2xl font-bold mb-4">No Active Theme</h1>
             <p className="text-[var(--muted-foreground)] mb-8">Check back soon for the next exciting theme!</p>
-            <Link href="/leaderboard">
+            <Link href="/creator">
               <ArcadeButton variant="primary">
                 <Gamepad2 className="h-4 w-4" />
-                Browse Past Games
+                Browse Games
               </ArcadeButton>
             </Link>
           </ArcadeCard>
@@ -279,7 +401,7 @@ export default function LeaderboardMagazineClient() {
             <p className="text-[var(--muted-foreground)] mb-8">
               No games submitted yet. Why not create one and take the top spot?
             </p>
-            <Link href="/leaderboard">
+            <Link href="/creator">
               <ArcadeButton variant="glow">
                 <Gamepad2 className="h-4 w-4" />
                 Create a Game
@@ -331,9 +453,9 @@ export default function LeaderboardMagazineClient() {
           <ArcadeCard className="p-8 text-center bg-gradient-to-br from-[var(--primary)]/5 to-transparent">
             <h3 className="text-xl font-bold mb-3">Want to join the fun?</h3>
             <p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
-              Write a prompt, pick your AI model, and see what you can create. It's that simple.
+              Write a prompt, pick your AI model, and see what you can create. It&apos;s that simple.
             </p>
-            <Link href="/leaderboard">
+            <Link href="/creator">
               <ArcadeButton variant="glow" size="lg">
                 <Gamepad2 className="h-5 w-5" />
                 Start Creating

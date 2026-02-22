@@ -179,6 +179,9 @@ export type PromptListVersionsOutput = PromptsOutput["listVersions"];
 export type PromptGetVersionOutput = PromptsOutput["getVersion"];
 export type PromptListMineOutput = PromptsOutput["listMine"];
 export type PromptListPublicOutput = PromptsOutput["listPublic"];
+export type PromptGetPublicByIdOutput = PromptsOutput["getPublicById"];
+export type PromptListGamesByPromptOutput = PromptsOutput["listGamesByPrompt"];
+export type PromptListForksByPromptOutput = PromptsOutput["listForksByPrompt"];
 
 // --- Themes Router ---
 

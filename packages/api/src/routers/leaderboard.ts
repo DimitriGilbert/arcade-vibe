@@ -1,12 +1,13 @@
 import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
-import { games } from "@arcade-vibe/db/schema/games";
+import { games, gameScores } from "@arcade-vibe/db/schema/games";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { themes } from "@arcade-vibe/db/schema/themes";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
+import { modelConfig } from "@arcade-vibe/db/schema/models";
 import { scores, scoreHistory } from "@arcade-vibe/db/schema/scores";
-import { eq, desc, lt, and, isNull, sql } from "drizzle-orm";
+import { eq, desc, lt, and, isNull, sql, count, sum } from "drizzle-orm";
 import z from "zod";
 
 type LeaderboardEntry = {
@@ -19,6 +20,7 @@ type LeaderboardEntry = {
   calculatedAt: Date | null;
   modelProvider: string;
   modelName: string;
+  modelId: string | null;
   tier: {
     slug: string;
     name: string;
@@ -31,6 +33,10 @@ type LeaderboardEntry = {
     id: string;
     title: string | null;
   } | null;
+  promptId: string;
+  promptVisibility: string;
+  playCount: number;
+  totalPlayTimeSeconds: number;
 };
 
 type PaginatedLeaderboardResult = {
@@ -77,12 +83,15 @@ export const leaderboardRouter = router({
           calculatedAt: scores.calculatedAt,
           modelProvider: games.modelProvider,
           modelName: games.modelName,
+          modelId: modelConfig.id,
           tierSlug: tierCosts.slug,
           tierName: tierCosts.name,
           creatorId: user.id,
           creatorName: user.name,
           themeId: themes.id,
           themeTitle: themes.title,
+          promptId: prompts.id,
+          promptVisibility: prompts.visibility,
         })
         .from(games)
         .innerJoin(prompts, eq(games.promptId, prompts.id))
@@ -90,9 +99,34 @@ export const leaderboardRouter = router({
         .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
         .leftJoin(themes, eq(games.themeId, themes.id))
         .leftJoin(scores, eq(games.id, scores.gameId))
+        .leftJoin(modelConfig, eq(games.modelName, modelConfig.modelName))
         .where(and(...conditions))
         .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`), desc(games.createdAt))
         .limit(fetchLimit);
+
+      const gameIds = result.map((r) => r.gameId);
+
+      const playStats = gameIds.length > 0
+        ? await db
+            .select({
+              gameId: gameScores.gameId,
+              playCount: count(),
+              totalPlayTime: sum(gameScores.completionTime),
+            })
+            .from(gameScores)
+            .where(sql`${gameScores.gameId} IN ${gameIds}`)
+            .groupBy(gameScores.gameId)
+        : [];
+
+      const playStatsMap = new Map(
+        playStats.map((s) => [
+          s.gameId,
+          {
+            playCount: Number(s.playCount ?? 0),
+            totalPlayTimeSeconds: Number(s.totalPlayTime ?? 0),
+          },
+        ])
+      );
 
       const hasMore = result.length > input.limit;
       const rows = hasMore ? result.slice(0, input.limit) : result;
@@ -100,29 +134,45 @@ export const leaderboardRouter = router({
         ? rows[rows.length - 1]?.gameId ?? null 
         : null;
 
-      const entries: LeaderboardEntry[] = rows.map((row) => ({
-        gameId: row.gameId,
-        gameName: row.gameName,
-        createdAt: row.createdAt,
-        submittedAt: row.submittedAt,
-        isSubmitted: row.isSubmitted,
-        finalScore: row.finalScore ?? "0",
-        calculatedAt: row.calculatedAt,
-        modelProvider: row.modelProvider,
-        modelName: row.modelName,
-        tier: row.tierSlug ? {
-          slug: row.tierSlug,
-          name: row.tierName,
-        } : null,
-        creator: {
-          id: row.creatorId,
-          name: row.creatorName,
-        },
-        theme: row.themeId ? {
-          id: row.themeId,
-          title: row.themeTitle,
-        } : null,
-      }));
+      const entries: LeaderboardEntry[] = rows.map((row) => {
+        const stats = playStatsMap.get(row.gameId) ?? {
+          playCount: 0,
+          totalPlayTimeSeconds: 0,
+        };
+
+        return {
+          gameId: row.gameId,
+          gameName: row.gameName,
+          createdAt: row.createdAt,
+          submittedAt: row.submittedAt,
+          isSubmitted: row.isSubmitted,
+          finalScore: row.finalScore ?? "0",
+          calculatedAt: row.calculatedAt,
+          modelProvider: row.modelProvider,
+          modelName: row.modelName,
+          modelId: row.modelId,
+          tier: row.tierSlug
+            ? {
+                slug: row.tierSlug,
+                name: row.tierName,
+              }
+            : null,
+          creator: {
+            id: row.creatorId,
+            name: row.creatorName,
+          },
+          theme: row.themeId
+            ? {
+                id: row.themeId,
+                title: row.themeTitle,
+              }
+            : null,
+          promptId: row.promptId,
+          promptVisibility: row.promptVisibility,
+          playCount: stats.playCount,
+          totalPlayTimeSeconds: stats.totalPlayTimeSeconds,
+        };
+      });
 
       return {
         entries,

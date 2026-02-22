@@ -82,3 +82,8 @@ export const libraryStatusEnum = pgEnum("library_status", [
   "active",
   "disabled",
 ]);
+
+export const promptRelationEnum = pgEnum("prompt_relation", [
+  "version",
+  "fork",
+]);

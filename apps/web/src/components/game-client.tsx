@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GamePlayer } from "@/components/game-player";
 import {
   ArcadeDialog,
@@ -32,6 +33,8 @@ import {
   Zap,
   Download,
   XCircle,
+  GitFork,
+  Code,
 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { RatingForm } from "@/components/game/rating-form";
@@ -42,6 +45,8 @@ import { EmptyState } from "@/components/reusable";
 import StarRatingDisplay from "@/components/reusable/star-rating-display";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { generateEmbedCode } from "@/lib/embed-utils";
 
 interface GamePlayPageProps {
   gameId: string;
@@ -53,10 +58,16 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showPromptDialog, setShowPromptDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  const router = useRouter();
   const { data: session } = authClient.useSession();
+  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(isLargeScreen);
+  }, [isLargeScreen]);
 
   const {
     data: game,
@@ -183,9 +194,43 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     },
   });
 
+  const forkMutation = useMutation({
+    mutationFn: async () => {
+      if (!game?.promptId) {
+        throw new Error("No prompt available to fork");
+      }
+      return await trpcClient.prompts.fork.mutate({ promptId: game.promptId });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked successfully");
+      window.location.href = `/editor?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
   const handleDownload = useCallback(() => {
     downloadMutation.mutate();
   }, [downloadMutation]);
+
+  const handleFork = useCallback(() => {
+    forkMutation.mutate();
+  }, [forkMutation]);
+
+  const handleCopyEmbed = useCallback(async () => {
+    if (!game) return;
+    const embedCode = generateEmbedCode({
+      gameId,
+      gameName: game.name || undefined,
+    });
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      toast.success("Embed code copied to clipboard");
+    } catch {
+      toast.error("Failed to copy embed code");
+    }
+  }, [game, gameId]);
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
@@ -328,6 +373,25 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
           >
             <Share2 className="size-4" />
           </button>
+          <button
+            type="button"
+            onClick={handleCopyEmbed}
+            className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
+            title="Copy embed code"
+          >
+            <Code className="size-4" />
+          </button>
+          {session?.user && game?.promptId && (
+            <button
+              type="button"
+              onClick={handleFork}
+              disabled={forkMutation.isPending}
+              className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors disabled:opacity-50"
+              title="Fork prompt"
+            >
+              <GitFork className={`size-4 ${forkMutation.isPending ? "animate-pulse" : ""}`} />
+            </button>
+          )}
           {session?.user && (
             <button
               type="button"

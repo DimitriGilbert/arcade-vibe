@@ -3,26 +3,36 @@
 import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowUpRight,
   Calendar,
+  Copy,
   Cpu,
+  Download,
   Gamepad2,
+  GitFork,
+  Play,
   Star,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
 
-import { ArcadeBadge, ArcadeCard } from "@/components/arcade";
+import { ArcadeBadge, ArcadeCard, ArcadeButton } from "@/components/arcade";
 import { EmptyState, LoadingState } from "@/components/reusable";
 import { trpcClient } from "@/utils/trpc";
+import { authClient } from "@/lib/auth-client";
+import { generateEmbedCode } from "@/lib/embed-utils";
 
 interface ModelPageClientProps {
   modelId: string;
 }
 
 export default function ModelPageClient({ modelId }: ModelPageClientProps) {
+  const { data: session } = authClient.useSession();
+
   const { data: model, isLoading: isModelLoading } = useQuery({
     queryKey: ["models", "detail", modelId],
     queryFn: async () => {
@@ -42,6 +52,48 @@ export default function ModelPageClient({ modelId }: ModelPageClientProps) {
 
     return [...games].sort((a, b) => b.avgRating - a.avgRating)[0] ?? null;
   }, [games]);
+
+  const downloadMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      return await trpcClient.games.exportPortable.query({ gameId });
+    },
+    onSuccess: (data) => {
+      const blob = new Blob([data.html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Game downloaded successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to download game");
+    },
+  });
+
+  const forkMutation = useMutation({
+    mutationFn: async (promptId: string) => {
+      return await trpcClient.prompts.fork.mutate({ promptId });
+    },
+    onSuccess: () => {
+      toast.success("Prompt forked successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  const handleCopyEmbed = useCallback((gameId: string, gameName: string | null) => {
+    const embedCode = generateEmbedCode({
+      gameId,
+      gameName: gameName ?? undefined,
+    });
+    navigator.clipboard.writeText(embedCode);
+    toast.success("Embed code copied to clipboard");
+  }, []);
 
   if (isModelLoading) {
     return <LoadingState centered message="Loading model profile..." />;
@@ -168,7 +220,14 @@ export default function ModelPageClient({ modelId }: ModelPageClientProps) {
                         )}
 
                         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                          <span>by {game.author?.name || "Anonymous"}</span>
+                          <span>by {game.author ? (
+                            <Link
+                              href={`/profile/${game.author.id}` as Route}
+                              className="hover:text-[var(--primary)]"
+                            >
+                              {game.author.name || "Anonymous"}
+                            </Link>
+                          ) : "Anonymous"}</span>
                           {game.theme?.title && <span>Theme: {game.theme.title}</span>}
                           <span className="inline-flex items-center gap-1">
                             <Calendar className="h-3.5 w-3.5" />
@@ -178,6 +237,45 @@ export default function ModelPageClient({ modelId }: ModelPageClientProps) {
                               year: "numeric",
                             })}
                           </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          <Link href={`/game/${game.id}` as Route}>
+                            <ArcadeButton variant="primary" size="sm">
+                              <Play className="h-3.5 w-3.5" />
+                              Play
+                            </ArcadeButton>
+                          </Link>
+                          {session?.user && game.promptId && (
+                            <ArcadeButton
+                              variant="outline"
+                              size="sm"
+                              onClick={() => forkMutation.mutate(game.promptId)}
+                              disabled={forkMutation.isPending}
+                            >
+                              <GitFork className="h-3.5 w-3.5" />
+                              Fork
+                            </ArcadeButton>
+                          )}
+                          {session?.user && (
+                            <ArcadeButton
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadMutation.mutate(game.id)}
+                              disabled={downloadMutation.isPending}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              Download
+                            </ArcadeButton>
+                          )}
+                          <ArcadeButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyEmbed(game.id, game.name)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Embed
+                          </ArcadeButton>
                         </div>
                       </div>
 

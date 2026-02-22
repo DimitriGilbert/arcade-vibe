@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
+import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import {
@@ -16,10 +17,13 @@ import {
   Loader2,
   Play,
   Cpu,
-  Calendar,
   Star,
+  GitFork,
+  Code,
+  FileText,
 } from "lucide-react";
 import type { RouterOutput } from "@/lib/trpc-types";
+import { generateEmbedCode } from "@/lib/embed-utils";
 
 type LeaderboardEntry = NonNullable<RouterOutput["leaderboard"]["getTop"]>["entries"][number];
 
@@ -35,6 +39,14 @@ function formatDate(date: Date | string | null): string {
   if (!date) return "";
   const d = new Date(date);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatPlayTime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${mins}m`;
 }
 
 function getTimeRemaining(endDate: string | Date | null): { days: number; hours: number; minutes: number; seconds: number } | null {
@@ -88,6 +100,32 @@ function CabinetCard({
   const isTop = rank <= 3;
   const cardSize = rank === 1 ? "lg" : "md";
 
+  const forkMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.prompts.fork.mutate({ promptId: entry.promptId });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked successfully");
+      window.location.href = `/editor?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  const handleCopyEmbed = useCallback(async () => {
+    const embedCode = generateEmbedCode({
+      gameId: entry.gameId,
+      gameName: entry.gameName ?? undefined,
+    });
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      toast.success("Embed code copied to clipboard");
+    } catch {
+      toast.error("Failed to copy embed code");
+    }
+  }, [entry]);
+
   return (
     <ArcadeCard
       variant={isTop ? "glow" : "default"}
@@ -114,17 +152,29 @@ function CabinetCard({
             <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${cardSize === "lg" ? "justify-center" : ""} text-sm text-[var(--muted-foreground)]`}>
               <div className="flex items-center gap-1">
                 <User className="h-3 w-3" />
-                <span className="truncate max-w-[100px]">
+                <Link
+                  href={`/profile/${entry.creator?.name}`}
+                  className="truncate max-w-[100px] hover:text-[var(--primary)] transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {entry.creator?.name || "Anonymous"}
-                </span>
+                </Link>
               </div>
-              <div className="flex items-center gap-1">
+              <Link
+                href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+                className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Cpu className="h-3 w-3" />
                 <span className="truncate max-w-[80px]">{entry.modelName}</span>
+              </Link>
+              <div className="flex items-center gap-1">
+                <Gamepad2 className="h-3 w-3" />
+                <span>{entry.playCount}</span>
               </div>
               <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(entry.submittedAt ?? entry.createdAt)}</span>
+                <Clock className="h-3 w-3" />
+                <span>{formatPlayTime(entry.totalPlayTimeSeconds)}</span>
               </div>
             </div>
           </div>
@@ -137,6 +187,31 @@ function CabinetCard({
           </div>
         </div>
       </Link>
+
+      <div className={`flex flex-wrap gap-1 mt-4 ${cardSize === "lg" ? "justify-center" : "justify-end"}`}>
+        <ArcadeButton
+          variant="outline"
+          size="sm"
+          onClick={() => forkMutation.mutate()}
+          disabled={forkMutation.isPending}
+        >
+          <GitFork className="h-3 w-3" />
+        </ArcadeButton>
+        <ArcadeButton
+          variant="outline"
+          size="sm"
+          onClick={() => handleCopyEmbed()}
+        >
+          <Code className="h-3 w-3" />
+        </ArcadeButton>
+        {entry.promptVisibility === "public" && (
+          <Link href={`/prompts/document/${entry.promptId}`}>
+            <ArcadeButton variant="outline" size="sm">
+              <FileText className="h-3 w-3" />
+            </ArcadeButton>
+          </Link>
+        )}
+      </div>
     </ArcadeCard>
   );
 }
@@ -144,23 +219,57 @@ function CabinetCard({
 function GridCard({ entry, index }: { entry: LeaderboardEntry; index: number }) {
   const rank = index + 4;
 
+  const forkMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.prompts.fork.mutate({ promptId: entry.promptId });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked successfully");
+      window.location.href = `/editor?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  const handleCopyEmbed = useCallback(async () => {
+    const embedCode = generateEmbedCode({
+      gameId: entry.gameId,
+      gameName: entry.gameName ?? undefined,
+    });
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      toast.success("Embed code copied to clipboard");
+    } catch {
+      toast.error("Failed to copy embed code");
+    }
+  }, [entry]);
+
   return (
     <ArcadeCard className="group overflow-hidden transition-all duration-300 cursor-pointer hover:scale-[1.02]">
-      <Link href={`/game/${entry.gameId}`} className="block p-4">
+      <div className="p-4">
         <div className="flex items-start gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[var(--muted)] text-[var(--muted-foreground)] font-bold text-lg shrink-0">
             {rank}
           </div>
 
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors truncate mb-1">
+            <Link
+              href={`/game/${entry.gameId}`}
+              className="font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors truncate mb-1 block"
+            >
               {entry.gameName || "Untitled Game"}
-            </h4>
+            </Link>
             <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-              <div className="flex items-center gap-1">
+              <Link
+                href={`/profile/${entry.creator?.name}`}
+                className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors"
+              >
                 <User className="h-3 w-3" />
                 <span className="truncate max-w-[80px]">{entry.creator?.name || "Anonymous"}</span>
-              </div>
+              </Link>
+              <span className="text-[var(--muted)]">|</span>
+              <span>{entry.playCount} plays</span>
             </div>
           </div>
 
@@ -171,7 +280,33 @@ function GridCard({ entry, index }: { entry: LeaderboardEntry; index: number }) 
             <div className="text-xs text-[var(--muted-foreground)]">pts</div>
           </div>
         </div>
-      </Link>
+
+        <div className="flex items-center gap-1 mt-3 justify-end">
+          <Link href={`/game/${entry.gameId}`}>
+            <ArcadeButton variant="outline" size="sm">
+              <Play className="h-3 w-3" />
+            </ArcadeButton>
+          </Link>
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={() => forkMutation.mutate()}
+            disabled={forkMutation.isPending}
+          >
+            <GitFork className="h-3 w-3" />
+          </ArcadeButton>
+          <ArcadeButton variant="outline" size="sm" onClick={handleCopyEmbed}>
+            <Code className="h-3 w-3" />
+          </ArcadeButton>
+          {entry.promptVisibility === "public" && (
+            <Link href={`/prompts/document/${entry.promptId}`}>
+              <ArcadeButton variant="outline" size="sm">
+                <FileText className="h-3 w-3" />
+              </ArcadeButton>
+            </Link>
+          )}
+        </div>
+      </div>
     </ArcadeCard>
   );
 }
@@ -335,7 +470,15 @@ export default function CabinetLeaderboardClient() {
                     </p>
                   </div>
                 </div>
-                <CountdownTimer endDate={currentTheme.endDate ?? null} />
+                <div className="flex items-center gap-4">
+                  <CountdownTimer endDate={currentTheme.endDate ?? null} />
+                  <Link href="/creator">
+                    <ArcadeButton variant="primary" size="sm">
+                      <Gamepad2 className="h-4 w-4" />
+                      Create
+                    </ArcadeButton>
+                  </Link>
+                </div>
               </div>
             </div>
           </ArcadeCard>
@@ -357,10 +500,12 @@ export default function CabinetLeaderboardClient() {
                   <p className="text-[var(--muted-foreground)] mb-4">
                     Be the first to create a game and claim the top spot!
                   </p>
-                  <ArcadeButton variant="primary" onClick={() => { window.location.href = "/leaderboard"; }}>
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Playing
-                  </ArcadeButton>
+                  <Link href="/creator">
+                    <ArcadeButton variant="primary">
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Creating
+                    </ArcadeButton>
+                  </Link>
                 </div>
               </ArcadeCard>
             ) : (

@@ -598,7 +598,10 @@ export async function generateGame(
   ]
     .filter(Boolean)
     .join("\n\n");
-  const userPrompt = prompt.content;
+  let userPrompt = prompt.content;
+  if (options.name?.trim()) {
+    userPrompt += `\n\nGame name: ${options.name.trim()}`;
+  }
 
   const model = await getProviderModel(
     modelKey,

@@ -314,7 +314,7 @@ export function PromptEditor({
       </div>
 
       {/* Monaco editor */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4">
         <Editor
           height="100%"
           defaultLanguage="markdown"

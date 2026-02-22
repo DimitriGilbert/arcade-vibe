@@ -10,7 +10,7 @@ interface WorkbenchEditorProps {
 
 export function WorkbenchEditor({ value, onChange, disabled }: WorkbenchEditorProps) {
   return (
-    <div className="h-full min-h-0 border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
+    <div className="h-full min-h-0 border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)] [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4">
       <Editor
         height="100%"
         defaultLanguage="markdown"

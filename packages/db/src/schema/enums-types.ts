@@ -21,6 +21,7 @@ import {
   moderationAppealStatusEnum,
   moderationReportStatusEnum,
   moderationTargetTypeEnum,
+  promptRelationEnum,
   promptStatusEnum,
   providerEnum,
   themeStatusEnum,
@@ -36,6 +37,7 @@ export {
   moderationAppealStatusEnum,
   moderationReportStatusEnum,
   moderationTargetTypeEnum,
+  promptRelationEnum,
   promptStatusEnum,
   providerEnum,
   themeStatusEnum,
@@ -82,6 +84,9 @@ export type LibraryCategory = (typeof libraryCategoryEnum.enumValues)[number];
 /** Library status values: active, disabled */
 export type LibraryStatus = (typeof libraryStatusEnum.enumValues)[number];
 
+/** Prompt relation values: version, fork */
+export type PromptRelationType = (typeof promptRelationEnum.enumValues)[number];
+
 // Array constants for runtime usage (derived from enum values)
 export const THEME_STATUSES = themeStatusEnum.enumValues;
 export const VISIBILITIES = visibilityEnum.enumValues;
@@ -94,3 +99,4 @@ export const MODERATION_APPEAL_STATUSES = moderationAppealStatusEnum.enumValues;
 export const MODERATION_TARGET_TYPES = moderationTargetTypeEnum.enumValues;
 export const LIBRARY_CATEGORIES = libraryCategoryEnum.enumValues;
 export const LIBRARY_STATUSES = libraryStatusEnum.enumValues;
+export const PROMPT_RELATION_TYPES = promptRelationEnum.enumValues;
