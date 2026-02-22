@@ -1,15 +1,14 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { AlertCircle, Trophy, Zap } from "lucide-react";
+import { headers } from "next/headers";
+import { auth } from "@arcade-vibe/auth";
 import { ArcadeCard } from "@/components/arcade";
 import { StatsCard } from "@/components/profile/stats-card";
 import { PromptList } from "@/components/profile/prompt-list";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { GamesListCard } from "@/components/profile/games-list-card";
 import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
-import { useProfileData } from "@/hooks/use-profile-data";
-import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
+import { getProfileData } from "@/lib/profile-data";
+import ProfilePageClient from "./profile-page-client";
 
 interface ProfilePageProps {
   params: Promise<{
@@ -17,62 +16,16 @@ interface ProfilePageProps {
   }>;
 }
 
-export default function ProfilePage({ params }: ProfilePageProps) {
-  const [username, setUsername] = useState<string>("");
-  const [isOwnProfile, setIsOwnProfile] = useState<boolean>(false);
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const { username } = await params;
 
-  useEffect(() => {
-    params.then((resolvedParams) => {
-      setUsername(resolvedParams.username);
-    });
-  }, [params]);
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  const {
-    user,
-    prompts,
-    userGamesWithRankings,
-    ratings,
-    stats,
-    isOwnProfile: computedIsOwnProfile,
-    userLoading,
-    promptsLoading,
-    gamesLoading,
-    ratingsLoading,
-  } = useProfileData(username, isOwnProfile);
+  const profileData = await getProfileData(username, session?.user?.id ?? null);
 
-  useEffect(() => {
-    const checkOwnProfile = async () => {
-      if (!user?.id) return;
-
-      try {
-        const sessionResponse = await fetch("/api/auth/getSession", {
-          credentials: "include",
-        });
-
-        if (sessionResponse.ok) {
-          const session = await sessionResponse.json();
-          const currentUserId = session?.user?.id;
-          setIsOwnProfile(currentUserId === user.id);
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      }
-    };
-
-    checkOwnProfile();
-  }, [user?.id]);
-
-  if (userLoading || (!user && !userLoading)) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto py-8 px-4">
-          <LoadingPlaceholder />
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
+  if (!profileData.user) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
@@ -96,67 +49,16 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     );
   }
 
+  const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4">
-        <ProfileHeader
-          user={user}
-          credits={stats ? { balance: stats.credits } : null}
-          isOwnProfile={computedIsOwnProfile}
-        />
-
-        {stats && (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="h-5 w-5 text-[var(--primary)]" />
-              <h2 className="text-2xl font-bold">Statistics Overview</h2>
-            </div>
-            <StatsCard
-              gamesCreated={stats.gamesCreated}
-              totalRatings={stats.totalRatings}
-              reputation={stats.reputation}
-              promptRuns={stats.promptRuns}
-              isLoading={gamesLoading || ratingsLoading}
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <ArcadeCard className="">
-            <div className="p-4 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                <Zap className="h-5 w-5 text-[var(--primary)]" />
-                Prompts Created
-              </h3>
-            </div>
-            <div className="p-4">
-              <PromptList prompts={prompts || []} isLoading={promptsLoading} />
-            </div>
-          </ArcadeCard>
-
-          <ArcadeCard className="">
-            <div className="p-4 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-[var(--primary)]" />
-                Games & Rankings
-              </h3>
-            </div>
-            <div className="p-4">
-              <GamesListCard
-                games={userGamesWithRankings}
-                isLoading={gamesLoading}
-              />
-            </div>
-          </ArcadeCard>
-        </div>
-
-        <div className="mt-8 space-y-6">
-          <RatingsHistoryCard
-            ratings={ratings || []}
-            isLoading={ratingsLoading}
-          />
-        </div>
-      </div>
-    </div>
+    <ProfilePageClient
+      user={user}
+      prompts={prompts}
+      gamesWithRankings={gamesWithRankings}
+      ratings={ratings}
+      stats={stats}
+      isOwnProfile={isOwnProfile}
+    />
   );
 }
