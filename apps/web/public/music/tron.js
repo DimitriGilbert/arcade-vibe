@@ -1,73 +1,30 @@
-// Arcade Vibe - "Boss Run" (Heavy Funk)
-// 130 BPM - Motivation & Grit
-// Lower octaves, heavier sound, no high-pitched "sparkles"
+// TRON - "Acid Grid"
+// 142 BPM | Squelchy Cyberpunk | A(8, heavy break) → B(8, half-time glitch) loop
 
-stack(
-  // -- DRUMS --
-  // Heavy Rock Breakbeat
-  s(`
-    <
-      [bd [~ sd] bd [~ sd]]
-      [bd [~ sd] [bd bd] [sd ~]]
-      [bd [~ sd] bd [sd sd]]
-      [bd [~ sd] [bd bd] [sd [~ sd]]]
-    >
-  `)
-    .bank("rolandtr707")
-    .gain(1.1)
-    .clip(1.3),
+// --- DRUMS ---
+const drums = arrange(
+  [8, s("<[bd [~ sd] bd [~ sd]]!7 [bd [~ sd] [bd*4] [sd*4]]>").bank("RolandTR909").shape(0.6).gain(1.1)],
+  [8, s("<[bd ~ ~ ~ ~ ~ sd ~]!7 [bd ~ sd ~ bd bd sd*4]>").bank("RolandTR909").shape(0.8).gain(1.2)] // Half-time trap feel
+)
 
-  // -- HI-HATS --
-  s("hh*8").bank("rolandtr707").gain(0.3).pan(0.2),
+const hats = arrange(
+  [8, s("~ <oh oh oh [oh hh*2]>").bank("RolandTR909").gain(0.5)],
+  [8, s("hh*16").bank("RolandTR909").gain(0.3).jux(rev)] // Skittering glitch hats
+)
 
-  // -- BASS --
-  // Driving E Minor Riff - Low and Gritty (Octave 1-2)
-  note(`
-    <
-      [e1 e2] [e1 g1] [e1 a1] [e1 b1]
-      [e1 e2] [e1 d2] [b1 a1] [g1 e1]
-      [e1 e2] [e1 g1] [e1 a1] [e1 b1]
-      [c2 b1] [a1 g1] [e1 ~] [~ ~]
-    >
-  `)
-    .s("sawtooth")
-    .gain(1.0)
-    .lpf(800)
-    .lpq(2)
-    .decay(0.2)
-    .sustain(0),
+// --- ACID BASS ---
+const bass = arrange(
+  [8, note("<[d1 d2 d1 d2 d1 f1 d1 g1] [d1 c2 d1 d2 d1 a1 d1 f1] [d1 d2 d1 d2 d1 f1 d1 g1] [d1 c2 bb0 c1 a0 d1 f1 g1]>")
+    .s("sawtooth").lpf(sine.range(300, 3500).slow(4)).lpattack(0.01).lpdecay(0.15).lpq(12).lpenv(3).gain(0.85).distort(0.4)],
+  [8, note("<[d1 ~ ~ ~ d2 ~ f1 ~] [~ ~ c2 ~ ~ ~ a1 ~]>") // Sparse but extremely aggressive
+    .s("sawtooth").lpf(sine.range(1000, 8000).slow(8)).lpattack(0.05).lpdecay(0.4).lpq(20).lpenv(4).gain(0.7).distort(0.8).room(0.6)]
+)
 
-  // -- RHYTHM GUITAR / SYNTH --
-  // Crunchy Stabs (Octave 3)
-  note(`
-    <
-      [~ [e3,g3,b3]] ~ [~ [e3,g3,b3]]
-      [~ [d3,fis3,a3]] ~ [~ [d3,fis3,a3]]
-      [~ [c3,e3,g3]] ~ [~ [c3,e3,g3]]
-      [~ [b2,dis3,fis3]] ~ [~ [b2,dis3,fis3]]
-    >
-  `)
-    .s("square")
-    .gain(0.4)
-    .decay(0.1)
-    // .width(0.5) // Fuller sound
-    .pan(0.7),
+// --- CYBER STABS ---
+const stabs = arrange(
+  [8, note("<[~ d4 ~ f4 ~ ~ ~ ~] [~ a4 ~ g4 ~ ~ f4 e4] [~ d4 ~ f4 ~ ~ ~ ~] [c5 ~ a4 ~ g4 f4 d4 ~]>")
+    .s("square").delay(0.4).room(0.4).gain(0.4)],
+  [8, note("<[d5,f5,a5] ~ ~ ~>").s("square").delay(0.8).delayt(0.33).room(0.9).size(0.9).gain(0.3).mask("<1 0 0 0>")] // Massive lonely chord
+)
 
-  // -- LEAD MELODY --
-  // Bluesy, determined (Octave 4 - NO 5s!)
-  note(`
-    <
-      [e4 ~ g4 ~] [a4 ~ b4 ~] [d4 ~ b4 ~] [a4 ~ g4 ~]
-      [e4 ~ g4 ~] [a4 ~ b4 ~] [d4 ~ e4 ~] [~ ~ ~ ~]
-      [e4 ~ g4 ~] [a4 ~ b4 ~] [c4 ~ b4 ~] [a4 ~ g4 ~]
-      [e4 d4 b3 a3] [g3 a3 b3 d4] [e4 ~ ~ ~] [~ ~ ~ ~]
-    >
-  `)
-    .s("square")
-    .gain(0.5)
-    .lpf(2000) // Mellow, not piercing
-    // .port(0.05)
-    .delay(0.2)
-    .delaytime(0.25)
-    .delayfeedback(0.3),
-).cpm(130 / 4);
+stack(drums, hats, bass, stabs).cpm(142/4)

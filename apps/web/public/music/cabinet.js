@@ -1,81 +1,39 @@
-// Arcade Vibe - "Pixel Bounce" (Corrected)
-// 140 BPM - Mario/Kirby Athletic Theme
-// Syncopated, Joyful, Lower Octave, NO width()
+// CABINET - "Fireplace Tales"
+// 95 BPM | Cozy Organic | A(8, warm groove) → B(8, ambient dream) loop
 
-stack(
-  // -- DRUMS --
-  // Bouncy Samba-ish beat
-  // Kick on 1, 2, 3, 4
-  // Snare on "and" of beats
-  s(`
-    <
-      [bd ~ bd ~] [~ sd ~ sd]
-      [bd ~ bd ~] [~ sd ~ sd]
-      [bd ~ bd ~] [~ sd ~ sd]
-      [bd sd bd sd] [sd sd sd sd]
-    >
-  `)
-    .bank("rolandtr707")
-    .gain(1.1)
-    .clip(1.2),
+// --- DRUMS ---
+const drums = arrange(
+  [8, s("<[bd ~ rim ~]!7 [bd ~ rim rim]>").bank("RolandTR808").gain(0.9)],
+  [8, s("~").gain(0)] // Drums completely disappear in the dream section
+)
 
-  // -- PERCUSSION --
-  // Agogo for the "Latin" feel
-  s("~ ~ ~ ht").bank("rolandtr707").gain(0.8),
+const hats = arrange(
+  [8, s("hh*8").bank("RolandTR808").gain(0.2).pan(0.3)],
+  [8, s("<~ ~ ~ [hh ~ ~ ~]>").bank("RolandTR808").gain(0.15).room(0.8)] // Just a ghostly whisper
+)
 
-  s("hh*4").bank("rolandtr707").gain(0.2),
+// --- BASS ---
+const bass = arrange(
+  [8, note("<[c2 ~ g2 ~] [a1 ~ e2 ~] [f1 ~ c2 ~] [g1 ~ d2 ~]>").s("triangle")
+    .lpf(1000).decay(0.4).sustain(0.2).gain(1.1)],
+  [8, note("<c1 a0 f0 g0>").s("triangle") // Deep, long drones
+    .lpf(600).attack(0.5).decay(1).sustain(0.8).gain(1.3).slow(2)]
+)
 
-  // -- BASS --
-  // Triangle Wave - Octave 2
-  // Syncopated "Tumbao" rhythm (dotted 8th feel)
-  note(`
-    <
-      [c2 ~ ~ g1] [~ c2 ~ ~]
-      [e2 ~ ~ b1] [~ e2 ~ ~]
-      [f2 ~ ~ c2] [~ f2 ~ ~]
-      [g2 ~ ~ d2] [~ g2 ~ ~]
-    >
-  `)
-    .s("triangle")
-    .gain(1.2)
-    .decay(0.15)
-    .sustain(0)
-    .clip(1.1),
+// --- PADS ---
+const pads = arrange(
+  [8, note("<[c3,e3,g3,b3] [a2,c3,e3,g3] [f2,a2,c3,e3] [g2,b2,d3,f3]>").s("sine")
+    .room(0.6).gain(0.7).slow(2)],
+  [8, note("<[c3,e3,g3,b3,d4] [a2,c3,e3,g3,b3] [f2,a2,c3,e3,g3] [g2,b2,d3,f3,a3]>").s("sine")
+    .room(0.9).size(0.8).gain(0.85).slow(2).vib("2:0.1")] // Wider, more complex chords
+)
 
-  // -- CHORDS --
-  // Off-beat "Skank" Stabs (Reggae/Ska style)
-  // On the "&" of the beat
-  // Octave 3 (Mid-range)
-  note(`
-    <
-      [~ [e3,g3,c4]] [~ [e3,g3,c4]]
-      [~ [g3,b3,e4]] [~ [g3,b3,e4]]
-      [~ [a3,c4,f4]] [~ [a3,c4,f4]]
-      [~ [b3,d4,g4]] [~ [b3,d4,g4]]
-    >
-  `)
-    .s("square")
-    .gain(0.35)
-    .decay(0.05)
-    .sustain(0) // Very short stabs
-    .lpf(4000),
+// --- LULLABY MELODY ---
+const melody = arrange(
+  [8, note("<[e4 ~ g4 ~ c5 ~ ~ ~] [c4 ~ e4 ~ a4 ~ ~ ~] [f4 ~ a4 ~ c5 ~ d5 ~] [b4 ~ ~ ~ g4 ~ ~ ~]>")
+    .s("triangle").delay(0.4).room(0.3).gain(0.5).slow(2)],
+  [8, note("<[c5 e5 g5 c6] [a4 c5 e5 a5] [f4 a4 c5 f5] [g4 b4 d5 g5]>") // Slow rising arpeggios
+    .s("sine").delay(0.6).delayt(0.75).room(0.8).gain(0.3).slow(2)]
+)
 
-  // -- LEAD MELODY --
-  // Octave 4 - Catchy, Rhythmic, Call & Response
-  // "Pa... Pa-Pa... Pa!"
-  note(`
-    <
-      [c4 ~ ~ e4] [g4 ~ a4 ~] [g4 ~ ~ ~] [~ ~ ~ ~]
-      [e4 ~ ~ d4] [c4 ~ d4 ~] [e4 ~ ~ ~] [~ ~ ~ ~]
-      [f4 ~ ~ a4] [c5 ~ a4 ~] [g4 ~ e4 ~] [c4 ~ ~ ~]
-      [d4 ~ ~ dis4] [e4 ~ c4 ~] [d4 c4 a3 g3] [c4 ~ ~ ~]
-    >
-  `)
-    .s("square")
-    .gain(0.6)
-    .decay(0.1)
-    .sustain(0.3)
-    .release(0.1)
-    .lpf(5000)
-    .delay(0.2),
-).cpm(140 / 4);
+stack(drums, hats, bass, pads, melody).cpm(95/4)
