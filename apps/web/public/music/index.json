@@ -1,14 +1,14 @@
 {
   "tracks": [
     { "id": "synthwave", "name": "Neon Horizon", "file": "synthwave.js" },
-    { "id": "tron", "name": "Boss Run", "file": "tron.js" },
-    { "id": "pixel", "name": "Hyper Pixel Sprint", "file": "pixel.js" },
-    { "id": "cabinet", "name": "Pixel Bounce", "file": "cabinet.js" },
-    { "id": "vaporwave", "name": "Midnight Drift", "file": "vaporwave.js" },
     { "id": "synthwave-2", "name": "Neon Horizon", "file": "synthwave-2.js" },
+    { "id": "tron", "name": "Boss Run", "file": "tron.js" },
     { "id": "tron-2", "name": "Boss Run", "file": "tron-2.js" },
+    { "id": "pixel", "name": "Hyper Pixel Sprint", "file": "pixel.js" },
     { "id": "pixel-2", "name": "Hyper Pixel Sprint", "file": "pixel-2.js" },
+    { "id": "cabinet", "name": "Pixel Bounce", "file": "cabinet.js" },
     { "id": "cabinet-2", "name": "Pixel Bounce", "file": "cabinet-2.js" },
+    { "id": "vaporwave", "name": "Midnight Drift", "file": "vaporwave.js" },
     { "id": "vaporwave-2", "name": "Midnight Drift", "file": "vaporwave-2.js" }
   ]
 }
