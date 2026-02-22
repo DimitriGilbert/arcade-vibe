@@ -135,6 +135,15 @@ export function WorkbenchHeader({
     [handleSaveEdit, handleCancelEdit]
   );
 
+  const handleGenerateClick = useCallback(() => {
+    // Commit any in-progress name edit before generating
+    if (isEditingName) {
+      onPromptNameChange(editValue.trim() || "Untitled Prompt");
+      setIsEditingName(false);
+    }
+    onGenerate();
+  }, [isEditingName, editValue, onPromptNameChange, onGenerate]);
+
   const totalCredits = useMemo(
     () => selectedModels.reduce((sum, m) => sum + m.creditCost, 0),
     [selectedModels]
@@ -340,7 +349,7 @@ export function WorkbenchHeader({
         {/* Generate Button */}
         <ArcadeButton
           size="sm"
-          onClick={onGenerate}
+          onClick={handleGenerateClick}
           disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
         >
           {isGenerating ? (

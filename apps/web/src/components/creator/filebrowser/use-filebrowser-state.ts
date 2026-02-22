@@ -105,6 +105,9 @@ export interface UseFilebrowserStateReturn {
   handleToggleThemeExpand: (themeId: string) => void;
   handleTogglePromptExpand: (promptId: string) => void;
   
+  // Store actions
+  clearGenerations: () => void;
+
   // Derived
   currentPromptId: string | null;
   deletingPromptId: string | null;
@@ -415,16 +418,20 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
       toast.error("Cannot remove model while generating");
       return;
     }
-    setSelectedModels((prev) => prev.filter((m) => m.id !== id));
-    removeGeneration(id);
-    setActiveOutputTab((prev) => {
-      if (prev === id) {
-        const remaining = selectedModels.filter((m) => m.id !== id);
-        return remaining.length > 0 ? remaining[0]!.id : null;
-      }
-      return prev;
+    setSelectedModels((prev) => {
+      const remaining = prev.filter((m) => m.id !== id);
+
+      setActiveOutputTab((currentTab) => {
+        if (currentTab === id) {
+          return remaining.length > 0 ? remaining[0]!.id : null;
+        }
+        return currentTab;
+      });
+
+      return remaining;
     });
-  }, [selectedModels, removeGeneration]);
+    removeGeneration(id);
+  }, [removeGeneration]);
 
   // Generate handler
   const handleGenerate = useCallback(async () => {
@@ -465,7 +472,7 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
           themeId: selection.themeId,
           content: promptContent,
         });
-        promptId = result.promptId;
+        promptId = result.promptId ?? null;
         setSelectedPromptId(promptId);
       }
 
@@ -543,6 +550,12 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
 
       // Refresh runs list
       void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      // Refresh credits balance after generation
+      void queryClient.invalidateQueries({ queryKey: ["credits"] });
+      // Refresh prompt versions after generation
+      if (promptId) {
+        void queryClient.invalidateQueries({ queryKey: ["prompt-versions", promptId] });
+      }
 
       if (completionStats.completed === completionStats.total) {
         toast.success(`All ${completionStats.total} games generated successfully!`);
@@ -630,11 +643,15 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
           }
           return prev;
         });
+        // Clear generation state when switching prompts
+        setSelectedModels([]);
+        clearGenerations();
+        setActiveOutputTab(null);
       }
     } catch {
       toast.error("Failed to load prompt");
     }
-  }, []);
+  }, [clearGenerations]);
 
   // Select version handler
   const handleSelectVersion = useCallback(async (versionId: string) => {
@@ -717,6 +734,9 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     handleTogglePromptVisibility,
     handleToggleThemeExpand,
     handleTogglePromptExpand,
+
+    // Store actions
+    clearGenerations,
 
     // Derived
     currentPromptId: selectedPromptId,

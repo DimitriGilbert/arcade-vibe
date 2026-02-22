@@ -50,6 +50,7 @@ export default function FilebrowserPage() {
     handleSelectVersion,
     handleToggleThemeExpand,
     handleTogglePromptExpand,
+    clearGenerations,
   } = state;
 
   const handleSelectTheme = useCallback((themeId: string) => {
@@ -59,7 +60,9 @@ export default function FilebrowserPage() {
       promptId: null,
       runId: null,
     });
-  }, [setSelection]);
+    // Clear generations when switching themes
+    clearGenerations();
+  }, [setSelection, clearGenerations]);
 
   const handleSelectRun = useCallback((runId: string) => {
     setSelection((prev) => ({

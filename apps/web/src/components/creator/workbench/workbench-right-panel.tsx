@@ -20,7 +20,7 @@ interface WorkbenchRightPanelProps {
   promptId: string | null;
   selectedModels: ModelSelection[];
   activeOutputTab: string | null;
-  onOutputTabChange: (id: string) => void;
+  onOutputTabChange: (id: string | null) => void;
   // Models tab props
   modelMetadata: ModelMetadata | null | undefined;
   onAddModel: (selection: ModelSelection) => void;

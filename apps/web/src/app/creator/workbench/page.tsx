@@ -106,6 +106,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("models");
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
 
@@ -349,16 +350,20 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.error("Cannot remove model while generating");
       return;
     }
-    setSelectedModels((prev) => prev.filter((m) => m.id !== id));
-    removeGeneration(id);
-    setActiveOutputTab((prev) => {
-      if (prev === id) {
-        const remaining = selectedModels.filter((m) => m.id !== id);
-        return remaining.length > 0 ? remaining[0]!.id : null;
-      }
-      return prev;
+    setSelectedModels((prev) => {
+      const remaining = prev.filter((m) => m.id !== id);
+
+      setActiveOutputTab((currentTab) => {
+        if (currentTab === id) {
+          return remaining.length > 0 ? remaining[0]!.id : null;
+        }
+        return currentTab;
+      });
+
+      return remaining;
     });
-  }, [selectedModels, removeGeneration]);
+    removeGeneration(id);
+  }, [removeGeneration]);
 
   const handleGenerate = useCallback(async () => {
     if (!promptContent.trim()) {
@@ -452,6 +457,10 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
                 flushBufferedDeltas();
                 completionStats.completed++;
                 updateGenerationGameId(model.id, chunk.gameId as string);
+                // Preserve selection when transitioning from model ID to game ID
+                if (activeOutputTab === model.id) {
+                  setActiveOutputTab(chunk.gameId as string);
+                }
               } else if (chunk.type === "error") {
                 flushBufferedDeltas();
                 completionStats.errors++;
@@ -481,6 +490,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
       // Invalidate games list after generation completes
       void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      // Invalidate prompt versions since generation creates a new version
+      void queryClient.invalidateQueries({ queryKey: ["prompt-versions", selectedPromptId] });
 
       // Show aggregate toast
       if (completionStats.completed === completionStats.total) {
@@ -511,6 +522,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     updateGenerationReasoning,
     updateGenerationGameId,
     updateGenerationError,
+    activeOutputTab,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -522,13 +534,21 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.error("Please enter prompt content");
       return;
     }
+    
+    // If viewing old version, always create new prompt (new version)
+    if (isViewingOldVersion) {
+      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, visibility });
+      setIsViewingOldVersion(false);
+      return;
+    }
+    
     const promptId = selectedPromptId;
     if (promptId) {
       updatePromptMutation.mutate({ id: promptId, content: promptContent });
     } else {
       createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, visibility });
     }
-  }, [selectedTheme, promptContent, selectedPromptId, visibility, updatePromptMutation, createPromptMutation]);
+  }, [selectedTheme, promptContent, selectedPromptId, visibility, isViewingOldVersion, updatePromptMutation, createPromptMutation]);
 
   const handleFork = useCallback(() => {
     if (!resolvedSearchParams?.forkId) return;
@@ -541,9 +561,12 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       if (versionData) {
         setPromptContent(versionData.content);
         setSelectedVersionId(versionId);
+        // Track if viewing old version (not the current/latest one)
+        // selectedPromptId is the current prompt, compare with versionId
+        setIsViewingOldVersion(versionId !== selectedPromptId);
       }
     },
-    [versions]
+    [versions, selectedPromptId]
   );
 
   const handleNewVersion = useCallback(() => {
@@ -571,6 +594,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         setPromptContent(prompt.content);
         setSelectedPromptId(prompt.id);
         setSelectedVersionId(prompt.id);
+        setIsViewingOldVersion(false);
         setSelectedTheme(prompt.themeId);
         setPromptName(`Prompt v${prompt.version}`);
         if (prompt.visibility) {
@@ -592,6 +616,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     setPromptContent("");
     setSelectedPromptId(null);
     setSelectedVersionId(null);
+    setIsViewingOldVersion(false);
     setPromptName("Untitled Prompt");
     setActiveRightTab("models");
     setSelectedModels([]);

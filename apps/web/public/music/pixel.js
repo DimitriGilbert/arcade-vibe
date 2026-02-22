@@ -1,4 +1,4 @@
-// PIXEL - "Mushroom Kingdom Hop"
+// PIXEL - "Mushroom Hop"
 // 160 BPM | 16-bit Platformer Joy | A(8, major) → B(8, minor-ish cave) loop
 
 // --- DRUMS ---

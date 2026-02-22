@@ -1,14 +1,18 @@
 {
   "tracks": [
     { "id": "synthwave", "name": "Neon Horizon", "file": "synthwave.js" },
-    { "id": "synthwave-2", "name": "Neon Horizon", "file": "synthwave-2.js" },
-    { "id": "tron", "name": "Boss Run", "file": "tron.js" },
+    { "id": "synthwave-2", "name": "outrun Horizon", "file": "synthwave-2.js" },
+    { "id": "synthwave-3", "name": "Neon Horizon 2", "file": "synthwave-3.js" },
+    { "id": "tron", "name": "Acid grid", "file": "tron.js" },
     { "id": "tron-2", "name": "Boss Run", "file": "tron-2.js" },
-    { "id": "pixel", "name": "Hyper Pixel Sprint", "file": "pixel.js" },
+    { "id": "pixel", "name": "Mushroom Hop", "file": "pixel.js" },
     { "id": "pixel-2", "name": "Hyper Pixel Sprint", "file": "pixel-2.js" },
     { "id": "cabinet", "name": "Pixel Bounce", "file": "cabinet.js" },
     { "id": "cabinet-2", "name": "Pixel Bounce", "file": "cabinet-2.js" },
-    { "id": "vaporwave", "name": "Midnight Drift", "file": "vaporwave.js" },
-    { "id": "vaporwave-2", "name": "Midnight Drift", "file": "vaporwave-2.js" }
+    { "id": "cabinet-3", "name": "Rainy Afternoon", "file": "cabinet-3.js" },
+    { "id": "cabinet-4", "name": "The Wanderer's Rest", "file": "cabinet-4.js" },
+    { "id": "vaporwave", "name": "Midnight Neon Rush", "file": "vaporwave.js" },
+    { "id": "vaporwave-2", "name": "Midnight Drift", "file": "vaporwave-2.js" },
+    { "id": "vaporwave-3", "name": "Ghost Signal", "file": "vaporwave-3.js" }
   ]
 }

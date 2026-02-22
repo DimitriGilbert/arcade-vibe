@@ -384,16 +384,20 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       toast.error("Cannot remove model while generating");
       return;
     }
-    setSelectedModels((prev) => prev.filter((m) => m.id !== id));
-    removeGeneration(id);
-    setActiveOutputTab((prev) => {
-      if (prev === id) {
-        const remaining = selectedModels.filter((m) => m.id !== id);
-        return remaining.length > 0 ? remaining[0]!.id : null;
-      }
-      return prev;
+    setSelectedModels((prev) => {
+      const remaining = prev.filter((m) => m.id !== id);
+
+      setActiveOutputTab((currentTab) => {
+        if (currentTab === id) {
+          return remaining.length > 0 ? remaining[0]!.id : null;
+        }
+        return currentTab;
+      });
+
+      return remaining;
     });
-  }, [selectedModels, removeGeneration]);
+    removeGeneration(id);
+  }, [removeGeneration]);
 
   // Generation function
   const handleGenerate = useCallback(async () => {
@@ -541,6 +545,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       );
     } finally {
       setIsGenerating(false);
+      void queryClient.invalidateQueries({ queryKey: ["credits"] });
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
     }
   }, [
     promptContent,
@@ -556,6 +562,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     updateGenerationReasoning,
     updateGenerationGameId,
     updateGenerationError,
+    queryClient,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -604,12 +611,17 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
         setLeftSidebarCollapsed(true);
         setRightSidebarCollapsed(false);
         setSelectedGameFromHistory(null);
+        // Clear generation state when switching prompts
+        setSelectedModels([]);
+        clearGenerations();
+        setActiveOutputTab(null);
+        setGameName("");
       }
     } catch (error) {
       toast.error("Failed to load prompt");
       console.error(error);
     }
-  }, []);
+  }, [clearGenerations]);
 
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
@@ -719,7 +731,15 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
         {/* Left Sidebar - Theme/Prompts - Collapsible */}
         <InboxSidebar
           selectedTheme={selectedTheme}
-          onSelectTheme={setSelectedTheme}
+          onSelectTheme={(themeId) => {
+            setSelectedTheme(themeId);
+            // Clear prompt-related state when theme changes
+            setSelectedPromptId(null);
+            setPromptContent("");
+            setSelectedModels([]);
+            clearGenerations();
+            setActiveOutputTab(null);
+          }}
           themes={themes?.map((t) => ({ id: t.id, title: t.title }))}
           themesLoading={themesLoading}
           prompts={myPrompts?.map((p) => ({

@@ -34,7 +34,7 @@ interface WorkbenchHistoryTabProps {
   promptId: string | null;
   selectedModels: ModelSelection[];
   activeOutputTab: string | null;
-  onOutputTabChange: (id: string) => void;
+  onOutputTabChange: (id: string | null) => void;
   disabled: boolean;
 }
 
@@ -249,10 +249,17 @@ export function WorkbenchHistoryTab({
   // Build combined history items: running generations + completed games
   const historyItems = useMemo((): HistoryItem[] => {
     const items: HistoryItem[] = [];
+    const seenGameIds = new Set<string>();
 
-    // Add running generations first (not completed, not error, not idle)
+    // Add running generations (include complete to track gameIds)
     for (const gen of allGenerations) {
-      if (gen.status !== "idle" && gen.status !== "complete" && gen.status !== "error") {
+      if (gen.status !== "idle" && gen.status !== "error") {
+        if (gen.status === "complete" && gen.gameId) {
+          // Track gameId to dedupe with query results
+          seenGameIds.add(gen.gameId);
+          continue; // Don't add - will come from query
+        }
+
         const model = selectedModels.find((m) => m.id === gen.modelSelectionId);
         items.push({
           type: "running",
@@ -263,14 +270,12 @@ export function WorkbenchHistoryTab({
       }
     }
 
-    // Add completed games
+    // Add completed games from query, filtering out ones already tracked
     if (games) {
       for (const game of games) {
-        items.push({
-          type: "completed",
-          id: game.id,
-          game,
-        });
+        if (!seenGameIds.has(game.id)) {
+          items.push({ type: "completed", id: game.id, game });
+        }
       }
     }
 
@@ -417,7 +422,7 @@ export function WorkbenchHistoryTab({
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {/* History List with inline output */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {!promptId ? (
+        {!promptId && allGenerations.length === 0 ? (
           <div className="h-full flex items-center justify-center p-4">
             <p className="text-[var(--muted-foreground)] text-sm text-center">
               Save your prompt to view generation history
@@ -448,7 +453,7 @@ export function WorkbenchHistoryTab({
                     <button
                       type="button"
                       className="w-full flex items-center justify-between p-2.5 hover:bg-[var(--muted)]/20 transition-colors text-left"
-                      onClick={() => onOutputTabChange(isExpanded ? "" : item.id)}
+                      onClick={() => onOutputTabChange(isExpanded ? null : item.id)}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="flex flex-col min-w-0">
@@ -524,7 +529,7 @@ export function WorkbenchHistoryTab({
                     <button
                       type="button"
                       className="flex items-center gap-2 min-w-0 flex-1 text-left"
-                      onClick={() => onOutputTabChange(isExpanded ? "" : game.id)}
+                      onClick={() => onOutputTabChange(isExpanded ? null : game.id)}
                     >
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-1.5">
