@@ -12,6 +12,7 @@
   "scripts": {},
   "dependencies": {
     "@arcade-vibe/db": "workspace:*",
+    "@arcade-vibe/email": "workspace:*",
     "@arcade-vibe/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",

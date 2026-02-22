@@ -21,6 +21,7 @@ import {
   themeAllowedPatterns,
 } from "./library-patterns";
 import { feedback } from "./feedback";
+import { emailLogs, emailTemplates } from "./email";
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -41,6 +42,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   scores: many(scores),
   gameScores: many(gameScores),
   feedback: many(feedback),
+  emailLogs: many(emailLogs),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -338,6 +340,20 @@ export const themeAllowedPatternsRelations = relations(
 export const feedbackRelations = relations(feedback, ({ one }) => ({
   user: one(user, {
     fields: [feedback.userId],
+    references: [user.id],
+  }),
+}));
+
+export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
+  user: one(user, {
+    fields: [emailLogs.userId],
+    references: [user.id],
+  }),
+}));
+
+export const emailTemplatesRelations = relations(emailTemplates, ({ one }) => ({
+  creator: one(user, {
+    fields: [emailTemplates.createdBy],
     references: [user.id],
   }),
 }));

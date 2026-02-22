@@ -487,3 +487,48 @@ export type GameAdminView = AdminDirectGetGamesOutput[number];
  * @source RouterOutput["feedback"]["list"][number]
  */
 export type Feedback = FeedbackListOutput[number];
+
+// --- Admin Email Router Types ---
+
+export type AdminEmailOutput = AdminOutput["email"];
+export type AdminEmailInput = AdminInput["email"];
+
+/**
+ * User data for email targeting with aggregated stats
+ * @source RouterOutput["admin"]["email"]["getFilteredUsers"]["users"][number]
+ */
+export type UserForEmail = NonNullable<AdminEmailOutput["getFilteredUsers"]>["users"][number];
+
+/**
+ * Email log entry
+ * @source RouterOutput["admin"]["email"]["getLogs"]["logs"][number]
+ */
+export type EmailLog = NonNullable<AdminEmailOutput["getLogs"]>["logs"][number];
+
+/**
+ * Email statistics by status and type
+ * @source RouterOutput["admin"]["email"]["getStats"]
+ */
+export type EmailStats = AdminEmailOutput["getStats"];
+
+/**
+ * Filter options for user targeting
+ * @source RouterInput["admin"]["email"]["getFilteredUsers"]["filters"]
+ */
+export type UserFilterInput = AdminEmailInput["getFilteredUsers"]["filters"];
+
+/**
+ * Sort configuration for user listing
+ * @source RouterInput["admin"]["email"]["getFilteredUsers"]["sort"]
+ */
+export type SortConfigInput = AdminEmailInput["getFilteredUsers"]["sort"];
+
+/**
+ * Sort field options for user listing
+ */
+export type SortField = SortConfigInput["field"];
+
+/**
+ * Sort order options
+ */
+export type SortOrder = SortConfigInput["order"];

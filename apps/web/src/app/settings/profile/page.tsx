@@ -10,15 +10,17 @@ import { ArcadeCard } from "@/components/arcade";
 import {
   Loader2,
   User,
-  Shield,
-  Calendar,
   CheckCircle,
-  AlertCircle,
   Mail,
-  Clock,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import LoadingPlaceholder from "@/components/reusable/loading-placeholder";
+import {
+  AccountStatusCard,
+  EmailVerificationCard,
+  AccountAgeCard,
+  AccountInfoCard,
+} from "@/components/settings";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -127,124 +129,20 @@ export default function ProfileSettingsPage() {
         {/* Right Column - Info Cards */}
         <div className="space-y-6">
           {/* Account Status Card */}
-          <ArcadeCard>
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-[var(--accent)]/20 rounded-lg">
-                  <Shield className="h-4 w-4 text-[var(--accent)]" />
-                </div>
-                <span className="font-medium">Account Status</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-[var(--accent)]/15 text-[var(--accent)]">
-                  <CheckCircle className="h-4 w-4 mr-1.5" />
-                  Active
-                </span>
-              </div>
-            </div>
-          </ArcadeCard>
+          <AccountStatusCard />
 
           {/* Email Verification Card */}
-          <ArcadeCard>
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-[var(--primary)]/20 rounded-lg">
-                  <Mail className="h-4 w-4 text-[var(--primary)]" />
-                </div>
-                <span className="font-medium">Email Verified</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {user?.emailVerified ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-[var(--accent)]" />
-                    <span className="text-[var(--accent)] font-medium text-sm">
-                      Verified
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-[var(--muted-foreground)]" />
-                    <span className="text-[var(--muted-foreground)] font-medium text-sm">
-                      Not Verified
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </ArcadeCard>
+          <EmailVerificationCard emailVerified={user?.emailVerified} />
 
           {/* Account Age Card */}
-          <ArcadeCard>
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-[var(--secondary)]/20 rounded-lg">
-                  <Clock className="h-4 w-4 text-[var(--secondary)]" />
-                </div>
-                <span className="font-medium">Account Age</span>
-              </div>
-              <p className="text-3xl font-bold text-[var(--secondary)]">
-                {accountAge}
-              </p>
-              <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                Days since joining
-              </p>
-            </div>
-          </ArcadeCard>
+          <AccountAgeCard accountAge={accountAge} />
         </div>
       </div>
 
       {/* Bottom Row - Full Width Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Account Information */}
-        <ArcadeCard>
-          <div className="p-4 border-b border-[var(--border)]">
-            <h3 className="font-semibold text-[var(--foreground)]">
-              Account Information
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-4">
-              {/* User ID */}
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                    User ID
-                  </p>
-                  <p className="font-mono text-sm mt-1 bg-[var(--muted)] px-2 py-1 rounded">
-                    {user?.id}
-                  </p>
-                </div>
-              </div>
-
-              {/* Account Creation Date */}
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                    Account Created
-                  </p>
-                  <p className="text-sm mt-1">
-                    {user?.createdAt ? (
-                      <span>
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span className="text-[var(--muted-foreground)]">
-                        Unknown
-                      </span>
-                    )}
-                  </p>
-                  {user?.createdAt && (
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                      {new Date(user.createdAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </ArcadeCard>
+        <AccountInfoCard userId={user?.id} createdAt={user?.createdAt} />
 
         {/* Email Change Notice */}
         <ArcadeCard>

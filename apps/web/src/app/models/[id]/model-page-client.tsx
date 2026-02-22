@@ -2,7 +2,6 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -22,6 +21,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { ArcadeBadge, ArcadeCard, ArcadeButton } from "@/components/arcade";
 import { EmptyState, LoadingState } from "@/components/reusable";
+import { StatRow } from "@/components/models";
 import { trpcClient } from "@/utils/trpc";
 import { authClient } from "@/lib/auth-client";
 import { generateEmbedCode } from "@/lib/embed-utils";
@@ -306,26 +306,6 @@ export default function ModelPageClient({ modelId }: ModelPageClientProps) {
           )}
         </section>
       </div>
-    </div>
-  );
-}
-
-function StatRow({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--muted)]/20 px-3 py-2">
-      <p className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
-        {icon}
-        {label}
-      </p>
-      <p className="text-sm font-semibold">{value}</p>
     </div>
   );
 }

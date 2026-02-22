@@ -21,6 +21,7 @@
     "@ai-sdk/openai-compatible": "^2.0.28",
     "@arcade-vibe/auth": "workspace:*",
     "@arcade-vibe/db": "workspace:*",
+    "@arcade-vibe/email": "workspace:*",
     "@arcade-vibe/env": "workspace:*",
     "@aws-sdk/client-s3": "^3.985.0",
     "@openrouter/ai-sdk-provider": "^2.1.1",

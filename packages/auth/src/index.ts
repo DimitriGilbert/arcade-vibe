@@ -7,9 +7,30 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { eq, and, sql } from "drizzle-orm";
+import { sendWelcomeEmail } from "@arcade-vibe/email";
 
 // Credit expiry constants (mirrored from api/lib/credits.ts to avoid circular dependency)
 const CREDIT_EXPIRY_FREE_TRIAL_DAYS = 30;
+
+// Build social providers config conditionally
+const socialProviders: Record<
+  string,
+  { clientId: string; clientSecret: string }
+> = {};
+
+if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+  socialProviders.google = {
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+  };
+}
+
+if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
+  socialProviders.github = {
+    clientId: env.GITHUB_CLIENT_ID,
+    clientSecret: env.GITHUB_CLIENT_SECRET,
+  };
+}
 
 /**
  * @security Session Cookie Configuration
@@ -71,6 +92,7 @@ export const auth = betterAuth({
    * custom implementation via database hooks or middleware.
    */
   plugins: [nextCookies()],
+  socialProviders,
   databaseHooks: {
     user: {
       create: {
@@ -103,6 +125,17 @@ export const auth = betterAuth({
               expiresAt,
             });
           });
+
+          // Send welcome email (fire and forget, don't block signup)
+          if (env.RESEND_API_KEY) {
+            sendWelcomeEmail({
+              userId: user.id,
+              userEmail: user.email,
+              userName: user.name,
+            }).catch((error: unknown) => {
+              console.error("Failed to send welcome email:", error);
+            });
+          }
         },
       },
     },

@@ -1,0 +1,19 @@
+{
+  "name": "@arcade-vibe/email",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@arcade-vibe/db": "workspace:*",
+    "@arcade-vibe/env": "workspace:*",
+    "resend": "^6.9.2"
+  },
+  "devDependencies": {
+    "@arcade-vibe/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

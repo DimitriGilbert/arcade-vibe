@@ -5,6 +5,7 @@ import { plansRouter } from "./plans";
 import { libraryPatternsRouter } from "./library-patterns";
 import { tierCostsRouter } from "./tier-costs";
 import { statsRouter } from "./stats";
+import { emailRouter } from "./email";
 
 /**
  * Admin Router
@@ -16,6 +17,7 @@ import { statsRouter } from "./stats";
  * - libraryPatterns: Allowed library pattern management (create, update, delete, add to/remove from themes)
  * - tierCosts: Tier credit cost management (get, update, reset to defaults)
  * - stats: Platform statistics and audit log (getStats, getActions)
+ * - email: Email management (getFilteredUsers, sendToUsers, sendToFiltered, getLogs, getStats)
  */
 export const adminRouter = router({
   models: modelConfigRouter,
@@ -24,4 +26,5 @@ export const adminRouter = router({
   libraryPatterns: libraryPatternsRouter,
   tierCosts: tierCostsRouter,
   stats: statsRouter,
+  email: emailRouter,
 });

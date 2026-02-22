@@ -207,6 +207,8 @@ import type { AppRouter } from "@arcade-vibe/api"; // Use trpc-types instead
 - **Database enums**: `packages/db/src/schema/enums-types.ts` - Enum definitions
 - **API router**: `packages/api/src/routers/index.ts` - AppRouter composition
 
+**YOU MUST REUSE EXISTING TYPES !** Creating types in situ in a file next to functionality is completely stupid and counterproductive ! it is as bad as using any as nothing is shared and it does not prevent any problems, just hide them under a rug ! THIS IS ANTI PATTERN ! JUST LIKE "any" USE ! NEVER DO THAT UNLESS ABSOLUTELY NECESSARY ! USE EXISTING TYPES !
+
 ## Progressive Disclosure
 
 For detailed guidelines:
