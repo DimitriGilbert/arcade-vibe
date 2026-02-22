@@ -35,7 +35,7 @@ function logAudit(entry: CreditAuditLog): void {
   if (auditLogs.length > MAX_AUDIT_LOGS) {
     auditLogs.shift();
   }
-  console.log("[AUDIT]", JSON.stringify(entry));
+  // console.log("[AUDIT]", JSON.stringify(entry));
 }
 
 // CB-008: Get audit logs (for admin use)

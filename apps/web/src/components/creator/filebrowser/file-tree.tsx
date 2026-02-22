@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import { Loader2, ChevronRight, ChevronDown, FileCode, Folder, FolderOpen, Sparkles, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import type { ThemeNode, PromptNode, RunNode, GenerationStatus } from "./types";
@@ -74,8 +74,6 @@ const RunNodeComponent = memo(function RunNodeComponent({
   isSelected: boolean;
   onClick: () => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <button
       type="button"
@@ -84,23 +82,24 @@ const RunNodeComponent = memo(function RunNodeComponent({
         isSelected ? "bg-[var(--primary)]/15 text-[var(--foreground)]" : "hover:bg-[var(--muted)]/50"
       )}
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <FileCode className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
       {getStatusIcon(run.status)}
-      <span className="text-xs truncate flex-1">
-        {run.name ?? run.modelName ?? "Untitled"}
-      </span>
-      {isHovered && (
-        <div className="flex items-center gap-1">
-          <ArcadeBadge
-            text={formatRelativeTime(run.createdAt)}
-            variant="default"
-            className="text-[10px] px-1"
-          />
-        </div>
-      )}
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-xs truncate">
+          {run.name ?? "Untitled"}
+        </span>
+        <span className="text-[10px] text-[var(--primary)] truncate">
+          {run.modelName ?? "Unknown model"}
+        </span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <ArcadeBadge
+          text={formatRelativeTime(run.createdAt)}
+          variant="default"
+          className="text-[10px] px-1"
+        />
+      </div>
     </button>
   );
 });

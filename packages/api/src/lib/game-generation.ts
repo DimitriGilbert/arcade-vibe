@@ -200,7 +200,7 @@ Return only the raw HTML snippet. No markdown fences, no explanations, no commen
 ## Every Game Must Have
 
 1. **Score** — visible at all times, updated in real time
-2. **Lives or health** — the player can fail and reach a game over state  
+2. **Lives or health** — the player can fail and reach a game over state
 3. **Progressive difficulty** — the game gets meaningfully harder over time (speed, frequency, complexity)
 4. **A complete game loop** — Start screen → Gameplay → Game Over → Restart, all accessible without a page reload
 5. **Instructions** — one or two lines on the start screen explaining how to play
@@ -523,7 +523,7 @@ export async function generateGame(
   if (!apiKeyId) {
     const creditCost = tierCost.creditCost;
     const userCredits = await getValidCreditBalance(userId);
-    console.log("[DEBUG] Credit check:", { userId, userCredits, creditCost });
+    // console.log("[DEBUG] Credit check:", { userId, userCredits, creditCost });
 
     if (userCredits < creditCost) {
       throw new TRPCError({

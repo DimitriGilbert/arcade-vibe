@@ -529,15 +529,20 @@ export function WorkbenchHistoryTab({
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-[var(--foreground)] truncate">
-                            {(game.name || game.modelName) ?? "Unknown"}
+                            {game.name ?? "Untitled"}
                           </span>
                           {game.isSubmitted && (
                             <Globe className="h-3 w-3 text-green-500 shrink-0" />
                           )}
                         </div>
-                        <span className="text-[10px] text-[var(--muted-foreground)]">
-                          {formatDate(game.createdAt)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-[var(--primary)] truncate">
+                            {game.modelName ?? "Unknown model"}
+                          </span>
+                          <span className="text-[10px] text-[var(--muted-foreground)]">
+                            {formatDate(game.createdAt)}
+                          </span>
+                        </div>
                       </div>
                       <ArcadeBadge text={game.status} variant={getStatusVariant(game.status)} />
                     </button>
