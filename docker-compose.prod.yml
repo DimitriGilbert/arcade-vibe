@@ -17,6 +17,13 @@ services:
         REDIS_URL: redis://redis:6379
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        RESEND_API_KEY: ${RESEND_API_KEY:-}
+        RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@arcade-vibe.com}
+        RESEND_FROM_NAME: ${RESEND_FROM_NAME:-Arcade-Vibe}
+        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+        GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+        GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
     container_name: arcade-vibe-app
     ports:
       - "38000:3000"
@@ -43,6 +50,16 @@ services:
       CDN_ACCESS_KEY_ID: ${CDN_ACCESS_KEY_ID:-}
       CDN_SECRET_ACCESS_KEY: ${CDN_SECRET_ACCESS_KEY:-}
       CDN_BUCKET: ${CDN_BUCKET:-games}
+      # Email (Resend)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@arcade-vibe.com}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-Arcade-Vibe}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      # OAuth Providers
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy

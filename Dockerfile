@@ -14,6 +14,7 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/db/package.json ./packages/db/
 COPY packages/env/package.json ./packages/env/
 COPY packages/config/package.json ./packages/config/
+COPY packages/email/package.json ./packages/email/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies (frozen lockfile for reproducibility)
@@ -32,6 +33,7 @@ COPY packages/auth ./packages/auth
 COPY packages/db ./packages/db
 COPY packages/env ./packages/env
 COPY packages/config ./packages/config
+COPY packages/email ./packages/email
 COPY apps/web ./apps/web
 COPY turbo.json ./
 
@@ -45,6 +47,13 @@ ARG GAME_SDK_SECRET
 ARG REDIS_URL
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_URL
+ARG RESEND_API_KEY
+ARG RESEND_FROM_EMAIL
+ARG RESEND_FROM_NAME
+ARG GOOGLE_CLIENT_ID
+ARG GOOGLE_CLIENT_SECRET
+ARG GITHUB_CLIENT_ID
+ARG GITHUB_CLIENT_SECRET
 
 # Build the application with real Dokploy-provided values.
 RUN DATABASE_URL="${DATABASE_URL}" \
@@ -56,6 +65,13 @@ RUN DATABASE_URL="${DATABASE_URL}" \
     REDIS_URL="${REDIS_URL}" \
     NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
     NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL}" \
+    RESEND_API_KEY="${RESEND_API_KEY}" \
+    RESEND_FROM_EMAIL="${RESEND_FROM_EMAIL}" \
+    RESEND_FROM_NAME="${RESEND_FROM_NAME}" \
+    GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+    GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
+    GITHUB_CLIENT_ID="${GITHUB_CLIENT_ID}" \
+    GITHUB_CLIENT_SECRET="${GITHUB_CLIENT_SECRET}" \
     pnpm --filter web build
 
 # ============================================

@@ -31,6 +31,16 @@ services:
       CDN_ACCESS_KEY_ID: ${CDN_ACCESS_KEY_ID:-}
       CDN_SECRET_ACCESS_KEY: ${CDN_SECRET_ACCESS_KEY:-}
       CDN_BUCKET: ${CDN_BUCKET:-games}
+      # Email (Resend)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@arcade-vibe.com}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-Arcade-Vibe}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      # OAuth Providers
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
     volumes:
       # Bind mount entire repo for hot reload
       - .:/app
@@ -42,6 +52,7 @@ services:
       - /app/packages/db/node_modules
       - /app/packages/env/node_modules
       - /app/packages/config/node_modules
+      - /app/packages/email/node_modules
       # Exclude build artifacts
       - /app/.next
       - /app/.turbo
