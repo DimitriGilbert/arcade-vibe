@@ -3,36 +3,11 @@ import { allowedLibraryPatterns } from "@arcade-vibe/db/schema/library-patterns"
 type AllowedLibraryPattern = typeof allowedLibraryPatterns.$inferSelect;
 
 const SCRIPT_TAG_REGEX = /<script\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
-const INLINE_SCRIPT_REGEX = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
-/**
- * WARNING: Static pattern matching cannot catch all XSS attack vectors.
- * Sophisticated obfuscation techniques (encoding, splitting, dynamic construction)
- * may bypass these checks. This is a defense-in-depth measure, not a complete solution.
- * Always combine with Content Security Policy and proper sandboxing.
- */
-const DANGEROUS_PATTERNS = [
-  /\beval\s*\(/gi,
-  /\bFunction\s*\(/gi,
-  /\bnew\s+Function\s*\(/gi,
-  /setTimeout\s*\(\s*["'`]/gi,
-  /setInterval\s*\(\s*["'`]/gi,
-  /\batob\s*\(/gi,
-  /\bbtoa\s*\(/gi,
-  /document\.write/gi,
-  /\.innerHTML\s*=/gi,
-  /\.outerHTML\s*=/gi,
-  /document\.cookie/gi,
-  /WebSocket\s*\(/gi,
-  /import\s*\(/gi,
-  /\[.*constructor.*constructor/gi,
-];
 
 export interface SanitizationResult {
   sanitizedHtml: string;
   blockedUrls: string[];
-  blockedInlineScripts: number;
   allowedUrls: string[];
-  dangerousPatternsFound: number;
 }
 
 export function extractCodeFromMarkdown(text: string): string {
@@ -106,11 +81,6 @@ export function extractScriptUrls(html: string): string[] {
   return urls;
 }
 
-export function extractInlineScriptCount(html: string): number {
-  const matches = html.match(INLINE_SCRIPT_REGEX);
-  return matches ? matches.length : 0;
-}
-
 export function isUrlAllowed(
   url: string,
   patterns: AllowedLibraryPattern[],
@@ -138,45 +108,20 @@ export function sanitizeGameCode(
 ): SanitizationResult {
   const blockedUrls: string[] = [];
   const allowedUrls: string[] = [];
-  let blockedInlineScripts = 0;
-  let dangerousPatternsFound = 0;
 
-  const sanitizeScriptTags = (input: string): string => {
-    return input.replace(SCRIPT_TAG_REGEX, (match, url) => {
-      if (isUrlAllowed(url, patterns)) {
-        allowedUrls.push(url);
-        return match;
-      }
-      blockedUrls.push(url);
-      return `<!-- BLOCKED SCRIPT: ${url} -->`;
-    });
-  };
-
-  const checkDangerousPatterns = (scriptContent: string): boolean => {
-    for (const pattern of DANGEROUS_PATTERNS) {
-      if (pattern.test(scriptContent)) {
-        return true;
-      }
+  const sanitized = html.replace(SCRIPT_TAG_REGEX, (match, url) => {
+    if (isUrlAllowed(url, patterns)) {
+      allowedUrls.push(url);
+      return match;
     }
-    return false;
-  };
-
-  let sanitized = sanitizeScriptTags(html);
-
-  sanitized = sanitized.replace(INLINE_SCRIPT_REGEX, (match, scriptContent) => {
-    if (checkDangerousPatterns(scriptContent)) {
-      dangerousPatternsFound++;
-      return `<!-- BLOCKED INLINE SCRIPT: dangerous patterns detected (eval/Function) -->`;
-    }
-    return match;
+    blockedUrls.push(url);
+    return `<!-- BLOCKED SCRIPT: ${url} -->`;
   });
 
   return {
     sanitizedHtml: sanitized,
     blockedUrls,
-    blockedInlineScripts,
     allowedUrls,
-    dangerousPatternsFound,
   };
 }
 

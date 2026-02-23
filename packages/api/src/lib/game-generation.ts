@@ -753,12 +753,6 @@ export async function generateGame(
         );
       }
 
-      if (sanitizationResult.dangerousPatternsFound > 0) {
-        console.warn(
-          `Blocked ${sanitizationResult.dangerousPatternsFound} dangerous inline script patterns`,
-        );
-      }
-
       // Get token usage from the result
       const usage = await result.usage;
       const inputTokens = usage.inputTokens ?? 0;
@@ -812,9 +806,7 @@ export async function generateGame(
           generatedAt: new Date(),
           status: "completed",
           blockedScriptUrls: sanitizationResult.blockedUrls,
-          sanitizationApplied:
-            sanitizationResult.blockedUrls.length > 0 ||
-            sanitizationResult.dangerousPatternsFound > 0,
+          sanitizationApplied: sanitizationResult.blockedUrls.length > 0,
         })
         .where(eq(games.id, confirmedGameId));
 
