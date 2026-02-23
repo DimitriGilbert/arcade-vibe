@@ -33,25 +33,9 @@ import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
+import type { AdminModel, Provider } from "@/lib/trpc-types";
 
-type ProviderValue = "openai" | "anthropic" | "google" | "openrouter" | "deepseek" | "glm" | "glm-coding-plan" | "moonshot" | "custom";
-
-type Model = {
-  id: string;
-  providers: string[];
-  modelName: string;
-  tierCostId: string;
-  tier: string;
-  tierName: string;
-  costPer1kTokens: string;
-  maxTokens: number;
-  supportsImages: boolean;
-  isActive: boolean;
-  modelCreatedAt: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
+// UI-only types for sorting (not derived from router)
 type SortField = "providers" | "modelName" | "tier" | "cost" | "modelCreatedAt";
 type SortOrder = "asc" | "desc";
 
@@ -71,7 +55,7 @@ export default function AdminModelsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("modelCreatedAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [editingModel, setEditingModel] = useState<Model | null>(null);
+  const [editingModel, setEditingModel] = useState<AdminModel | null>(null);
   const [addingModel, setAddingModel] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTierCostId, setBulkTierCostId] = useState<string>("");
@@ -131,7 +115,7 @@ export default function AdminModelsPage() {
 
   const addModelMutation = useMutation({
     mutationFn: async (input: {
-      providers: ProviderValue[];
+      providers: Provider[];
       modelName: string;
       tierCostId: string;
       costPer1kTokens: string;
@@ -344,7 +328,7 @@ export default function AdminModelsPage() {
     model,
   }: {
     mode: "add" | "edit";
-    model?: Model;
+    model?: AdminModel;
   }) => {
     const schema = z.object({
       id: z.string().uuid().optional(),
@@ -383,7 +367,7 @@ export default function AdminModelsPage() {
       formOptions: {
         defaultValues: isAddMode
           ? {
-              providers: ["openrouter"] as ProviderValue[],
+              providers: ["openrouter"] as Provider[],
               modelName: "",
               tierCostId: "",
               costPer1kTokens: "0.01",
@@ -394,7 +378,7 @@ export default function AdminModelsPage() {
           : model
             ? {
                 id: model.id,
-                providers: model.providers as ProviderValue[],
+                providers: model.providers as Provider[],
                 modelName: model.modelName,
                 tierCostId: model.tierCostId,
                 costPer1kTokens: model.costPer1kTokens,
@@ -406,7 +390,7 @@ export default function AdminModelsPage() {
         onSubmit: async ({ value }) => {
           if (isAddMode) {
             await addModelMutation.mutateAsync({
-              providers: value.providers as ProviderValue[],
+              providers: value.providers as Provider[],
               modelName: value.modelName,
               tierCostId: value.tierCostId,
               costPer1kTokens: value.costPer1kTokens,

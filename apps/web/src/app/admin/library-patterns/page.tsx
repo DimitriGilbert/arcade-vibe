@@ -33,7 +33,9 @@ import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
+import type { LibraryPattern } from "@/lib/trpc-types";
 
+// UI-only types for sorting (not derived from router)
 type SortField = "name" | "category" | "status";
 type SortOrder = "asc" | "desc";
 
@@ -697,34 +699,3 @@ export default function AdminLibraryPatternsPage() {
     </div>
   );
 }
-
-type LibraryPattern = {
-  id: string;
-  name: string;
-  description: string;
-  urlPattern: string;
-  category:
-    | "game_engine"
-    | "physics"
-    | "audio"
-    | "graphics"
-    | "utility"
-    | "analytics"
-    | "other";
-  isGlobal: boolean;
-  status: "active" | "disabled";
-  createdAt: string;
-  updatedAt: string;
-  createdById: string;
-  createdBy?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  themeAllowedPatterns?: Array<{
-    theme: {
-      id: string;
-      title: string;
-    };
-  }>;
-};

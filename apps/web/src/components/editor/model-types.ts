@@ -1,4 +1,6 @@
-export type GenerationStatus = "idle" | "reasoning" | "generating" | "complete" | "error";
+import type { GenerationStatus, ModelSelection } from "@/lib/trpc-types";
+
+export type { GenerationStatus, ModelSelection };
 
 export interface GenerationUsageMetrics {
   inputTokens: number;
@@ -7,19 +9,6 @@ export interface GenerationUsageMetrics {
   reasoningTokens?: number;
   cachedInputTokens?: number;
   requestCostUsd?: number;
-}
-
-export interface ModelSelection {
-  id: string;
-  modelKey: string;
-  modelName: string;
-  tier: string;
-  tierName: string;
-  creditCost: number;
-  apiKeyId: string | null;
-  isByok: boolean;
-  reasoningEnabled: boolean;
-  reasoningMaxTokens: number;
 }
 
 export interface GenerationResult {

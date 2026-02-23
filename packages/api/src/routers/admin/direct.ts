@@ -455,6 +455,14 @@ export const directActionsRouter = router({
         });
       }
 
+      // Prevent self-suspension
+      if (input.userId === ctx.user.id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot suspend your own account",
+        });
+      }
+
       const now = new Date();
       let suspendedUntil: Date | null = null;
 
@@ -585,6 +593,22 @@ export const directActionsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      // Fetch current weights BEFORE update to enable rollback
+      const currentWeights = await db.query.scoringWeights.findFirst({
+        where: eq(scoringWeights.themeId, input.themeId),
+      });
+
+      // Store old weights for rollback capability
+      const oldWeights = currentWeights
+        ? {
+            quality: parseFloat(currentWeights.qualityWeight ?? "0.40"),
+            difficulty: parseFloat(currentWeights.difficultyWeight ?? "0.25"),
+            efficiency: parseFloat(currentWeights.efficiencyWeight ?? "0.20"),
+            engagement: parseFloat(currentWeights.engagementWeight ?? "0.10"),
+            popularity: parseFloat(currentWeights.popularityWeight ?? "0.05"),
+          }
+        : null;
+
       // PRD lines 589-610: Upsert scoring weights
       await db
         .insert(scoringWeights)
@@ -611,7 +635,7 @@ export const directActionsRouter = router({
           },
         });
 
-      // PRD lines 612: Log to adminActions
+      // PRD lines 612: Log to adminActions with actual old weights
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
         actionType: "update_scoring_weights",
@@ -619,7 +643,7 @@ export const directActionsRouter = router({
         targetId: input.themeId,
         reason: `Updated scoring weights for theme`,
         metadata: JSON.stringify({
-          oldWeights: "See previous version in database",
+          oldWeights,
           newWeights: input.weights,
         }),
       });
@@ -785,15 +809,15 @@ export const directActionsRouter = router({
 
         if (action.metadata) {
           try {
-            const parsed = JSON.parse(action.metadata) as { newWeights?: {
+            const parsed = JSON.parse(action.metadata) as { oldWeights?: {
               quality: number;
               difficulty: number;
               efficiency: number;
               engagement: number;
               popularity: number;
             } };
-            if (parsed.newWeights) {
-              previousWeights = parsed.newWeights;
+            if (parsed.oldWeights) {
+              previousWeights = parsed.oldWeights;
             }
           } catch {
             previousWeights = null;
@@ -1006,20 +1030,11 @@ export const directActionsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const existingUsers = await db.query.userExtended.findMany({
-        where: and(
-          ...input.userIds.map((id) => eq(userExtended.id, id)),
-        ),
-        columns: { id: true },
-      });
-
-      const existingUserIds = new Set(existingUsers.map((u) => u.id));
-      const notFoundIds = input.userIds.filter((id) => !existingUserIds.has(id));
-
-      if (notFoundIds.length > 0) {
+      // Prevent self-suspension
+      if (input.userIds.includes(ctx.user.id)) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Users not found: ${notFoundIds.join(", ")}`,
+          code: "BAD_REQUEST",
+          message: "Cannot suspend your own account",
         });
       }
 
@@ -1032,31 +1047,51 @@ export const directActionsRouter = router({
         suspendedUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       }
 
-      await db
-        .update(userExtended)
-        .set({
-          isSuspended: true,
-          suspensionReason: input.reason,
-          suspendedUntil,
-        })
-        .where(
-          and(...input.userIds.map((id) => eq(userExtended.id, id))),
-        );
+      const finalSuspendedUntil = suspendedUntil;
 
-      const actionValues = input.userIds.map((userId) => ({
-        adminId: ctx.user.id,
-        actionType: "bulk_suspend_user" as const,
-        targetType: "user" as const,
-        targetId: userId,
-        reason: input.reason,
-        metadata: JSON.stringify({
-          duration: input.duration,
-          bulkOperation: true,
-          totalSuspended: input.userIds.length,
-        }),
-      }));
+      // Wrap in transaction with FOR UPDATE lock to prevent concurrent modifications
+      await db.transaction(async (tx) => {
+        // Lock the rows we're about to modify
+        const existingUsers = await tx
+          .select({ id: userExtended.id })
+          .from(userExtended)
+          .where(and(...input.userIds.map((id) => eq(userExtended.id, id))))
+          .for("update");
 
-      await db.insert(adminActions).values(actionValues);
+        const existingUserIds = new Set(existingUsers.map((u) => u.id));
+        const notFoundIds = input.userIds.filter((id) => !existingUserIds.has(id));
+
+        if (notFoundIds.length > 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Users not found: ${notFoundIds.join(", ")}`,
+          });
+        }
+
+        await tx
+          .update(userExtended)
+          .set({
+            isSuspended: true,
+            suspensionReason: input.reason,
+            suspendedUntil: finalSuspendedUntil,
+          })
+          .where(and(...input.userIds.map((id) => eq(userExtended.id, id))));
+
+        const actionValues = input.userIds.map((userId) => ({
+          adminId: ctx.user.id,
+          actionType: "bulk_suspend_user" as const,
+          targetType: "user" as const,
+          targetId: userId,
+          reason: input.reason,
+          metadata: JSON.stringify({
+            duration: input.duration,
+            bulkOperation: true,
+            totalSuspended: input.userIds.length,
+          }),
+        }));
+
+        await tx.insert(adminActions).values(actionValues);
+      });
 
       return {
         success: true,
@@ -1083,57 +1118,67 @@ export const directActionsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const existingGames = await db.query.games.findMany({
-        where: and(...input.gameIds.map((id) => eq(games.id, id))),
-        columns: { id: true, themeId: true },
+      // Store themeIds outside transaction for cache invalidation
+      let themeIds: Set<string>;
+
+      // Wrap in transaction with FOR UPDATE lock to prevent concurrent modifications
+      await db.transaction(async (tx) => {
+        // Lock the rows we're about to modify
+        const existingGames = await tx
+          .select({ id: games.id, themeId: games.themeId })
+          .from(games)
+          .where(and(...input.gameIds.map((id) => eq(games.id, id))))
+          .for("update");
+
+        const existingGameIds = new Set(existingGames.map((g) => g.id));
+        const notFoundIds = input.gameIds.filter((id) => !existingGameIds.has(id));
+
+        if (notFoundIds.length > 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Games not found: ${notFoundIds.join(", ")}`,
+          });
+        }
+
+        await tx
+          .update(games)
+          .set({
+            status: "hidden",
+            isHidden: true,
+            hiddenReason: input.reason,
+            hiddenAt: new Date(),
+          })
+          .where(and(...input.gameIds.map((id) => eq(games.id, id))));
+
+        const actionValues = input.gameIds.map((gameId) => ({
+          adminId: ctx.user.id,
+          actionType: "bulk_hide_game" as const,
+          targetType: "game" as const,
+          targetId: gameId,
+          reason: input.reason,
+          metadata: JSON.stringify({
+            bulkOperation: true,
+            totalHidden: input.gameIds.length,
+          }),
+        }));
+
+        await tx.insert(adminActions).values(actionValues);
+
+        // Capture themeIds for cache invalidation after transaction
+        themeIds = new Set(
+          existingGames.map((g) => g.themeId).filter((id): id is string => id !== null),
+        );
       });
 
-      const existingGameIds = new Set(existingGames.map((g) => g.id));
-      const notFoundIds = input.gameIds.filter((id) => !existingGameIds.has(id));
-
-      if (notFoundIds.length > 0) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Games not found: ${notFoundIds.join(", ")}`,
-        });
-      }
-
-      await db
-        .update(games)
-        .set({
-          status: "hidden",
-          isHidden: true,
-          hiddenReason: input.reason,
-          hiddenAt: new Date(),
-        })
-        .where(and(...input.gameIds.map((id) => eq(games.id, id))));
-
-      const themeIds = new Set(
-        existingGames.map((g) => g.themeId).filter((id): id is string => id !== null),
-      );
-
-      for (const themeId of themeIds) {
+      // Invalidate leaderboard caches after successful transaction
+      for (const themeId of themeIds!) {
         await redis.del(`lb:${themeId}`);
       }
-
-      const actionValues = input.gameIds.map((gameId) => ({
-        adminId: ctx.user.id,
-        actionType: "bulk_hide_game" as const,
-        targetType: "game" as const,
-        targetId: gameId,
-        reason: input.reason,
-        metadata: JSON.stringify({
-          bulkOperation: true,
-          totalHidden: input.gameIds.length,
-        }),
-      }));
-
-      await db.insert(adminActions).values(actionValues);
 
       return {
         success: true,
         hiddenCount: input.gameIds.length,
-        affectedThemeIds: Array.from(themeIds),
+        affectedThemeIds: Array.from(themeIds!),
       };
     }),
 

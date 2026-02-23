@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function Error({
+export default function GameError({
   error,
   reset,
 }: {
@@ -20,6 +20,7 @@ export default function Error({
         {error.message || "An unexpected error occurred"}
       </p>
       <button
+        type="button"
         onClick={reset}
         className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-md hover:opacity-90 transition-opacity"
       >

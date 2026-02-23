@@ -22,49 +22,11 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import type { Route } from "next";
 import Link from "next/link";
-
-interface CreditBatch {
-  id: string;
-  amount: number;
-  remainingAmount: number;
-  sourceType: string;
-  expiresAt: Date;
-  daysUntilExpiry: number;
-  createdAt: Date;
-}
-
-interface CreditBreakdown {
-  total: number;
-  expiringWithin7Days: number;
-  expiringWithin30Days: number;
-  validBeyond30Days: number;
-  batches: CreditBatch[];
-}
-
-interface Transaction {
-  id: string;
-  amount: number;
-  type: string;
-  description: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-}
-
-interface Subscription {
-  id: string;
-  status: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  plan: {
-    id: string;
-    name: string;
-    displayName: string;
-    credits: number;
-    price: number;
-    creditValidityDays: number | null;
-  };
-  stripeSubscriptionId: string | null;
-}
+import type {
+  CreditBreakdown,
+  CreditTransaction,
+  BillingSubscription,
+} from "@/lib/trpc-types";
 
 function ExpiryTimeline({ breakdown }: { breakdown: CreditBreakdown }) {
   const maxCredits = Math.max(
@@ -276,7 +238,7 @@ export default function SubscriptionSettingsPage() {
   const balance = balanceData?.balance ?? 0;
   const breakdown = breakdownData as CreditBreakdown | undefined;
   const subscription = subscriptionData?.subscription as
-    | Subscription
+    | BillingSubscription
     | undefined;
   const transactions = transactionsData?.transactions ?? [];
   const invoices = invoicesData?.invoices ?? [];
@@ -499,7 +461,7 @@ export default function SubscriptionSettingsPage() {
           <div className="p-6">
             <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
             <div className="space-y-3">
-              {transactions.map((transaction: Transaction) => (
+              {transactions.map((transaction: CreditTransaction) => (
                 <div
                   key={transaction.id}
                   className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"

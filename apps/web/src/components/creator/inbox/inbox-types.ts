@@ -2,20 +2,9 @@
  * Shared types for the Inbox prompt editor
  */
 
-export type GenerationStatus = "idle" | "reasoning" | "generating" | "complete" | "error";
+import type { GenerationStatus, ModelSelection } from "@/lib/trpc-types";
 
-export interface ModelSelection {
-  id: string;
-  modelKey: string;
-  modelName: string;
-  tier: string;
-  tierName: string;
-  creditCost: number;
-  apiKeyId: string | null;
-  isByok: boolean;
-  reasoningEnabled: boolean;
-  reasoningMaxTokens: number;
-}
+export type { GenerationStatus, ModelSelection };
 
 export interface ModelConfig {
   id: string;

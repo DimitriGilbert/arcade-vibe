@@ -229,6 +229,7 @@ export type CreditsInput = RouterInput["credits"];
 export type CreditsGetUserExtendedOutput = CreditsOutput["getUserExtended"];
 export type CreditsGetBalanceOutput = CreditsOutput["getBalance"];
 export type CreditsGetTransactionsOutput = CreditsOutput["getTransactions"];
+export type CreditsGetCreditBreakdownOutput = CreditsOutput["getCreditBreakdown"];
 export type CreditsAddCreditsOutput = CreditsOutput["addCredits"];
 
 // --- Admin Router ---
@@ -547,3 +548,80 @@ export type SortOrder = SortConfigInput["order"];
 export type ModelWithStats = ModelsListWithStatsOutput[number];
 export type ModelDetail = ModelsGetByIdWithStatsOutput;
 export type ModelGame = ModelsListGamesByModelOutput[number];
+
+// --- Admin Models Router Types ---
+
+/**
+ * Admin model configuration with tier info
+ * @source RouterOutput["admin"]["models"]["getModels"][number]
+ */
+export type AdminModel = AdminOutput["models"]["getModels"][number];
+
+// --- Admin Moderation Router Types ---
+
+/**
+ * Moderation report from admin queue
+ * @source RouterOutput["admin"]["direct"]["getModerationQueue"][number]
+ */
+export type ModerationReport = AdminOutput["direct"]["getModerationQueue"][number];
+
+// --- Billing Router Types ---
+
+export type BillingOutput = RouterOutput["billing"];
+export type BillingInput = RouterInput["billing"];
+
+export type BillingSubscription = NonNullable<BillingOutput["getSubscription"]["subscription"]>;
+export type BillingInvoice = BillingOutput["getInvoices"]["invoices"][number];
+
+// --- Credits Router Extended Types ---
+
+/**
+ * Credit batch with expiry information
+ * @source RouterOutput["credits"]["getCreditBreakdown"]["batches"][number]
+ */
+export type CreditBatch = NonNullable<CreditsGetCreditBreakdownOutput>["batches"][number];
+
+/**
+ * Credit breakdown with expiry timeline
+ * @source RouterOutput["credits"]["getCreditBreakdown"]
+ */
+export type CreditBreakdown = NonNullable<CreditsGetCreditBreakdownOutput>;
+
+/**
+ * Credit transaction from history
+ * @source RouterOutput["credits"]["getTransactions"]["transactions"][number]
+ */
+export type CreditTransaction = NonNullable<CreditsGetTransactionsOutput>["transactions"][number];
+
+// --- Admin Plans Router Types ---
+
+/**
+ * Subscription plan from admin list
+ * @source RouterOutput["admin"]["plans"]["getPlans"][number]
+ */
+export type SubscriptionPlan = AdminOutput["plans"]["getPlans"][number];
+
+// --- UI State Types ---
+
+/**
+ * Generation status for game code generation
+ * Used by editor and inbox components for tracking generation state
+ */
+export type GenerationStatus = "idle" | "reasoning" | "generating" | "complete" | "error";
+
+/**
+ * Model selection for game generation
+ * Represents a selected AI model with its configuration for generation
+ */
+export interface ModelSelection {
+  id: string;
+  modelKey: string;
+  modelName: string;
+  tier: string;
+  tierName: string;
+  creditCost: number;
+  apiKeyId: string | null;
+  isByok: boolean;
+  reasoningEnabled: boolean;
+  reasoningMaxTokens: number;
+}

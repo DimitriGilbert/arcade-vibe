@@ -189,6 +189,9 @@ export const deductCredits = async (
 
   // Use transaction for atomic operations
   await db.transaction(async (tx) => {
+    // Acquire advisory lock for this user to prevent race conditions
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`);
+
     // Get valid batches ordered by expiry date (FIFO - oldest first)
     const batches = await tx.query.creditBatches.findMany({
       where: and(

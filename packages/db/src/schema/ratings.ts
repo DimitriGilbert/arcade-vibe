@@ -6,7 +6,9 @@ import {
   integer,
   index,
   unique,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { prompts } from "./prompts";
 import { themes } from "./themes";
 import { games as gamesImport } from "./games";
@@ -69,5 +71,11 @@ export const ratings = pgTable(
       table.promptId,
       table.gameId,
     ),
+    check("ratings_range_check", sql`
+      (prompt_quality IS NULL OR prompt_quality BETWEEN 1 AND 5) AND
+      (game_quality IS NULL OR game_quality BETWEEN 1 AND 5) AND
+      (theme_relevance IS NULL OR theme_relevance BETWEEN 1 AND 5) AND
+      overall BETWEEN 1 AND 5
+    `),
   ],
 );

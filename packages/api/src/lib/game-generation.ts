@@ -8,7 +8,7 @@ import {
 } from "@arcade-vibe/db/schema/library-patterns";
 import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 import { getProviderModel } from "./ai-providers";
-import { deductCredits, getValidCreditBalance } from "./credits";
+import { deductCredits } from "./credits";
 import { decryptApiKey } from "./encryption";
 import { uploadToCDN } from "./cdn";
 import {
@@ -524,16 +524,7 @@ export async function generateGame(
 
   if (!apiKeyId) {
     const creditCost = tierCost.creditCost;
-    const userCredits = await getValidCreditBalance(userId);
-    // console.log("[DEBUG] Credit check:", { userId, userCredits, creditCost });
-
-    if (userCredits < creditCost) {
-      throw new TRPCError({
-        code: "PAYMENT_REQUIRED",
-        message: `Insufficient credits. Need ${creditCost}, have ${userCredits}.`,
-      });
-    }
-
+    // deductCredits handles the balance check atomically with locking
     await deductCredits(userId, creditCost, creditReason, modelKey);
   }
 
@@ -618,9 +609,13 @@ export async function generateGame(
     { role: "user" as const, content: userPrompt },
   ];
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
+
   const result = streamText({
     model,
     messages,
+    abortSignal: controller.signal,
   });
 
   const configuredMaxCharsRaw = Number(
@@ -846,6 +841,7 @@ export async function generateGame(
         error: errorMessage,
       };
     } finally {
+      clearTimeout(timeoutId);
       if (redisHasPersistedChunks || redisBufferEnabled) {
         try {
           await redis.del(redisBufferKey);

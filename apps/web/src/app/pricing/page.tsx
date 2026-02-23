@@ -10,19 +10,7 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  displayName: string | null;
-  price: number;
-  credits: number;
-  features: string[] | null;
-  isActive: boolean | null;
-  isOneTime: boolean | null;
-  isPopular: boolean | null;
-  creditValidityDays: number | null;
-}
+import type { SubscriptionPlan } from "@/lib/trpc-types";
 
 function PlanCard({
   plan,

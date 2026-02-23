@@ -356,106 +356,109 @@ export const moderationRouter = router({
       const userId = ctx.user!.id;
 
       // PRD lines 316-325: Update report status
-      await db
-        .update(moderationReports)
-        .set({
-          status: "resolved",
-          resolutionNotes: input.resolutionReason, // Schema uses resolutionNotes, not resolutionReason
-          reviewedBy: userId, // Schema uses reviewedBy, not assignedTo
-          reviewedAt: new Date(),
-        })
-        .where(eq(moderationReports.id, input.reportId));
+      // Wrap all database operations in a transaction for atomicity
+      await db.transaction(async (tx) => {
+        await tx
+          .update(moderationReports)
+          .set({
+            status: "resolved",
+            resolutionNotes: input.resolutionReason, // Schema uses resolutionNotes, not resolutionReason
+            reviewedBy: userId, // Schema uses reviewedBy, not assignedTo
+            reviewedAt: new Date(),
+          })
+          .where(eq(moderationReports.id, input.reportId));
 
-      // PRD lines 327-363: Execute action based on resolution
-      if (input.action === "approved") {
-        if (report.targetType === "game" && report.targetId) {
-          const gameBefore = await db.query.games.findFirst({
-            where: eq(games.id, report.targetId),
-            columns: { status: true, themeId: true },
-          });
-          const originalStatus = gameBefore?.status ?? "completed";
+        // PRD lines 327-363: Execute action based on resolution
+        if (input.action === "approved") {
+          if (report.targetType === "game" && report.targetId) {
+            const gameBefore = await tx.query.games.findFirst({
+              where: eq(games.id, report.targetId),
+              columns: { status: true, themeId: true },
+            });
+            const originalStatus = gameBefore?.status ?? "completed";
 
-          await db
-            .update(games)
-            .set({
-              status: "hidden",
-              isHidden: true,
-              hiddenAt: new Date(),
-              hiddenReason: `Moderation: ${input.resolutionReason}`,
-            })
-            .where(eq(games.id, report.targetId));
+            await tx
+              .update(games)
+              .set({
+                status: "hidden",
+                isHidden: true,
+                hiddenAt: new Date(),
+                hiddenReason: `Moderation: ${input.resolutionReason}`,
+              })
+              .where(eq(games.id, report.targetId));
 
-          await db
-            .update(moderationReports)
-            .set({
-              resolutionNotes: JSON.stringify({
-                reason: input.resolutionReason,
-                originalStatus,
-              }),
-            })
-            .where(eq(moderationReports.id, input.reportId));
+            await tx
+              .update(moderationReports)
+              .set({
+                resolutionNotes: JSON.stringify({
+                  reason: input.resolutionReason,
+                  originalStatus,
+                }),
+              })
+              .where(eq(moderationReports.id, input.reportId));
 
-          if (gameBefore?.themeId) {
-            await redis.del(`lb:${gameBefore.themeId}`);
+            if (gameBefore?.themeId) {
+              await redis.del(`lb:${gameBefore.themeId}`);
+            }
+          } else if (report.targetType === "prompt" && report.targetId) {
+            const promptBefore = await tx.query.prompts.findFirst({
+              where: eq(prompts.id, report.targetId),
+              columns: { status: true },
+            });
+            const originalStatus = promptBefore?.status ?? "draft";
+
+            await tx
+              .update(prompts)
+              .set({
+                status: "disqualified",
+              })
+              .where(eq(prompts.id, report.targetId));
+
+            await tx
+              .update(moderationReports)
+              .set({
+                resolutionNotes: JSON.stringify({
+                  reason: input.resolutionReason,
+                  originalStatus,
+                }),
+              })
+              .where(eq(moderationReports.id, input.reportId));
+          } else if (report.targetType === "user" && report.targetId) {
+            await tx
+              .update(userExtended)
+              .set({
+                isSuspended: true,
+                suspensionReason: input.resolutionReason,
+              })
+              .where(eq(userExtended.id, report.targetId));
+          } else if (report.targetType === "review" && report.targetId) {
+            await tx.delete(ratings).where(eq(ratings.id, report.targetId));
+            await redis.del(`lb:*`);
           }
-        } else if (report.targetType === "prompt" && report.targetId) {
-          const promptBefore = await db.query.prompts.findFirst({
-            where: eq(prompts.id, report.targetId),
-            columns: { status: true },
-          });
-          const originalStatus = promptBefore?.status ?? "draft";
-
-          await db
-            .update(prompts)
-            .set({
-              status: "disqualified",
-            })
-            .where(eq(prompts.id, report.targetId));
-
-          await db
-            .update(moderationReports)
-            .set({
-              resolutionNotes: JSON.stringify({
-                reason: input.resolutionReason,
-                originalStatus,
-              }),
-            })
-            .where(eq(moderationReports.id, input.reportId));
-        } else if (report.targetType === "user" && report.targetId) {
-          await db
-            .update(userExtended)
-            .set({
-              isSuspended: true,
-              suspensionReason: input.resolutionReason,
-            })
-            .where(eq(userExtended.id, report.targetId));
-        } else if (report.targetType === "review" && report.targetId) {
-          await db.delete(ratings).where(eq(ratings.id, report.targetId));
-          await redis.del(`lb:*`);
+        } else if (input.action === "escalated") {
+          await redis.xadd(
+            "admin:escalation",
+            "*",
+            "reportId",
+            input.reportId,
+            "escalatedBy",
+            userId,
+          );
         }
-      } else if (input.action === "escalated") {
-        await redis.xadd(
-          "admin:escalation",
-          "*",
-          "reportId",
-          input.reportId,
-          "escalatedBy",
-          userId,
-        );
-      }
 
-      const userRole = ctx.user!.role;
-      await db.insert(adminActions).values({
-        adminId: userId,
-        actionType: "resolve_report",
-        targetType: report.targetType,
-        targetId: report.targetId,
-        reason: input.resolutionReason,
-        metadata: JSON.stringify({
-          resolutionAction: input.action,
-          reportId: input.reportId,
-          resolvedByRole: userRole,
-        }),
+        const userRole = ctx.user!.role;
+        await tx.insert(adminActions).values({
+          adminId: userId,
+          actionType: "resolve_report",
+          targetType: report.targetType,
+          targetId: report.targetId,
+          reason: input.resolutionReason,
+          metadata: JSON.stringify({
+            resolutionAction: input.action,
+            reportId: input.reportId,
+            resolvedByRole: userRole,
+          }),
+        });
       });
 
       return { success: true };

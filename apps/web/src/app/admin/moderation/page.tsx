@@ -31,7 +31,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import { LoadingState, EmptyState } from "@/components/reusable";
+import type { ModerationReport } from "@/lib/trpc-types";
 
+// UI-only types for status filter (not derived from router)
 type ReportStatus = "pending" | "resolved" | "reviewing" | "dismissed";
 type ReportAction = "approved" | "rejected" | "requested_changes" | "escalated";
 
@@ -41,10 +43,10 @@ export default function AdminModerationPage() {
   const [typeFilter, setTypeFilter] = useState<
     "all" | "prompt" | "game" | "user" | "review"
   >("all");
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ModerationReport | null>(null);
   const [resolutionDialog, setResolutionDialog] = useState<{
     open: boolean;
-    report: Report | null;
+    report: ModerationReport | null;
     action: ReportAction | null;
   }>({
     open: false,
@@ -127,7 +129,7 @@ export default function AdminModerationPage() {
   });
 
   const handleResolve = (
-    report: Report,
+    report: ModerationReport,
     action: ReportAction,
     resolutionReason: string,
   ) => {
@@ -536,25 +538,3 @@ export default function AdminModerationPage() {
     </div>
   );
 }
-
-type Report = {
-  id: string;
-  targetType: "user" | "prompt" | "game" | "review";
-  targetId: string | null;
-  reason: string;
-  description: string | null;
-  status: "pending" | "resolved" | "reviewing" | "dismissed";
-  reporter: {
-    id: string;
-    name: string | null;
-    email: string;
-  } | null;
-  reviewer: {
-    id: string;
-    name: string | null;
-  } | null;
-  resolutionNotes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  reviewedAt: string | null;
-};

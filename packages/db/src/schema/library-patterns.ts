@@ -5,6 +5,7 @@ import {
   timestamp,
   boolean,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { libraryCategoryEnum, libraryStatusEnum } from "./enums";
 import { user } from "./auth";
@@ -51,6 +52,6 @@ export const themeAllowedPatterns = pgTable(
   (table) => [
     index("theme_allowed_patterns_themeId_idx").on(table.themeId),
     index("theme_allowed_patterns_patternId_idx").on(table.patternId),
-    index("theme_allowed_patterns_unique_idx").on(table.themeId, table.patternId),
+    unique("theme_allowed_patterns_themeId_patternId_key").on(table.themeId, table.patternId),
   ],
 );

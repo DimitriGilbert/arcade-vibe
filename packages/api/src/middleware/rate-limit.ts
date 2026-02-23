@@ -83,6 +83,6 @@ export const rateLimits = {
     windowMs: 60 * 1000,
     maxRequests: 30,
     keyPrefix: "ratelimit:loose",
-    failOpen: true,
+    failOpen: isDev, // Only fail open in dev, not production
   },
 };

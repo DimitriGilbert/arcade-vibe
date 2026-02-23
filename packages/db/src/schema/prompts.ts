@@ -22,7 +22,7 @@ export const prompts = pgTable(
     themeId: uuid("theme_id")
       .references(() => themes.id, { onDelete: "cascade" })
       .notNull(),
-    parentId: uuid("parent_id").references((): AnyPgColumn => prompts.id),
+    parentId: uuid("parent_id").references((): AnyPgColumn => prompts.id, { onDelete: "set null" }),
     content: text("content").notNull(),
     contentHash: varchar("content_hash", { length: 64 }).notNull(),
     tokenCount: integer("token_count").notNull(),

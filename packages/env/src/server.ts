@@ -21,6 +21,11 @@ export const env = createEnv({
     // Initial credits given to new users on signup (default: 20)
     INITIAL_CREDITS: z.coerce.number().int().min(0).default(20),
     OPENROUTER_APP_NAME: z.string().min(1).default("Arcade-Vibe"),
+    // AI Provider Keys
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    GOOGLE_API_KEY: z.string().min(1).optional(),
+    OPENROUTER_API_KEY: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1).optional(),
     RESEND_FROM_EMAIL: z.string().email().default("noreply@arcade-vibe.com"),
     RESEND_FROM_NAME: z.string().min(1).default("Arcade-Vibe"),
@@ -29,6 +34,12 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
     GITHUB_CLIENT_ID: z.string().min(1).optional(),
     GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+    // CDN Configuration
+    CDN_URL: z.string().url().optional(),
+    CDN_REGION: z.string().min(1).default("auto"),
+    CDN_ACCESS_KEY_ID: z.string().min(1).optional(),
+    CDN_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    CDN_BUCKET: z.string().min(1).default("games"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

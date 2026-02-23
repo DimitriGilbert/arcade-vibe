@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
       handleInvoicePaid,
       handleSubscriptionUpdated,
       handleSubscriptionDeleted,
+      handleInvoicePaymentFailed,
+      handleCustomerDeleted,
       tryClaimEvent,
       DuplicateEventError,
     } = await getWebhookHandlers();
@@ -76,6 +78,18 @@ export async function POST(request: NextRequest) {
           case "customer.subscription.deleted": {
             const subscription = event.data.object as Stripe.Subscription;
             await handleSubscriptionDeleted(subscription, tx);
+            break;
+          }
+
+          case "invoice.payment_failed": {
+            const invoice = event.data.object as Stripe.Invoice;
+            await handleInvoicePaymentFailed(invoice, tx);
+            break;
+          }
+
+          case "customer.deleted": {
+            const customer = event.data.object as Stripe.Customer;
+            await handleCustomerDeleted(customer, tx);
             break;
           }
 

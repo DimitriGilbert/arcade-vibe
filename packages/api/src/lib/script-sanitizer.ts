@@ -4,12 +4,27 @@ type AllowedLibraryPattern = typeof allowedLibraryPatterns.$inferSelect;
 
 const SCRIPT_TAG_REGEX = /<script\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
 const INLINE_SCRIPT_REGEX = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+/**
+ * WARNING: Static pattern matching cannot catch all XSS attack vectors.
+ * Sophisticated obfuscation techniques (encoding, splitting, dynamic construction)
+ * may bypass these checks. This is a defense-in-depth measure, not a complete solution.
+ * Always combine with Content Security Policy and proper sandboxing.
+ */
 const DANGEROUS_PATTERNS = [
   /\beval\s*\(/gi,
   /\bFunction\s*\(/gi,
   /\bnew\s+Function\s*\(/gi,
   /setTimeout\s*\(\s*["'`]/gi,
   /setInterval\s*\(\s*["'`]/gi,
+  /\batob\s*\(/gi,
+  /\bbtoa\s*\(/gi,
+  /document\.write/gi,
+  /\.innerHTML\s*=/gi,
+  /\.outerHTML\s*=/gi,
+  /document\.cookie/gi,
+  /WebSocket\s*\(/gi,
+  /import\s*\(/gi,
+  /\[.*constructor.*constructor/gi,
 ];
 
 export interface SanitizationResult {

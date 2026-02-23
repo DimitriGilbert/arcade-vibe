@@ -16,7 +16,7 @@ import {
   generatePortableGameHtml,
   generatePortableFilename,
 } from "../lib/game-export";
-import { cacheGet, cacheSet } from "../lib/redis";
+import { cacheGet, cacheSet, cacheDeletePattern } from "../lib/redis";
 import { redis } from "../lib/redis";
 import z from "zod";
 
@@ -1284,7 +1284,7 @@ export const gamesRouter = router({
 
   exportPortable: protectedProcedure
     .input(z.object({ gameId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const gamesQuery = db.query.games;
       if (!gamesQuery) {
         throw new TRPCError({
@@ -1295,12 +1295,31 @@ export const gamesRouter = router({
 
       const game = await gamesQuery.findFirst({
         where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: { id: true },
+              },
+            },
+          },
+        },
       });
 
       if (!game) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Game not found",
+        });
+      }
+
+      const isAuthor = game.prompt?.user?.id === ctx.user.id;
+      const isAdmin = ctx.user.role === "admin" || ctx.user.role === "moderator";
+
+      if (!isAuthor && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only export games you own",
         });
       }
 
@@ -1497,13 +1516,6 @@ export const gamesRouter = router({
       };
     }),
 });
-
-async function cacheDeletePattern(pattern: string): Promise<void> {
-  const keys = await redis.keys(pattern);
-  if (keys.length > 0) {
-    await redis.del(...keys);
-  }
-}
 
 async function cacheDelete(key: string): Promise<void> {
   await redis.del(key);
