@@ -1,216 +1,96 @@
 import { db } from "@arcade-vibe/db";
 import { scores, scoreHistory, scoreRecalculationJobs } from "@arcade-vibe/db/schema/scores";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
-import { games as gamesTable, gameScores } from "@arcade-vibe/db/schema/games";
-import { scoringWeights, platformStats } from "@arcade-vibe/db/schema/platform";
+import { games as gamesTable, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
+import { platformStats } from "@arcade-vibe/db/schema/platform";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
-import { eq, and, desc, gt, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, isNotNull } from "drizzle-orm";
 import { redis } from "./redis";
-import {
-  SCORING_CONFIG,
-  getPlaytimeBucket,
-  type PlaytimeBucket,
-  type ScoringConfig,
-} from "./scoring-config";
+import { SCORING_CONFIG, type ScoringConfig } from "./scoring-config";
 
-export type { PlaytimeBucket, ScoringConfig };
-export { SCORING_CONFIG, getPlaytimeBucket };
-
-interface ScoringWeights {
-  quality: number;
-  difficulty: number;
-  efficiency: number;
-  engagement: number;
-  popularity: number;
-}
+export type { ScoringConfig };
+export { SCORING_CONFIG };
 
 interface ScoreComponents {
   qualityScore: number;
-  difficultyScore: number;
-  efficiencyScore: number;
   engagementScore: number;
-  popularityScore: number;
-  playtimeBucket: PlaytimeBucket;
+  playersScore: number;
+  playsScore: number;
+  replayScore: number;
+  efficiencyScore: number;
+  tierFactor: number;
 }
 
 interface ScoreResult {
   gameId: string;
   finalScore: number;
   components: ScoreComponents;
-  weightsUsed: ScoringWeights;
+}
+
+interface GameplayMetrics {
+  uniquePlayers: number;
+  totalPlays: number;
+  retention30: number;
+  retention60: number;
+  p75Playtime: number;
 }
 
 interface BatchScoreData {
   tierCostMultipliers: Map<string, number>;
-  engagementData: Map<string, { avgPlaytime: number; bucket: PlaytimeBucket }>;
+  gameplayMetrics: Map<string, GameplayMetrics>;
 }
 
-const DEFAULT_WEIGHTS: ScoringWeights = {
-  quality: SCORING_CONFIG.weights.quality,
-  difficulty: SCORING_CONFIG.weights.difficulty,
-  efficiency: SCORING_CONFIG.weights.efficiency,
-  engagement: SCORING_CONFIG.weights.engagement,
-  popularity: SCORING_CONFIG.weights.popularity,
-};
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
 
-async function calculateQualityScore(
-  gameRatings: Array<{
-    overall: number;
-    promptQuality: number | null;
-    gameQuality: number | null;
-    themeRelevance: number | null;
-  }>,
-  globalAvgRating: number,
-  totalRatingCount: number,
-): Promise<number> {
-  if (gameRatings.length === 0) {
+function saturate(value: number, scale: number): number {
+  if (value <= 0) {
+    return 0;
+  }
+  return 1 - Math.exp(-value / scale);
+}
+
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) {
     return 0;
   }
 
-  const { minRatingCount, maxScore, ratingToScoreMultiplier } = SCORING_CONFIG.quality;
-  const sumOfRatings = gameRatings.reduce((sum, r) => sum + r.overall, 0);
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = (sorted.length - 1) * p;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const lowerValue = sorted[lower];
+  const upperValue = sorted[upper];
 
-  const bayesianAvg =
-    (totalRatingCount * globalAvgRating + sumOfRatings) /
-    (totalRatingCount + minRatingCount);
+  if (lowerValue === undefined || upperValue === undefined) {
+    return sorted[sorted.length - 1] ?? 0;
+  }
 
-  const qualityScore = Math.min(bayesianAvg * ratingToScoreMultiplier, maxScore);
-  return qualityScore;
+  if (lower === upper) {
+    return lowerValue;
+  }
+
+  const weight = index - lower;
+  return lowerValue * (1 - weight) + upperValue * weight;
 }
 
-async function calculateDifficultyScore(
-  tierCostId: string,
-  batchData?: BatchScoreData,
-): Promise<number> {
-  const { maxScore, defaultMultiplier } = SCORING_CONFIG.difficulty;
-
-  if (batchData?.tierCostMultipliers.has(tierCostId)) {
-    const scoreMultiplier = batchData.tierCostMultipliers.get(tierCostId) ?? defaultMultiplier;
-    return Math.min(scoreMultiplier * maxScore, maxScore);
-  }
-
-  const tierCost = await db.query.tierCosts.findFirst({
-    where: eq(tierCosts.id, tierCostId),
-    columns: { scoreMultiplier: true },
-  });
-
-  const scoreMultiplier = tierCost?.scoreMultiplier ?? defaultMultiplier;
-  const difficultyScore = scoreMultiplier * maxScore;
-  return Math.min(difficultyScore, maxScore);
-}
-
-function calculateEfficiencyScore(tokenCount: number): number {
-  if (tokenCount <= 0) {
-    return 0;
-  }
-
-  const { maxScore, tokenBaseline } = SCORING_CONFIG.efficiency;
-  const efficiencyScore =
-    (maxScore * Math.log(tokenBaseline / (tokenCount + 1))) / Math.log(tokenBaseline);
-  return Math.max(0, Math.min(efficiencyScore, maxScore));
-}
-
-async function calculateEngagementScore(
-  gameId: string,
-  batchData?: BatchScoreData,
-): Promise<{ score: number; bucket: PlaytimeBucket }> {
-  const { maxScore, maxPlaytimeSeconds } = SCORING_CONFIG.engagement;
-
-  if (batchData?.engagementData.has(gameId)) {
-    const data = batchData.engagementData.get(gameId);
-    if (data) {
-      const cappedPlaytime = Math.min(data.avgPlaytime, maxPlaytimeSeconds);
-      const engagementScore = (maxScore * cappedPlaytime) / maxPlaytimeSeconds;
-      return { score: engagementScore, bucket: data.bucket };
-    }
-  }
-
-  const scores = await db.query.gameScores.findMany({
-    where: and(
-      eq(gameScores.gameId, gameId),
-      gt(gameScores.score, 0),
-    ),
-    columns: { completionTime: true },
-  });
-
-  if (scores.length === 0 || scores.every((s) => s.completionTime === null)) {
-    return { score: 0, bucket: getPlaytimeBucket(0) };
-  }
-
-  const validTimes = scores
-    .map((s) => s.completionTime)
-    .filter((t): t is number => t !== null && t !== undefined);
-  const avgPlaytime = validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
-  const bucket = getPlaytimeBucket(avgPlaytime);
-
-  const cappedPlaytime = Math.min(avgPlaytime, maxPlaytimeSeconds);
-  const engagementScore = (maxScore * cappedPlaytime) / maxPlaytimeSeconds;
-
-  return { score: engagementScore, bucket };
-}
-
-function calculatePopularityScore(ratingCount: number): number {
-  if (ratingCount <= 0) {
-    return 0;
-  }
-
-  const { maxScore, logBase } = SCORING_CONFIG.popularity;
-  const popularityScore = (maxScore * Math.log(ratingCount + 1)) / Math.log(logBase);
-
-  return Math.min(popularityScore, maxScore);
-}
-
-async function fetchScoringWeights(
-  themeId?: string | null,
-): Promise<ScoringWeights> {
-  let weightsRow: typeof scoringWeights.$inferSelect | undefined;
-
-  if (themeId) {
-    weightsRow = await db.query.scoringWeights.findFirst({
-      where: and(
-        eq(scoringWeights.themeId, themeId),
-        eq(scoringWeights.isActive, true),
-      ),
-    });
-  }
-
-  if (!weightsRow) {
-    return DEFAULT_WEIGHTS;
-  }
-
-  return {
-    quality: parseFloat(weightsRow.qualityWeight ?? "0.40"),
-    difficulty: parseFloat(weightsRow.difficultyWeight ?? "0.25"),
-    efficiency: parseFloat(weightsRow.efficiencyWeight ?? "0.20"),
-    engagement: parseFloat(weightsRow.engagementWeight ?? "0.10"),
-    popularity: parseFloat(weightsRow.popularityWeight ?? "0.05"),
-  };
-}
-
-async function fetchPlatformStats(): Promise<{
-  totalRatings: number;
-  averageRating: number;
-}> {
+async function fetchPlatformAverageRating(): Promise<number> {
   const stats = await db.query.platformStats.findFirst({
     orderBy: desc(platformStats.lastCalculatedAt),
   });
 
-  if (!stats) {
-    return {
-      totalRatings: 0,
-      averageRating: 0,
-    };
+  const parsed = stats ? parseFloat(stats.averageRating) : NaN;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
   }
 
-  const totalRatings = stats.totalRatings;
-  const averageRating = parseFloat(stats.averageRating) || 0;
-
-  return { totalRatings, averageRating };
+  return 3;
 }
 
 async function fetchBatchData(gameIds: string[], tierCostIds: string[]): Promise<BatchScoreData> {
   const tierCostMultipliers = new Map<string, number>();
-  const engagementData = new Map<string, { avgPlaytime: number; bucket: PlaytimeBucket }>();
+  const gameplayMetrics = new Map<string, GameplayMetrics>();
 
   if (tierCostIds.length > 0) {
     const tierCostRows = await db
@@ -219,44 +99,114 @@ async function fetchBatchData(gameIds: string[], tierCostIds: string[]): Promise
       .where(inArray(tierCosts.id, tierCostIds));
 
     for (const row of tierCostRows) {
-      tierCostMultipliers.set(
-        row.id,
-        row.scoreMultiplier ?? SCORING_CONFIG.difficulty.defaultMultiplier,
-      );
+      tierCostMultipliers.set(row.id, row.scoreMultiplier ?? 1);
     }
   }
 
   if (gameIds.length > 0) {
-    const gameScoreRows = await db
+    const rows = await db
       .select({
-        gameId: gameScores.gameId,
-        completionTime: gameScores.completionTime,
+        gameId: gameSessionMetrics.gameId,
+        userId: gameSessionMetrics.userId,
+        playtimeSeconds: gameSessionMetrics.playtimeSeconds,
       })
-      .from(gameScores)
+      .from(gameSessionMetrics)
       .where(and(
-        inArray(gameScores.gameId, gameIds),
-        gt(gameScores.score, 0),
+        inArray(gameSessionMetrics.gameId, gameIds),
+        isNotNull(gameSessionMetrics.endedAt),
       ));
 
-    const scoresByGame = new Map<string, number[]>();
-    for (const row of gameScoreRows) {
-      if (row.completionTime !== null) {
-        const existing = scoresByGame.get(row.gameId) ?? [];
-        existing.push(row.completionTime);
-        scoresByGame.set(row.gameId, existing);
-      }
+    const grouped = new Map<string, { players: Set<string>; times: number[] }>();
+
+    for (const row of rows) {
+      const existing = grouped.get(row.gameId) ?? {
+        players: new Set<string>(),
+        times: [],
+      };
+      existing.players.add(row.userId);
+      existing.times.push(Math.max(0, row.playtimeSeconds));
+      grouped.set(row.gameId, existing);
     }
 
-    for (const [gameId, times] of scoresByGame) {
-      const avgPlaytime = times.reduce((sum, t) => sum + t, 0) / times.length;
-      engagementData.set(gameId, {
-        avgPlaytime,
-        bucket: getPlaytimeBucket(avgPlaytime),
+    for (const [gameId, data] of grouped) {
+      const totalPlays = data.times.length;
+      const uniquePlayers = data.players.size;
+      const retention30 =
+        totalPlays === 0
+          ? 0
+          : data.times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.shortThresholdSeconds).length /
+            totalPlays;
+      const retention60 =
+        totalPlays === 0
+          ? 0
+          : data.times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.ratingThresholdSeconds).length /
+            totalPlays;
+      const p75Playtime = percentile(data.times, 0.75);
+
+      gameplayMetrics.set(gameId, {
+        uniquePlayers,
+        totalPlays,
+        retention30,
+        retention60,
+        p75Playtime,
       });
     }
   }
 
-  return { tierCostMultipliers, engagementData };
+  return { tierCostMultipliers, gameplayMetrics };
+}
+
+async function getGameplayMetrics(
+  gameId: string,
+  batchData?: BatchScoreData,
+): Promise<GameplayMetrics> {
+  const cached = batchData?.gameplayMetrics.get(gameId);
+  if (cached) {
+    return cached;
+  }
+
+  const rows = await db
+    .select({
+      userId: gameSessionMetrics.userId,
+      playtimeSeconds: gameSessionMetrics.playtimeSeconds,
+    })
+    .from(gameSessionMetrics)
+    .where(and(
+      eq(gameSessionMetrics.gameId, gameId),
+      isNotNull(gameSessionMetrics.endedAt),
+    ));
+
+  if (rows.length === 0) {
+    return {
+      uniquePlayers: 0,
+      totalPlays: 0,
+      retention30: 0,
+      retention60: 0,
+      p75Playtime: 0,
+    };
+  }
+
+  const players = new Set<string>();
+  const times: number[] = [];
+
+  for (const row of rows) {
+    players.add(row.userId);
+    times.push(Math.max(0, row.playtimeSeconds));
+  }
+
+  const totalPlays = times.length;
+
+  return {
+    uniquePlayers: players.size,
+    totalPlays,
+    retention30:
+      times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.shortThresholdSeconds).length /
+      totalPlays,
+    retention60:
+      times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.ratingThresholdSeconds).length /
+      totalPlays,
+    p75Playtime: percentile(times, 0.75),
+  };
 }
 
 async function recordScoreHistory(
@@ -308,51 +258,92 @@ export async function calculateGameScore(
     where: eq(ratings.gameId, gameId),
     columns: {
       overall: true,
-      promptQuality: true,
-      gameQuality: true,
-      themeRelevance: true,
     },
   });
 
-  const { totalRatings, averageRating } = await fetchPlatformStats();
-  const weights = await fetchScoringWeights(game.themeId);
+  const globalAverageRating = await fetchPlatformAverageRating();
+  const n = gameRatings.length;
+  const avgRating =
+    n === 0 ? 0 : gameRatings.reduce((sum, row) => sum + row.overall, 0) / n;
 
-  const qualityScore = await calculateQualityScore(
-    gameRatings,
-    averageRating,
-    totalRatings,
+  const bayes =
+    (SCORING_CONFIG.bayesian.priorRatingCount * globalAverageRating + n * avgRating) /
+    (SCORING_CONFIG.bayesian.priorRatingCount + n);
+  const confidence = 1 - Math.exp(-n / SCORING_CONFIG.bayesian.confidenceScale);
+  const qualityScore =
+    n === 0 ? 0 : clamp((bayes - 1) / 4, 0, 1) * clamp(confidence, 0, 1);
+
+  const gameplay = await getGameplayMetrics(gameId, batchData);
+  const playersScore = saturate(gameplay.uniquePlayers, SCORING_CONFIG.players.saturation);
+  const playsProxy =
+    gameplay.uniquePlayers + Math.sqrt(Math.max(gameplay.totalPlays - gameplay.uniquePlayers, 0));
+  const playsScore = saturate(playsProxy, SCORING_CONFIG.plays.saturation);
+
+  const p75Normalized =
+    clamp(
+      Math.min(gameplay.p75Playtime, SCORING_CONFIG.engagement.p75CapSeconds) /
+        SCORING_CONFIG.engagement.p75CapSeconds,
+      0,
+      1,
+    );
+
+  const engagementScore = clamp(
+    SCORING_CONFIG.engagement.weights.retention30 * gameplay.retention30 +
+      SCORING_CONFIG.engagement.weights.retention60 * gameplay.retention60 +
+      SCORING_CONFIG.engagement.weights.p75Playtime * p75Normalized,
+    0,
+    1,
   );
 
-  const difficultyScore = await calculateDifficultyScore(game.tierCostId, batchData);
+  const replayScore =
+    gameplay.uniquePlayers === 0
+      ? 0
+      : clamp((gameplay.totalPlays / gameplay.uniquePlayers - 1) / 2, 0, 1);
 
-  const efficiencyScore = calculateEfficiencyScore(game.prompt.tokenCount);
+  const inputTokens = game.inputTokens ?? game.prompt.tokenCount ?? 0;
+  const tokenPenalty = Math.log(
+    1 + Math.max(inputTokens - SCORING_CONFIG.efficiency.baselineInputTokens, 0),
+  );
+  const maxPenalty = Math.log(1 + SCORING_CONFIG.efficiency.maxPenaltyInputTokens);
+  const efficiencyScore =
+    inputTokens <= 0 ? 0 : clamp(1 - tokenPenalty / maxPenalty, 0, 1);
 
-  const { score: engagementScore, bucket: playtimeBucket } = await calculateEngagementScore(gameId, batchData);
+  const tierMultiplier = batchData?.tierCostMultipliers.get(game.tierCostId)
+    ?? game.tierCost.scoreMultiplier
+    ?? 1;
+  const tierFactor = clamp(
+    1 + SCORING_CONFIG.tier.scale * (tierMultiplier - 1),
+    SCORING_CONFIG.tier.minFactor,
+    SCORING_CONFIG.tier.maxFactor,
+  );
 
-  const popularityScore = calculatePopularityScore(gameRatings.length);
+  const weightedBase =
+    100 * (
+      SCORING_CONFIG.weights.quality * qualityScore +
+      SCORING_CONFIG.weights.engagement * engagementScore +
+      SCORING_CONFIG.weights.players * playersScore +
+      SCORING_CONFIG.weights.plays * playsScore +
+      SCORING_CONFIG.weights.replay * replayScore +
+      SCORING_CONFIG.weights.efficiency * efficiencyScore
+    );
 
-  const finalScore =
-    qualityScore * weights.quality +
-    difficultyScore * weights.difficulty +
-    efficiencyScore * weights.efficiency +
-    engagementScore * weights.engagement +
-    popularityScore * weights.popularity;
+  const finalScore = Math.round(weightedBase * tierFactor * 100) / 100;
 
   const result: ScoreResult = {
     gameId,
-    finalScore: Math.round(finalScore * 100) / 100,
+    finalScore,
     components: {
       qualityScore,
-      difficultyScore,
-      efficiencyScore,
       engagementScore,
-      popularityScore,
-      playtimeBucket,
+      playersScore,
+      playsScore,
+      replayScore,
+      efficiencyScore,
+      tierFactor,
     },
-    weightsUsed: weights,
   };
 
-  await updateGameScore(gameId, result);
+  await updateGameScore(gameId, result, inputTokens);
 
   return result;
 }
@@ -360,6 +351,7 @@ export async function calculateGameScore(
 export async function updateGameScore(
   gameId: string,
   scoreResult: ScoreResult,
+  inputTokens: number,
 ): Promise<void> {
   const game = await db.query.games.findFirst({
     where: eq(gamesTable.id, gameId),
@@ -389,11 +381,14 @@ export async function updateGameScore(
       .set({
         score: roundedScore,
         finalScore: scoreResult.finalScore.toFixed(2),
-        bayesianRating: scoreResult.components.qualityScore.toFixed(2),
-        difficultyMultiplier: scoreResult.components.difficultyScore.toFixed(2),
-        brevityScore: scoreResult.components.efficiencyScore.toFixed(2),
-        engagementScore: scoreResult.components.engagementScore.toFixed(2),
-        popularityScore: scoreResult.components.popularityScore.toFixed(2),
+        qualityScore: scoreResult.components.qualityScore.toFixed(4),
+        engagementScore: scoreResult.components.engagementScore.toFixed(4),
+        playersScore: scoreResult.components.playersScore.toFixed(4),
+        playsScore: scoreResult.components.playsScore.toFixed(4),
+        replayScore: scoreResult.components.replayScore.toFixed(4),
+        efficiencyScore: scoreResult.components.efficiencyScore.toFixed(4),
+        tierFactor: scoreResult.components.tierFactor.toFixed(4),
+        inputTokens,
         calculatedAt: new Date(),
         version: existingScore.version + 1,
       })
@@ -405,15 +400,16 @@ export async function updateGameScore(
       existingScore.finalScore,
       scoreResult.finalScore.toFixed(2),
       {
-        qualityScore: parseFloat(existingScore.bayesianRating ?? "0"),
-        difficultyScore: parseFloat(existingScore.difficultyMultiplier ?? "0"),
-        efficiencyScore: parseFloat(existingScore.brevityScore ?? "0"),
+        qualityScore: parseFloat(existingScore.qualityScore ?? "0"),
         engagementScore: parseFloat(existingScore.engagementScore ?? "0"),
-        popularityScore: parseFloat(existingScore.popularityScore ?? "0"),
-        playtimeBucket: getPlaytimeBucket(0),
+        playersScore: parseFloat(existingScore.playersScore ?? "0"),
+        playsScore: parseFloat(existingScore.playsScore ?? "0"),
+        replayScore: parseFloat(existingScore.replayScore ?? "0"),
+        efficiencyScore: parseFloat(existingScore.efficiencyScore ?? "0"),
+        tierFactor: parseFloat(existingScore.tierFactor ?? "1"),
       },
       scoreResult.components,
-      "recalculation",
+      "recalculation_v2",
     );
   } else {
     const [inserted] = await db
@@ -421,18 +417,21 @@ export async function updateGameScore(
       .values({
         userId: game.prompt.authorId,
         promptId: game.prompt.id,
-        gameId: gameId,
+        gameId,
         themeId: game.themeId,
         score: roundedScore,
         isHighScore: false,
         completionTime: null,
         playedAt: new Date(),
         finalScore: scoreResult.finalScore.toFixed(2),
-        bayesianRating: scoreResult.components.qualityScore.toFixed(2),
-        difficultyMultiplier: scoreResult.components.difficultyScore.toFixed(2),
-        brevityScore: scoreResult.components.efficiencyScore.toFixed(2),
-        engagementScore: scoreResult.components.engagementScore.toFixed(2),
-        popularityScore: scoreResult.components.popularityScore.toFixed(2),
+        qualityScore: scoreResult.components.qualityScore.toFixed(4),
+        engagementScore: scoreResult.components.engagementScore.toFixed(4),
+        playersScore: scoreResult.components.playersScore.toFixed(4),
+        playsScore: scoreResult.components.playsScore.toFixed(4),
+        replayScore: scoreResult.components.replayScore.toFixed(4),
+        efficiencyScore: scoreResult.components.efficiencyScore.toFixed(4),
+        tierFactor: scoreResult.components.tierFactor.toFixed(4),
+        inputTokens,
       })
       .returning({ id: scores.id });
 
@@ -444,7 +443,7 @@ export async function updateGameScore(
         scoreResult.finalScore.toFixed(2),
         null,
         scoreResult.components,
-        "initial",
+        "initial_v2",
       );
     }
   }
@@ -476,16 +475,18 @@ export async function publishScoreUpdate(
     score.finalScore.toString(),
     "qualityScore",
     score.components.qualityScore.toString(),
-    "difficultyScore",
-    score.components.difficultyScore.toString(),
-    "efficiencyScore",
-    score.components.efficiencyScore.toString(),
     "engagementScore",
     score.components.engagementScore.toString(),
-    "popularityScore",
-    score.components.popularityScore.toString(),
-    "playtimeBucket",
-    score.components.playtimeBucket,
+    "playersScore",
+    score.components.playersScore.toString(),
+    "playsScore",
+    score.components.playsScore.toString(),
+    "replayScore",
+    score.components.replayScore.toString(),
+    "efficiencyScore",
+    score.components.efficiencyScore.toString(),
+    "tierFactor",
+    score.components.tierFactor.toString(),
     "timestamp",
     Date.now().toString(),
   );
@@ -713,4 +714,4 @@ export async function getScoreHistory(
   }));
 }
 
-export type { ScoreResult, ScoreComponents, ScoringWeights };
+export type { ScoreResult, ScoreComponents };

@@ -1,13 +1,13 @@
 import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
-import { games, gameScores } from "@arcade-vibe/db/schema/games";
+import { games, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { themes } from "@arcade-vibe/db/schema/themes";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { modelConfig } from "@arcade-vibe/db/schema/models";
 import { scores, scoreHistory } from "@arcade-vibe/db/schema/scores";
-import { eq, desc, lt, and, isNull, sql, count, sum } from "drizzle-orm";
+import { eq, desc, lt, and, isNull, isNotNull, sql, count, sum } from "drizzle-orm";
 import z from "zod";
 
 type LeaderboardEntry = {
@@ -109,13 +109,18 @@ export const leaderboardRouter = router({
       const playStats = gameIds.length > 0
         ? await db
             .select({
-              gameId: gameScores.gameId,
+              gameId: gameSessionMetrics.gameId,
               playCount: count(),
-              totalPlayTime: sum(gameScores.completionTime),
+              totalPlayTime: sum(gameSessionMetrics.playtimeSeconds),
             })
-            .from(gameScores)
-            .where(sql`${gameScores.gameId} IN ${gameIds}`)
-            .groupBy(gameScores.gameId)
+            .from(gameSessionMetrics)
+            .where(
+              and(
+                sql`${gameSessionMetrics.gameId} IN ${gameIds}`,
+                isNotNull(gameSessionMetrics.endedAt),
+              ),
+            )
+            .groupBy(gameSessionMetrics.gameId)
         : [];
 
       const playStatsMap = new Map(

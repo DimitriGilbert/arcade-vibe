@@ -11,7 +11,7 @@ import {
 import { apiKeys, modelConfig, modelProviders } from "./models";
 import { themes } from "./themes";
 import { prompts } from "./prompts";
-import { games, gameScores, gameVersions } from "./games";
+import { games, gameScores, gameSessionMetrics, gameVersions } from "./games";
 import { promptRuns, ratings } from "./ratings";
 import { scores } from "./scores";
 import { platformStats, adminActions, scoringWeights } from "./platform";
@@ -41,6 +41,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   ratings: many(ratings),
   scores: many(scores),
   gameScores: many(gameScores),
+  gameSessionMetrics: many(gameSessionMetrics),
   feedback: many(feedback),
   emailLogs: many(emailLogs),
 }));
@@ -165,6 +166,7 @@ export const gamesRelations = relations(games, ({ one, many }) => ({
     references: [tierCosts.id],
   }),
   gameScores: many(gameScores),
+  sessionMetrics: many(gameSessionMetrics),
   promptRuns: many(promptRuns),
   ratings: many(ratings),
   versions: many(gameVersions),
@@ -191,6 +193,20 @@ export const gameScoresRelations = relations(gameScores, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const gameSessionMetricsRelations = relations(
+  gameSessionMetrics,
+  ({ one }) => ({
+    game: one(games, {
+      fields: [gameSessionMetrics.gameId],
+      references: [games.id],
+    }),
+    user: one(user, {
+      fields: [gameSessionMetrics.userId],
+      references: [user.id],
+    }),
+  }),
+);
 
 export const promptRunsRelations = relations(promptRuns, ({ one }) => ({
   prompt: one(prompts, {

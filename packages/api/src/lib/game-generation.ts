@@ -166,10 +166,12 @@ Your code will be injected inside the <body> tag of an existing HTML page. The A
 
 ## Arcade Vibe SDK
 
+Call \`ArcadeVibe.startGame()\` when the player actually starts playing (start button, first movement input, etc.).
 Call \`ArcadeVibe.reportScore(score)\` with a positive integer at every game over.
 Do not implement your own score reporting via postMessage or fetch.
 
 Other available methods:
+- \`ArcadeVibe.startGame()\` — starts playtime tracking for this session
 - \`ArcadeVibe.getPlaytime()\` — session duration in seconds
 - \`ArcadeVibe.isReady()\` — returns true if SDK is initialized
 

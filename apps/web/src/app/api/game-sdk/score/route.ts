@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyGameSessionToken } from "@arcade-vibe/api/lib/game-session";
 import { db } from "@arcade-vibe/db";
-import { gameScores } from "@arcade-vibe/db/schema/games";
+import { gameScores, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { eq, and } from "drizzle-orm";
 import { redis } from "@arcade-vibe/api/lib/redis";
+import { calculateGameScore } from "@arcade-vibe/api/lib/scoring";
 import z from "zod";
 
 function extractBearerToken(authHeader: string | null): string | null {
@@ -75,6 +76,28 @@ export async function POST(req: NextRequest) {
     "userId",
     session.userId,
   );
+
+  if (!session.userId.startsWith("anonymous:")) {
+    await db
+      .insert(gameSessionMetrics)
+      .values({
+        sessionId: session.sessionId,
+        gameId: input.gameId,
+        userId: session.userId,
+        startedAt: new Date(session.startedAt),
+        playtimeSeconds: Math.round(validatedPlaytime),
+        hasScoreEvent: true,
+      })
+      .onConflictDoUpdate({
+        target: gameSessionMetrics.sessionId,
+        set: {
+          playtimeSeconds: Math.round(validatedPlaytime),
+          hasScoreEvent: true,
+        },
+      });
+
+    await calculateGameScore(input.gameId);
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -1,19 +1,32 @@
 const STUB_SDK = `
 (function() {
   "use strict";
-  let sessionStart = Date.now();
+  let sessionStart = null;
+
+  function getPlaytime() {
+    if (sessionStart === null) return 0;
+    return Math.floor((Date.now() - sessionStart) / 1000);
+  }
 
   window.ArcadeVibe = {
+    startGame() {
+      if (sessionStart !== null) return;
+      sessionStart = Date.now();
+    },
+
     reportScore(score) {
       if (typeof score !== "number" || score < 0 || !Number.isInteger(score)) {
         console.warn("[ArcadeVibe Portable] Invalid score. Must be a positive integer.");
         return;
       }
+      if (sessionStart === null) {
+        sessionStart = Date.now();
+      }
       console.log("[ArcadeVibe Portable] Score recorded:", score);
     },
 
     getPlaytime() {
-      return Math.floor((Date.now() - sessionStart) / 1000);
+      return getPlaytime();
     },
 
     isReady() {

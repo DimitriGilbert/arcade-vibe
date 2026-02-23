@@ -1,54 +1,45 @@
 export const SCORING_CONFIG = {
-  weights: {
-    quality: 0.4,
-    difficulty: 0.25,
-    efficiency: 0.2,
-    engagement: 0.1,
-    popularity: 0.05,
+  bayesian: {
+    priorRatingCount: 20,
+    confidenceScale: 15,
   },
-  quality: {
-    minRatingCount: 10,
-    maxScore: 20,
-    ratingToScoreMultiplier: 4,
+  players: {
+    saturation: 25,
   },
-  difficulty: {
-    maxScore: 20,
-    defaultMultiplier: 1.0,
-  },
-  efficiency: {
-    maxScore: 20,
-    tokenBaseline: 1000,
+  plays: {
+    saturation: 60,
   },
   engagement: {
-    maxScore: 20,
-    maxPlaytimeSeconds: 300,
-    buckets: {
-      veryShort: { maxSeconds: 30, label: "very_short" },
-      short: { maxSeconds: 60, label: "short" },
-      medium: { maxSeconds: 180, label: "medium" },
-      long: { maxSeconds: 300, label: "long" },
-      veryLong: { maxSeconds: Infinity, label: "very_long" },
+    shortThresholdSeconds: 30,
+    ratingThresholdSeconds: 60,
+    p75CapSeconds: 300,
+    weights: {
+      retention30: 0.45,
+      retention60: 0.35,
+      p75Playtime: 0.2,
     },
   },
-  popularity: {
-    maxScore: 20,
-    logBase: 100,
+  efficiency: {
+    baselineInputTokens: 800,
+    maxPenaltyInputTokens: 6000,
+  },
+  tier: {
+    scale: 0.08,
+    minFactor: 0.9,
+    maxFactor: 1.12,
+  },
+  weights: {
+    quality: 0.34,
+    engagement: 0.22,
+    players: 0.16,
+    plays: 0.1,
+    replay: 0.08,
+    efficiency: 0.1,
   },
   recalculation: {
     batchSize: 50,
     delayBetweenBatchesMs: 100,
   },
 } as const;
-
-export type PlaytimeBucket = (typeof SCORING_CONFIG.engagement.buckets)[keyof typeof SCORING_CONFIG.engagement.buckets]["label"];
-
-export function getPlaytimeBucket(seconds: number): PlaytimeBucket {
-  const { buckets } = SCORING_CONFIG.engagement;
-  if (seconds <= buckets.veryShort.maxSeconds) return buckets.veryShort.label;
-  if (seconds <= buckets.short.maxSeconds) return buckets.short.label;
-  if (seconds <= buckets.medium.maxSeconds) return buckets.medium.label;
-  if (seconds <= buckets.long.maxSeconds) return buckets.long.label;
-  return buckets.veryLong.label;
-}
 
 export type ScoringConfig = typeof SCORING_CONFIG;

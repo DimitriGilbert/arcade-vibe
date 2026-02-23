@@ -17,5 +17,3 @@ export * from "./relations";
 export * from "./library-patterns";
 export * from "./feedback";
 export * from "./email";
-
-export type { PlaytimeBucket } from "./scores";

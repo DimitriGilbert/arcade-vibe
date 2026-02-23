@@ -30,13 +30,19 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
         const API_ENDPOINT = "__ARCADE_VIBE_API_ENDPOINT__";
         const GAME_ID = "__ARCADE_VIBE_GAME_ID__";
 
-        let sessionStart = Date.now();
+        let sessionStart = null;
         let lastHeartbeat = Date.now();
         let isSessionActive = true;
 
+        function getPlaytime() {
+          if (sessionStart === null) return 0;
+          return Math.floor((Date.now() - sessionStart) / 1000);
+        }
+
         const heartbeatInterval = setInterval(() => {
           if (!isSessionActive) return;
-          const playtime = Math.floor((Date.now() - sessionStart) / 1000);
+          if (sessionStart === null) return;
+          const playtime = getPlaytime();
           fetch(\`\${API_ENDPOINT}/api/game-sdk/heartbeat\`, {
             method: "POST",
             headers: {
@@ -53,12 +59,33 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
         }, 5000);
 
         window.ArcadeVibe = {
+          startGame() {
+            if (sessionStart !== null) return;
+            sessionStart = Date.now();
+
+            fetch(\`\${API_ENDPOINT}/api/game-sdk/start-session\`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: \`Bearer \${SESSION_TOKEN}\`,
+              },
+              body: JSON.stringify({
+                gameId: GAME_ID,
+                timestamp: sessionStart,
+              }),
+            }).catch(() => {});
+          },
+
           reportScore(score) {
             if (typeof score !== "number" || score < 0 || !Number.isInteger(score)) {
               console.warn("[ArcadeVibe] Invalid score. Must be a positive integer.");
               return;
             }
-            const playtime = Math.floor((Date.now() - sessionStart) / 1000);
+            // Backward compatibility: legacy games might not call startGame().
+            if (sessionStart === null) {
+              sessionStart = Date.now();
+            }
+            const playtime = getPlaytime();
             fetch(\`\${API_ENDPOINT}/api/game-sdk/score\`, {
               method: "POST",
               headers: {
@@ -76,7 +103,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
             });
           },
           getPlaytime() {
-            return Math.floor((Date.now() - sessionStart) / 1000);
+            return getPlaytime();
           },
           isReady() {
             return SESSION_TOKEN !== "__ARCADE_VIBE_SESSION_TOKEN__";
@@ -86,7 +113,7 @@ const SDK_TEMPLATE = `<!DOCTYPE html>
         window.addEventListener("beforeunload", () => {
           isSessionActive = false;
           clearInterval(heartbeatInterval);
-          const playtime = Math.floor((Date.now() - sessionStart) / 1000);
+          const playtime = getPlaytime();
           navigator.sendBeacon(
             \`\${API_ENDPOINT}/api/game-sdk/end-session\`,
             JSON.stringify({

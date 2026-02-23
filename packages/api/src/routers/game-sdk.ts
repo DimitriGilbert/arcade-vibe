@@ -1,6 +1,6 @@
 import { router, publicProcedure } from "../index";
 import { db } from "@arcade-vibe/db";
-import { gameScores } from "@arcade-vibe/db/schema/games";
+import { gameScores, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { suspiciousActivityLogs } from "@arcade-vibe/db/schema/security";
 import { redis } from "../lib/redis";
 import { verifyGameSessionToken } from "../lib/game-session";
@@ -11,6 +11,7 @@ import {
   rateLimits,
 } from "../middleware/rate-limit";
 import { eq } from "drizzle-orm";
+import { calculateGameScore } from "../lib/scoring";
 
 /**
  * Extract Bearer token from Authorization header
@@ -31,6 +32,70 @@ function extractBearerToken(
 }
 
 export const gameSdkRouter = router({
+  /**
+   * Mark gameplay start for session metrics
+   * Called by ArcadeVibe.startGame()
+   */
+  startSession: publicProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        timestamp: z.number().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const authHeader = ctx.req.headers.get("authorization");
+      const token = extractBearerToken(authHeader);
+
+      if (!token) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Missing or invalid authorization token",
+        });
+      }
+
+      const session = await verifyGameSessionToken(token);
+
+      if (!session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid or expired session token",
+        });
+      }
+
+      if (session.gameId !== input.gameId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Game ID mismatch",
+        });
+      }
+
+      // Product decision: anonymous sessions do not affect leaderboard scoring.
+      if (session.userId.startsWith("anonymous:")) {
+        return { ok: true };
+      }
+
+      const startedAt = new Date(input.timestamp ?? Date.now());
+      await db
+        .insert(gameSessionMetrics)
+        .values({
+          sessionId: session.sessionId,
+          gameId: input.gameId,
+          userId: session.userId,
+          startedAt,
+          playtimeSeconds: 0,
+          hasScoreEvent: false,
+        })
+        .onConflictDoUpdate({
+          target: gameSessionMetrics.sessionId,
+          set: {
+            startedAt,
+          },
+        });
+
+      return { ok: true };
+    }),
+
   /**
    * Heartbeat to track playtime
    * Called periodically (every 5 seconds) by the game client
@@ -93,8 +158,6 @@ export const gameSdkRouter = router({
         // Continue processing but this is flagged for review
       }
 
-
-
       // Store updated session data in Redis
       const sessionData = {
         userId: session.userId,
@@ -109,6 +172,25 @@ export const gameSdkRouter = router({
         3600, // 1 hour expiry
         JSON.stringify(sessionData),
       );
+
+      if (!session.userId.startsWith("anonymous:")) {
+        await db
+          .insert(gameSessionMetrics)
+          .values({
+            sessionId: session.sessionId,
+            gameId: input.gameId,
+            userId: session.userId,
+            startedAt: new Date(session.startedAt),
+            playtimeSeconds: input.playtime,
+            hasScoreEvent: false,
+          })
+          .onConflictDoUpdate({
+            target: gameSessionMetrics.sessionId,
+            set: {
+              playtimeSeconds: input.playtime,
+            },
+          });
+      }
 
       return { ok: true };
     }),
@@ -207,6 +289,26 @@ export const gameSdkRouter = router({
         session.userId,
       );
 
+      await db
+        .insert(gameSessionMetrics)
+        .values({
+          sessionId: session.sessionId,
+          gameId: input.gameId,
+          userId: session.userId,
+          startedAt: new Date(session.startedAt),
+          playtimeSeconds: Math.round(validatedPlaytime),
+          hasScoreEvent: true,
+        })
+        .onConflictDoUpdate({
+          target: gameSessionMetrics.sessionId,
+          set: {
+            playtimeSeconds: Math.round(validatedPlaytime),
+            hasScoreEvent: true,
+          },
+        });
+
+      await calculateGameScore(input.gameId);
+
       return { ok: true };
     }),
 
@@ -247,6 +349,36 @@ export const gameSdkRouter = router({
           code: "FORBIDDEN",
           message: "Game ID mismatch",
         });
+      }
+
+      // Product decision: anonymous sessions do not affect leaderboard scoring.
+      if (!session.userId.startsWith("anonymous:")) {
+        const wallClockElapsed = (Date.now() - session.startedAt) / 1000;
+        const validatedPlaytime = Math.min(
+          input.playtime,
+          wallClockElapsed + 10,
+        );
+
+        await db
+          .insert(gameSessionMetrics)
+          .values({
+            sessionId: session.sessionId,
+            gameId: input.gameId,
+            userId: session.userId,
+            startedAt: new Date(session.startedAt),
+            endedAt: new Date(),
+            playtimeSeconds: Math.round(validatedPlaytime),
+            hasScoreEvent: false,
+          })
+          .onConflictDoUpdate({
+            target: gameSessionMetrics.sessionId,
+            set: {
+              endedAt: new Date(),
+              playtimeSeconds: Math.round(validatedPlaytime),
+            },
+          });
+
+        await calculateGameScore(input.gameId);
       }
 
       // Delete the session from Redis to revoke the token

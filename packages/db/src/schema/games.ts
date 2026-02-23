@@ -121,3 +121,31 @@ export const gameScores = pgTable(
     index("game_scores_userId_idx").on(table.userId),
   ],
 );
+
+export const gameSessionMetrics = pgTable(
+  "game_session_metrics",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: text("session_id").notNull().unique(),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    endedAt: timestamp("ended_at"),
+    playtimeSeconds: integer("playtime_seconds").notNull().default(0),
+    hasScoreEvent: boolean("has_score_event").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("game_session_metrics_gameId_idx").on(table.gameId),
+    index("game_session_metrics_userId_idx").on(table.userId),
+    index("game_session_metrics_endedAt_idx").on(table.endedAt),
+  ],
+);

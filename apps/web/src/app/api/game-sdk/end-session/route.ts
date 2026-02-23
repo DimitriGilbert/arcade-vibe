@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyGameSessionToken } from "@arcade-vibe/api/lib/game-session";
+import { calculateGameScore } from "@arcade-vibe/api/lib/scoring";
+import { db } from "@arcade-vibe/db";
+import { gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { redis } from "@arcade-vibe/api/lib/redis";
 import z from "zod";
 
@@ -43,6 +46,32 @@ export async function POST(req: NextRequest) {
 
   if (session.gameId !== input.gameId) {
     return NextResponse.json({ error: "Game ID mismatch" }, { status: 403 });
+  }
+
+  if (!session.userId.startsWith("anonymous:")) {
+    const wallClockElapsed = (Date.now() - session.startedAt) / 1000;
+    const validatedPlaytime = Math.min(input.playtime, wallClockElapsed + 10);
+
+    await db
+      .insert(gameSessionMetrics)
+      .values({
+        sessionId: session.sessionId,
+        gameId: input.gameId,
+        userId: session.userId,
+        startedAt: new Date(session.startedAt),
+        endedAt: new Date(),
+        playtimeSeconds: Math.round(validatedPlaytime),
+        hasScoreEvent: false,
+      })
+      .onConflictDoUpdate({
+        target: gameSessionMetrics.sessionId,
+        set: {
+          endedAt: new Date(),
+          playtimeSeconds: Math.round(validatedPlaytime),
+        },
+      });
+
+    await calculateGameScore(input.gameId);
   }
 
   const sessionData = {

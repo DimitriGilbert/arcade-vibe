@@ -182,7 +182,7 @@ export function GamePlayer({
       try {
         iframeRef.current.contentWindow?.postMessage(
           {
-            type: "SESSION_TOKEN",
+            type: "ARCADE_VIBE_SESSION_TOKEN",
             token: sessionToken,
             gameId,
           },

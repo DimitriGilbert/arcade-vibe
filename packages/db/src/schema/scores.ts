@@ -14,11 +14,6 @@ import { themes } from "./themes";
 import { games as gamesImport } from "./games";
 import { user } from "./auth";
 
-export const playtimeBucketEnum = {
-  values: ["very_short", "short", "medium", "long", "very_long"],
-} as const;
-export type PlaytimeBucket = (typeof playtimeBucketEnum.values)[number];
-
 // per PRD lines 1349-1369
 export const scores = pgTable(
   "scores",
@@ -41,15 +36,14 @@ export const scores = pgTable(
     isHighScore: boolean("is_high_score").notNull().default(false),
     completionTime: integer("completion_time"),
     playedAt: timestamp("played_at").defaultNow().notNull(),
-    // PRD-aligned decimal score components
-    bayesianRating: decimal("bayesian_rating", { precision: 6, scale: 2 }),
-    difficultyMultiplier: decimal("difficulty_multiplier", {
-      precision: 5,
-      scale: 2,
-    }),
-    brevityScore: decimal("brevity_score", { precision: 6, scale: 2 }),
-    engagementScore: decimal("engagement_score", { precision: 6, scale: 2 }),
-    popularityScore: decimal("popularity_score", { precision: 6, scale: 2 }),
+    qualityScore: decimal("quality_score", { precision: 6, scale: 4 }),
+    engagementScore: decimal("engagement_score", { precision: 6, scale: 4 }),
+    playersScore: decimal("players_score", { precision: 6, scale: 4 }),
+    playsScore: decimal("plays_score", { precision: 6, scale: 4 }),
+    replayScore: decimal("replay_score", { precision: 6, scale: 4 }),
+    efficiencyScore: decimal("efficiency_score", { precision: 6, scale: 4 }),
+    tierFactor: decimal("tier_factor", { precision: 5, scale: 4 }),
+    inputTokens: integer("input_tokens"),
     finalScore: decimal("final_score", { precision: 8, scale: 4 }).notNull(),
     calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
     version: integer("version").default(1).notNull(),

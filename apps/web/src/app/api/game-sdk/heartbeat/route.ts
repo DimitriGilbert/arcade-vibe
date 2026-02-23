@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyGameSessionToken } from "@arcade-vibe/api/lib/game-session";
 import { db } from "@arcade-vibe/db";
-import { gameScores } from "@arcade-vibe/db/schema/games";
+import { gameScores, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { suspiciousActivityLogs } from "@arcade-vibe/db/schema/security";
 import { eq, and } from "drizzle-orm";
 import { redis } from "@arcade-vibe/api/lib/redis";
@@ -93,6 +93,25 @@ export async function POST(req: NextRequest) {
     3600,
     JSON.stringify(sessionData),
   );
+
+  if (!session.userId.startsWith("anonymous:")) {
+    await db
+      .insert(gameSessionMetrics)
+      .values({
+        sessionId: session.sessionId,
+        gameId: input.gameId,
+        userId: session.userId,
+        startedAt: new Date(session.startedAt),
+        playtimeSeconds: input.playtime,
+        hasScoreEvent: false,
+      })
+      .onConflictDoUpdate({
+        target: gameSessionMetrics.sessionId,
+        set: {
+          playtimeSeconds: input.playtime,
+        },
+      });
+  }
 
   return NextResponse.json({ ok: true });
 }
