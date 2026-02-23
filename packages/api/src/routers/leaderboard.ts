@@ -37,6 +37,16 @@ type LeaderboardEntry = {
   promptVisibility: string;
   playCount: number;
   totalPlayTimeSeconds: number;
+  scoreBreakdown: {
+    qualityScore: string | null;
+    engagementScore: string | null;
+    playersScore: string | null;
+    playsScore: string | null;
+    replayScore: string | null;
+    efficiencyScore: string | null;
+    tierFactor: string | null;
+    inputTokens: number | null;
+  };
 };
 
 type PaginatedLeaderboardResult = {
@@ -81,6 +91,14 @@ export const leaderboardRouter = router({
           isSubmitted: games.isSubmitted,
           finalScore: sql<string>`COALESCE(${scores.finalScore}, '0')`,
           calculatedAt: scores.calculatedAt,
+          qualityScore: scores.qualityScore,
+          engagementScore: scores.engagementScore,
+          playersScore: scores.playersScore,
+          playsScore: scores.playsScore,
+          replayScore: scores.replayScore,
+          efficiencyScore: scores.efficiencyScore,
+          tierFactor: scores.tierFactor,
+          inputTokens: scores.inputTokens,
           modelProvider: games.modelProvider,
           modelName: games.modelName,
           modelId: modelConfig.id,
@@ -176,6 +194,16 @@ export const leaderboardRouter = router({
           promptVisibility: row.promptVisibility,
           playCount: stats.playCount,
           totalPlayTimeSeconds: stats.totalPlayTimeSeconds,
+          scoreBreakdown: {
+            qualityScore: row.qualityScore,
+            engagementScore: row.engagementScore,
+            playersScore: row.playersScore,
+            playsScore: row.playsScore,
+            replayScore: row.replayScore,
+            efficiencyScore: row.efficiencyScore,
+            tierFactor: row.tierFactor,
+            inputTokens: row.inputTokens,
+          },
         };
       });
 
