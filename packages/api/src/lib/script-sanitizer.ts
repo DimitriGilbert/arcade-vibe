@@ -36,13 +36,60 @@ export interface SanitizationResult {
 }
 
 export function extractCodeFromMarkdown(text: string): string {
-  const codeBlockRegex = /```(?:html|htm)?\s*\n?([\s\S]*?)\n?```/g;
+  const codeBlockRegex = /```([a-zA-Z0-9_-]+)?\s*\n?([\s\S]*?)\n?```/g;
   const matches = [...text.matchAll(codeBlockRegex)];
 
-  if (matches.length > 0 && matches[0]?.[1]) {
-    return matches[0][1].trim();
+  if (matches.length === 0) {
+    return text.trim();
   }
-  return text.trim();
+
+  const mergedParts = matches
+    .map((match) => {
+      const language = (match[1] ?? "").toLowerCase();
+      const content = (match[2] ?? "").trim();
+
+      if (!content) return "";
+
+      if (language === "" || language === "html" || language === "htm") {
+        return content;
+      }
+
+      if (language === "css") {
+        return `<style>\n${content}\n</style>`;
+      }
+
+      if (
+        language === "js" ||
+        language === "javascript" ||
+        language === "ts" ||
+        language === "typescript"
+      ) {
+        return `<script>\n${content}\n</script>`;
+      }
+
+      return content;
+    })
+    .filter((part) => part.length > 0);
+
+  const merged = mergedParts.join("\n\n").trim();
+  return merged.length > 0 ? merged : text.trim();
+}
+
+export function normalizeGeneratedBodySnippet(html: string): string {
+  let normalized = html.trim();
+
+  normalized = normalized.replace(/<!doctype[^>]*>/gi, "");
+  normalized = normalized.replace(/<\?xml[^>]*\?>/gi, "");
+
+  const bodyMatch = normalized.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch?.[1]) {
+    normalized = bodyMatch[1];
+  }
+
+  normalized = normalized.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, "");
+  normalized = normalized.replace(/<\/?(html|head|body)\b[^>]*>/gi, "");
+
+  return normalized.trim();
 }
 
 export function extractScriptUrls(html: string): string[] {

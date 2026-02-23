@@ -156,6 +156,8 @@ export interface PromptWithTheme {
 const COMMON_SYSTEM_PROMPT = `## Output Format
 
 Your code will be injected inside the <body> tag of an existing HTML page. The Arcade Vibe SDK is already loaded in the page header.
+The app game engine provides and controls the full page boilerplate (DOCTYPE, <html>, <head>, and <body> wrapper).
+You must return ONLY the content that belongs inside <body>.
 
 ### Do NOT generate:
 - <!DOCTYPE html>, <html>, <head>, or <body> tags
@@ -197,7 +199,10 @@ Other available methods:
 
 ## Output Rules
 
-Return only the raw HTML snippet. No markdown fences, no explanations, no comments addressed to the reader.
+Return one contiguous raw HTML snippet representing body content only.
+Do NOT return a full HTML document or boilerplate; the app game engine injects that.
+Do NOT split output into separate blocks for HTML/CSS/JS.
+No markdown fences, no explanations, no comments addressed to the reader.
 
 ## Every Game Must Have
 
@@ -609,13 +614,9 @@ export async function generateGame(
     { role: "user" as const, content: userPrompt },
   ];
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes
-
   const result = streamText({
     model,
     messages,
-    abortSignal: controller.signal,
   });
 
   const configuredMaxCharsRaw = Number(
@@ -738,8 +739,11 @@ export async function generateGame(
       }
 
       const extractedCode = extractCodeFromMarkdown(fullCode);
+      const rawCode = fullCode.trim();
+      const codeForSanitization =
+        extractedCode.length > 0 ? extractedCode : rawCode;
       const sanitizationResult = sanitizeGameCode(
-        extractedCode,
+        codeForSanitization,
         allAllowedPatterns,
       );
 
@@ -841,7 +845,6 @@ export async function generateGame(
         error: errorMessage,
       };
     } finally {
-      clearTimeout(timeoutId);
       if (redisHasPersistedChunks || redisBufferEnabled) {
         try {
           await redis.del(redisBufferKey);
