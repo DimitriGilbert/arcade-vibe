@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { MusicTrack, MusicState } from "@/lib/music-types";
+import { initStrudel, samples } from "@strudel/web/web.mjs";
+import { registerSoundfonts } from "@strudel/soundfonts/index.mjs";
 
 type MusicContextType = {
   isPlaying: boolean;
@@ -17,6 +19,7 @@ type MusicContextType = {
 const MusicContext = createContext<MusicContextType | null>(null);
 
 const STORAGE_KEY = "arcade-vibe-music";
+type StrudelRepl = Awaited<ReturnType<typeof initStrudel>>;
 
 function loadStoredState(): MusicState {
   if (typeof window === "undefined") {
@@ -45,65 +48,43 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const strudelReadyRef = useRef(false);
   const isPlayingRef = useRef(false);
-  // Store the repl instance returned by initStrudel
-  const replRef = useRef<{ scheduler: { stop: () => void }; setPattern: (p: unknown, play: boolean) => void; evaluate: (code: string) => Promise<void> } | null>(null);
+  const replRef = useRef<StrudelRepl | null>(null);
 
-  // Load Strudel web package once
+  // Load Strudel modules once
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const existingScript = document.querySelector(
-      'script[src="https://unpkg.com/@strudel/web@latest"]'
-    );
+    let cancelled = false;
 
-    if (existingScript && strudelReadyRef.current) {
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/@strudel/web@latest";
-    script.async = true;
-
-    script.onload = async () => {
+    const bootstrap = async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const win = window as any;
-
-        if (typeof win.initStrudel !== "function") {
-          throw new Error("initStrudel not found");
-        }
-
-        // initStrudel returns the repl instance - we MUST use this for stop
-        const repl = await win.initStrudel();
+        const repl = await initStrudel({
+          prebake: async () => {
+            await registerSoundfonts();
+            await samples("github:tidalcycles/dirt-samples");
+            await samples("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json");
+            await samples(
+              "https://raw.githubusercontent.com/felixroos/dough-samples/main/vcsl.json",
+              "https://raw.githubusercontent.com/felixroos/dough-samples/main/VCSL/"
+            );
+          },
+        });
         replRef.current = repl;
-
-        // Load samples
-        if (typeof win.samples === "function") {
-          try {
-            await win.samples("github:tidalcycles/dirt-samples");
-          } catch (e) {
-            console.warn("Could not load dirt-samples:", e);
-          }
-          try {
-            await win.samples("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json");
-          } catch (e) {
-            console.warn("Could not load tidal-drum-machines:", e);
-          }
-        }
-
         strudelReadyRef.current = true;
       } catch (e) {
         console.error("Failed to init Strudel:", e);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
     };
 
-    script.onerror = () => {
-      console.error("Failed to load Strudel script");
-      setIsLoading(false);
-    };
+    void bootstrap();
 
-    document.head.appendChild(script);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load tracks index

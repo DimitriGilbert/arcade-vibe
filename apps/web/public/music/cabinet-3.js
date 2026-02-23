@@ -59,7 +59,7 @@ const chordsMain = note(`
     [d3,f3,a3,c4] [f3,a3,c4,e4] [e3,g3,b3,d4] [a2,c#3,e3,g3]
   >
 `)
-  .s("gm_electric_piano_1")  // Rhodes-style for that lo-fi flavor
+  .s("gm_epiano1")  // Rhodes-style for that lo-fi flavor
   .gain(0.35)
   .lpf(2800)
   .room(0.2)
@@ -71,7 +71,7 @@ const chordsBridge = note(`
     [f3,a3,c4,eb4] [bb2,d3,f3,a3] [eb3,g3,bb3,d4] [ab2,c3,eb3,g3]
   >
 `)
-  .s("gm_electric_piano_1")
+  .s("gm_epiano1")
   .gain(0.3)
   .lpf(2200)
   .room(0.3)

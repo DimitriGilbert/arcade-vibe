@@ -296,15 +296,22 @@ export function InboxGenerationHistory({
             const isSelected = selectedGameId === game.id;
 
             return (
-              <button
-                type="button"
+              <div
                 key={game.id}
+                role="button"
+                tabIndex={0}
                 className={`w-full text-left flex items-center justify-between p-2 transition-colors group cursor-pointer ${
                   isSelected 
                     ? "bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]" 
                     : "hover:bg-[var(--muted)]/20"
                 }`}
                 onClick={() => onSelectGame?.(game)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectGame?.(game);
+                  }
+                }}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {getStatusIcon(game.status)}
@@ -380,7 +387,7 @@ export function InboxGenerationHistory({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </button>
+              </div>
             );
           })}
         </ul>

@@ -3,9 +3,21 @@
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { useMusic } from "@/contexts/music-context";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useEffect, useRef } from "react";
 
 export function MusicPlayer() {
   const { isPlaying, togglePlay, playNext, playPrevious, isLoading, currentTrack } = useMusic();
+  const prevTrackIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (currentTrack && currentTrack.id !== prevTrackIdRef.current) {
+      if (prevTrackIdRef.current !== null) {
+        toast.success(`Now playing: ${currentTrack.name}`, { duration: 2000 });
+      }
+      prevTrackIdRef.current = currentTrack.id;
+    }
+  }, [currentTrack]);
 
   if (isLoading) {
     return (

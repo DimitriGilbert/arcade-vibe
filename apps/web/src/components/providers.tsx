@@ -2,12 +2,17 @@
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import dynamic from "next/dynamic";
 
 import { queryClient } from "@/utils/trpc";
 
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
-import { MusicProvider } from "@/contexts/music-context";
+
+const MusicProvider = dynamic(
+  () => import("@/contexts/music-context").then((module) => module.MusicProvider),
+  { ssr: false }
+);
 
 const themes = ["synthwave", "tron", "pixel", "cabinet", "vaporwave"] as const;
 
