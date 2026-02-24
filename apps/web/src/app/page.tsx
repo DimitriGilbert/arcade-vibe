@@ -18,6 +18,10 @@ import {
   ArrowRight,
   Play,
   TrendingUp,
+  GraduationCap,
+  BarChart3,
+  Scale,
+  Heart,
 } from "lucide-react";
 
 import {
@@ -321,6 +325,101 @@ function FeatureSplit() {
   );
 }
 
+function LearnBento() {
+  return (
+    <section className="py-20 bg-[var(--card)]/10">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="mb-12">
+          <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">More Than Just Games</span>
+          <h2 className="text-4xl md:text-5xl font-black mt-4">
+            Get better. Figure stuff out.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-12 gap-4 md:gap-6">
+          <ArcadeCard className="col-span-12 md:col-span-7 row-span-2 p-8 flex flex-col">
+            <div className="flex-1">
+              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-6">
+                <GraduationCap className="size-7 text-[var(--primary)]" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                You actually get better at this
+              </h3>
+              <p className="text-lg text-[var(--muted-foreground)] leading-relaxed mb-6">
+                Every prompt you write teaches you something. The good ones, the ones that flop—all of it. Watch your own progress, see what works, figure out why.
+              </p>
+              <p className="text-[var(--muted-foreground)] leading-relaxed">
+                Public prompts become case studies. Read what the winners wrote, try it yourself, learn from it. No gatekeeping here.
+              </p>
+            </div>
+            <div className="mt-8 pt-6 border-t border-[var(--border)]">
+              <div className="flex items-center gap-6 text-sm">
+                <div>
+                  <span className="text-2xl font-bold text-[var(--primary)]">100%</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">Public winning prompts</p>
+                </div>
+                <div className="w-px h-10 bg-[var(--border)]" />
+                <div>
+                  <span className="text-2xl font-bold">∞</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">Things to learn</p>
+                </div>
+              </div>
+            </div>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-5 p-6">
+            <div className="w-12 h-12 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+              <Scale className="size-6 text-[var(--accent)]" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Compare models head-to-head</h3>
+            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+              Run the same prompt on GPT, Claude, Deepseek, whoever. See who delivers. Build your own benchmarks with real tasks, not synthetic tests.
+            </p>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-5 p-6">
+            <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center mb-4">
+              <BarChart3 className="size-6 text-yellow-500" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Scoring that rewards skill</h3>
+            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+              Shorter prompts score higher. Harder models multiply your points. Actual playtime matters. Can't game the system with copy-paste junk.
+            </p>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-4 p-6 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5">
+            <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center mb-3">
+              <Users className="size-5 text-[var(--primary)]" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Learn from everyone</h3>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Every public prompt is a lesson. Fork it, tweak it, run it on a different model.
+            </p>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-4 p-6">
+            <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center mb-3">
+              <Heart className="size-5 text-pink-500" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Actually fun</h3>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Not a course. Not homework. Just games, competition, and a reason to keep improving.
+            </p>
+          </ArcadeCard>
+
+          <ArcadeCard variant="glow" className="col-span-12 md:col-span-4 p-6 flex flex-col justify-center">
+            <div className="text-center">
+              <p className="text-5xl font-black text-[var(--primary)] mb-2">1</p>
+              <p className="text-sm font-bold uppercase tracking-wider">Prompt. That's it.</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-2">No tricks, no workarounds</p>
+            </div>
+          </ArcadeCard>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Outro() {
   return (
     <footer className="py-24 relative">
@@ -373,6 +472,7 @@ export default function HomeMagazine() {
         <QuickStats />
         <FeaturedArticle />
         <FeatureSplit />
+        <LearnBento />
         <Outro />
       </div>
     </main>

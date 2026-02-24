@@ -25,6 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
+const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/og.jpeg`;
+
 export const metadata: Metadata = {
   title: {
     default: "Arcade Vibe - AI-Powered Game Arcade",
@@ -45,7 +47,7 @@ export const metadata: Metadata = {
     title: "Arcade Vibe - One Prompt. One Shot. One Game.",
     description:
       "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
-    images: ["/og.jpeg"],
+    images: [ogImageUrl],
     type: "website",
   },
   twitter: {
@@ -53,7 +55,7 @@ export const metadata: Metadata = {
     title: "Arcade Vibe - One Prompt. One Shot. One Game.",
     description:
       "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
-    images: ["/og.jpeg"],
+    images: [ogImageUrl],
   },
 };
 
