@@ -439,8 +439,15 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     setMultipleGenerations(initialGenerations);
 
     try {
+      // Save prompt first (create new or update existing)
       let promptId = existingPrompt?.id ?? selectedPromptId;
-      if (!promptId) {
+      if (promptId) {
+        const result = await updatePromptMutation.mutateAsync({
+          id: promptId,
+          content: promptContent,
+        });
+        promptId = result.promptId;
+      } else {
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
@@ -555,6 +562,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     selectedTheme,
     selectedModels,
     createPromptMutation,
+    updatePromptMutation,
     selectedPromptId,
     setMultipleGenerations,
     updateGenerationStatus,

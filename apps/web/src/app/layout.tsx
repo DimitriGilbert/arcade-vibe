@@ -31,14 +31,30 @@ export const metadata: Metadata = {
     template: "%s | Arcade Vibe",
   },
   description:
-    "Create, play, and rate AI-generated games in a retro arcade environment. Join monthly challenges and compete on leaderboards.",
+    "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry. Get better at prompting. Figure out which AI actually delivers. Have fun doing it.",
   keywords: [
     "arcade",
     "AI games",
+    "prompt engineering",
     "game generation",
     "retro gaming",
     "monthly challenge",
+    "competitive prompting",
   ],
+  openGraph: {
+    title: "Arcade Vibe - One Prompt. One Shot. One Game.",
+    description:
+      "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
+    images: ["/og.jpeg"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Arcade Vibe - One Prompt. One Shot. One Game.",
+    description:
+      "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
+    images: ["/og.jpeg"],
+  },
 };
 
 export default function RootLayout({

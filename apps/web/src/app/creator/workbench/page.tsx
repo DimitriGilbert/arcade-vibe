@@ -399,9 +399,15 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     setMultipleGenerations(initialGenerations);
 
     try {
-      // Create new prompt first if not exists
+      // Save prompt first (create new or update existing)
       let promptId = selectedPromptId;
-      if (!promptId) {
+      if (promptId) {
+        const result = await updatePromptMutation.mutateAsync({
+          id: promptId,
+          content: promptContent,
+        });
+        promptId = result.promptId;
+      } else {
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
@@ -515,6 +521,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     promptName,
     visibility,
     createPromptMutation,
+    updatePromptMutation,
     queryClient,
     setMultipleGenerations,
     updateGenerationStatus,
