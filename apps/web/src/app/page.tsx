@@ -67,7 +67,7 @@ function Masthead() {
               <span className="block text-[var(--muted-foreground)] home-title-sub">VIBE</span>
             </h1>
           </div>
-          
+
           <div className="lg:col-span-4">
             <p className="text-lg md:text-xl text-[var(--muted-foreground)] leading-relaxed mb-4 font-semibold">
               A chill place to test your prompting skills, play some fun games, and see how different AI models stack up.
@@ -147,7 +147,7 @@ function FeaturedArticle() {
                     <p className="text-lg text-[var(--muted-foreground)] leading-relaxed mb-8 max-w-xl">
                       {themeDescription}
                     </p>
-                    
+
                     <div className="flex items-center gap-8 mb-8">
                       {timeRemaining && (
                         <div>
@@ -306,8 +306,8 @@ function FeatureSplit() {
 
           <div className="grid grid-cols-2 gap-4">
             {MODEL_TIERS.map((tier, idx) => (
-              <ArcadeCard 
-                key={tier.name} 
+              <ArcadeCard
+                key={tier.name}
                 className={`p-5 ${idx >= 2 ? 'border-[var(--accent)]/30' : ''}`}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -336,8 +336,8 @@ function LearnBento() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-12 gap-4 md:gap-6">
-          <ArcadeCard className="col-span-12 md:col-span-7 row-span-2 p-8 flex flex-col">
+        <div className="grid grid-cols-12 gap-4 md:gap-5 auto-rows-[minmax(100px,auto)]">
+          <ArcadeCard className="col-span-12 md:col-span-6 row-span-2 p-8 flex flex-col">
             <div className="flex-1">
               <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-6">
                 <GraduationCap className="size-7 text-[var(--primary)]" />
@@ -346,10 +346,10 @@ function LearnBento() {
                 You actually get better at this
               </h3>
               <p className="text-lg text-[var(--muted-foreground)] leading-relaxed mb-6">
-                Every prompt you write teaches you something. The good ones, the ones that flop—all of it. Watch your own progress, see what works, figure out why.
+                Every prompt teaches you something. The good ones, the flops—all of it.
               </p>
               <p className="text-[var(--muted-foreground)] leading-relaxed">
-                Public prompts become case studies. Read what the winners wrote, try it yourself, learn from it. No gatekeeping here.
+                Public prompts become case studies. Read what winners wrote, try it, learn from it.
               </p>
             </div>
             <div className="mt-8 pt-6 border-t border-[var(--border)]">
@@ -367,51 +367,72 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-5 p-6">
-            <div className="w-12 h-12 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center mb-4">
-              <Scale className="size-6 text-[var(--accent)]" />
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-6 p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center shrink-0">
+                <Scale className="size-6 text-[var(--accent)]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-2">Compare models head-to-head</h3>
+                <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+                  Run the same prompt on GPT, Claude, Deepseek. See who delivers. Build your own benchmarks with real tasks.
+                </p>
+              </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">Compare models head-to-head</h3>
-            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
-              Run the same prompt on GPT, Claude, Deepseek, whoever. See who delivers. Build your own benchmarks with real tasks, not synthetic tests.
-            </p>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-5 p-6">
-            <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center mb-4">
-              <BarChart3 className="size-6 text-yellow-500" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Scoring that rewards skill</h3>
-            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
-              Shorter prompts score higher. Harder models multiply your points. Actual playtime matters. Can't game the system with copy-paste junk.
-            </p>
-          </ArcadeCard>
-
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-4 p-6 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5">
-            <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center mb-3">
+          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 p-5 flex flex-col justify-between">
+            <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center">
               <Users className="size-5 text-[var(--primary)]" />
             </div>
-            <h3 className="text-lg font-bold mb-2">Learn from everyone</h3>
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Every public prompt is a lesson. Fork it, tweak it, run it on a different model.
-            </p>
-          </ArcadeCard>
-
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-4 p-6">
-            <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center mb-3">
-              <Heart className="size-5 text-pink-500" />
+            <div>
+              <h3 className="text-lg font-bold mb-1">Learn from everyone</h3>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Fork winning prompts. Tweak them. Run them elsewhere.
+              </p>
             </div>
-            <h3 className="text-lg font-bold mb-2">Actually fun</h3>
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Not a course. Not homework. Just games, competition, and a reason to keep improving.
-            </p>
           </ArcadeCard>
 
-          <ArcadeCard variant="glow" className="col-span-12 md:col-span-4 p-6 flex flex-col justify-center">
+          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 row-span-3 p-6 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5 flex flex-col justify-center">
             <div className="text-center">
-              <p className="text-5xl font-black text-[var(--primary)] mb-2">1</p>
-              <p className="text-sm font-bold uppercase tracking-wider">Prompt. That's it.</p>
-              <p className="text-xs text-[var(--muted-foreground)] mt-2">No tricks, no workarounds</p>
+              <p className="text-6xl font-black text-[var(--primary)] mb-2">1</p>
+              <p className="text-sm font-bold uppercase tracking-wider">Prompt</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">No tricks. Just skill.</p>
+            </div>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-7 md:col-span-7 p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                <BarChart3 className="size-5 text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold mb-1">Scoring rewards skill</h3>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Shorter prompts = more points. Harder models = bigger multiplier. Can't game it.
+                </p>
+              </div>
+            </div>
+          </ArcadeCard>
+
+          <ArcadeCard variant="glow" className="col-span-4 sm:col-span-2 md:col-span-2 p-4 flex items-center justify-center">
+            <div className="text-center">
+              <Sparkles className="size-8 text-[var(--primary)] mx-auto mb-2" />
+              <p className="text-xs font-bold uppercase tracking-wider">No BS</p>
+            </div>
+          </ArcadeCard>
+
+          <ArcadeCard className="col-span-12 sm:col-span-9 md:col-span-9 p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
+                <Heart className="size-5 text-pink-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold mb-1">Actually fun</h3>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Not a course. Not homework. Just games, competition, and a reason to keep improving.
+                </p>
+              </div>
             </div>
           </ArcadeCard>
         </div>

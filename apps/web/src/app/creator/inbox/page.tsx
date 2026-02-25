@@ -863,22 +863,32 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                     </button>
                   )}
                 </div>
-                <ArcadeButton
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={
-                    !promptContent.trim() ||
-                    createPromptMutation.isPending ||
-                    updatePromptMutation.isPending
-                  }
-                >
-                  {createPromptMutation.isPending || updatePromptMutation.isPending ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Save className="h-3 w-3" />
-                  )}
-                </ArcadeButton>
+                <div className="flex items-center gap-1">
+                  <ArcadeButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingGameName(true)}
+                    disabled={isEditingGameName}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </ArcadeButton>
+                  <ArcadeButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={
+                      !promptContent.trim() ||
+                      createPromptMutation.isPending ||
+                      updatePromptMutation.isPending
+                    }
+                  >
+                    {createPromptMutation.isPending || updatePromptMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Save className="h-3 w-3" />
+                    )}
+                  </ArcadeButton>
+                </div>
               </div>
               <div className="flex-1 min-h-0 [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4">
                 <Editor

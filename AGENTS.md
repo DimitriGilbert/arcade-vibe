@@ -2,11 +2,7 @@
 
 A monorepo workspace containing a Next.js web application and tRPC API with Drizzle ORM database.
 
-## Package Manager
-
-This project uses **pnpm@10.10.0** with workspaces. Use `pnpm` for all package operations.
-
-## Commands
+Use `pnpm` for all package operations.
 
 ```bash
 # Build all packages
@@ -21,7 +17,6 @@ pnpm run --filter <package> <command>
 # Database
 pnpm run db:push          # Push schema to database
 pnpm run db:generate      # Generate Drizzle migrations
-pnpm run db:studio        # Open Drizzle Studio
 ```
 
 **Important**: No test commands are configured yet. Always run `pnpm run check-types` and `pnpm run build` before committing.
@@ -62,8 +57,6 @@ When working with libraries, **ALWAYS load the corresponding skill** first. Skil
 
 ## Code Style
 
-### Imports
-
 Use type imports for types only:
 
 ```typescript
@@ -71,50 +64,17 @@ import type { NextRequest } from "next/server";
 import { db } from "@arcade-vibe/db";
 ```
 
-### Validation
+**NO** `await import` unless absolutely necessary.
 
-All inputs must be validated with Zod:
+Respect the existing codebase regarding input validation and trpc usage.
 
-```typescript
-import z from "zod";
-
-const schema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
-});
-```
-
-### tRPC Procedures
-
-```typescript
-import { db } from "@arcade-vibe/db";
-import { eq } from "drizzle-orm";
-import { router, protectedProcedure } from "@arcade-vibe/api";
-
-export const exampleRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return await db.select().from(todo);
-  }),
-});
-```
-
-### React Components
-
-Functional components with TypeScript:
-
-```typescript
-export default function Button({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return <button onClick={onClick}>{children}</button>;
-}
-```
-
-### Error Handling
+Error Handling
 
 - Use TRPCError in tRPC procedures
 - Use toast notifications in frontend (Sonner)
 - Handle errors at appropriate levels
 
-### Naming Conventions
+Naming Conventions
 
 - Components: PascalCase (`UserProfile.tsx`)
 - Utilities/functions: camelCase (`formatDate.ts`)
@@ -122,21 +82,11 @@ export default function Button({ onClick, children }: { onClick: () => void; chi
 - Types: PascalCase (`interface UserProps`)
 - Files: kebab-case for utilities, PascalCase for components
 
-### Database Queries
-
 Always use Drizzle ORM with type-safe queries:
 
-```typescript
-import { db } from "@arcade-vibe/db";
-import { users } from "@arcade-vibe/db/schema";
-import { eq } from "drizzle-orm";
-
-const user = await db.query.users.findFirst({
-  where: eq(users.id, userId),
-});
-```
-
 ## Type System
+
+**The use of `any` is strictly prohibited.** This is a fully type-safe application.
 
 ### Single Source of Truth
 
@@ -149,22 +99,6 @@ All frontend types derive from two authoritative sources:
 2. **Enum types** → Database schema (`@arcade-vibe/db`)
    - GameStatus, PromptStatus, ThemeStatus, Visibility, UserRole, etc.
    - Re-exported via `@/lib/trpc-types` for convenience
-
-### Import Pattern
-
-```typescript
-// ✅ CORRECT - Import from trpc-types (single source)
-import type { Game, GameStatus, Prompt, UserProfile } from "@/lib/trpc-types";
-
-// ✅ CORRECT - Type imports for types only
-import type { Game, Theme } from "@/lib/trpc-types";
-
-// ❌ WRONG - Never define manual types duplicating backend types
-type GameStatus = "pending" | "completed"; // Forbidden!
-
-// ❌ WRONG - Never import directly from API in components
-import type { AppRouter } from "@arcade-vibe/api"; // Use trpc-types instead
-```
 
 ### Adding New Types
 
@@ -207,7 +141,7 @@ import type { AppRouter } from "@arcade-vibe/api"; // Use trpc-types instead
 - **Database enums**: `packages/db/src/schema/enums-types.ts` - Enum definitions
 - **API router**: `packages/api/src/routers/index.ts` - AppRouter composition
 
-**YOU MUST REUSE EXISTING TYPES !** Creating types in situ in a file next to functionality is completely stupid and counterproductive ! it is as bad as using any as nothing is shared and it does not prevent any problems, just hide them under a rug ! THIS IS ANTI PATTERN ! JUST LIKE "any" USE ! NEVER DO THAT UNLESS ABSOLUTELY NECESSARY ! USE EXISTING TYPES !
+**YOU MUST REUSE EXISTING TYPES !** Creating types in situ in a file next to functionality is completely stupid and counterproductive ! it is as bad as using `any` as nothing is shared and it does not prevent any problems, just hide them under a rug ! THIS IS ANTI PATTERN ! JUST LIKE "any" USE ! NEVER DO THAT UNLESS ABSOLUTELY NECESSARY ! USE EXISTING TYPES !
 
 ## Progressive Disclosure
 
