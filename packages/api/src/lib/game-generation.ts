@@ -630,16 +630,7 @@ export async function generateGame(
     },
   });
 
-  const configuredMaxCharsRaw = Number(
-    process.env.MAX_GENERATED_CODE_CHARS ?? "",
-  );
-  const maxGeneratedCodeChars =
-    Number.isFinite(configuredMaxCharsRaw) && configuredMaxCharsRaw > 0
-      ? configuredMaxCharsRaw
-      : null;
-
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
-    let codeCharCount = 0;
     let hasEmittedGenerating = false;
     let bufferedCodeDelta = "";
     let bufferedReasoningDelta = "";
@@ -687,18 +678,6 @@ export async function generateGame(
               gameId: confirmedGameId,
               status: "generating",
             };
-          }
-
-          codeCharCount += chunk.text.length;
-          if (
-            maxGeneratedCodeChars !== null &&
-            codeCharCount > maxGeneratedCodeChars
-          ) {
-            throw new TRPCError({
-              code: "PAYLOAD_TOO_LARGE",
-              message:
-                "Generated output exceeded size limit. Try a shorter prompt or lower reasoning/output settings.",
-            });
           }
 
           bufferedCodeDelta += chunk.text;
