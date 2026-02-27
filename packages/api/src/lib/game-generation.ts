@@ -16,7 +16,7 @@ import {
   buildLibraryListForSystemPrompt,
   extractCodeFromMarkdown,
 } from "./script-sanitizer";
-import { streamText, type LanguageModelUsage } from "ai";
+import { smoothStream, streamText, type LanguageModelUsage } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -620,6 +620,15 @@ export async function generateGame(
     model,
     messages,
     experimental_include: { requestBody: false },
+    experimental_transform: smoothStream({
+      delayInMs: null,
+      chunking: (buffer) => {
+        if (buffer.length >= 512) {
+          return buffer.slice(0, 512);
+        }
+        return undefined;
+      },
+    }),
     onFinish(event) {
       finishedText = event.text;
       finishedTotalUsage = event.totalUsage;
