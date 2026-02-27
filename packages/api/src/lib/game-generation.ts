@@ -20,7 +20,6 @@ import { streamText } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { redis, isRedisAvailable } from "./redis";
 
 // ============================================================================
 // Types & Interfaces
@@ -617,6 +616,7 @@ export async function generateGame(
   const result = streamText({
     model,
     messages,
+    experimental_include: { requestBody: false },
   });
 
   const configuredMaxCharsRaw = Number(
@@ -627,53 +627,11 @@ export async function generateGame(
       ? configuredMaxCharsRaw
       : null;
 
-  // Create the async generator
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
-    const redisBufferKey = `generation:buffer:${confirmedGameId}`;
-    const redisBufferTtlSeconds = 60 * 60;
-    const redisFlushThresholdChars = 16_384;
-
-    const inMemoryCodeChunks: string[] = [];
     let codeCharCount = 0;
-    let redisChunkBuffer = "";
-    let redisBufferEnabled = isRedisAvailable();
-    let redisHasPersistedChunks = false;
     let hasEmittedGenerating = false;
 
     try {
-      const appendChunk = async (delta: string): Promise<void> => {
-        codeCharCount += delta.length;
-
-        if (!redisBufferEnabled) {
-          inMemoryCodeChunks.push(delta);
-          return;
-        }
-
-        redisChunkBuffer += delta;
-
-        if (redisChunkBuffer.length < redisFlushThresholdChars) {
-          return;
-        }
-
-        try {
-          await redis.rpush(redisBufferKey, redisChunkBuffer);
-          await redis.expire(redisBufferKey, redisBufferTtlSeconds);
-          redisHasPersistedChunks = true;
-          redisChunkBuffer = "";
-        } catch (redisError) {
-          console.warn(
-            "[generation] redis buffering failed, falling back to in-memory buffer",
-            redisError,
-          );
-          redisBufferEnabled = false;
-          if (redisChunkBuffer.length > 0) {
-            inMemoryCodeChunks.push(redisChunkBuffer);
-            redisChunkBuffer = "";
-          }
-        }
-      };
-
-      // Emit reasoning status if enabled
       if (options.reasoningEnabled ?? true) {
         yield {
           type: "status",
@@ -682,7 +640,6 @@ export async function generateGame(
         };
       }
 
-      // Stream chunks using fullStream to capture reasoning
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
           yield {
@@ -700,7 +657,7 @@ export async function generateGame(
             };
           }
 
-          await appendChunk(chunk.text);
+          codeCharCount += chunk.text.length;
           if (
             maxGeneratedCodeChars !== null &&
             codeCharCount > maxGeneratedCodeChars
@@ -720,23 +677,7 @@ export async function generateGame(
         }
       }
 
-      // GL-008: Sanitize FIRST, then upload to CDN
-      // 8. Sanitize the generated code
-      let fullCode = "";
-
-      if (redisBufferEnabled && redisChunkBuffer.length > 0) {
-        await redis.rpush(redisBufferKey, redisChunkBuffer);
-        await redis.expire(redisBufferKey, redisBufferTtlSeconds);
-        redisHasPersistedChunks = true;
-        redisChunkBuffer = "";
-      }
-
-      if (redisHasPersistedChunks) {
-        const persistedChunks = await redis.lrange(redisBufferKey, 0, -1);
-        fullCode = persistedChunks.join("") + inMemoryCodeChunks.join("");
-      } else {
-        fullCode = inMemoryCodeChunks.join("");
-      }
+      const fullCode = await result.text;
 
       const extractedCode = extractCodeFromMarkdown(fullCode);
       const rawCode = fullCode.trim();
@@ -836,14 +777,6 @@ export async function generateGame(
         gameId: confirmedGameId,
         error: errorMessage,
       };
-    } finally {
-      if (redisHasPersistedChunks || redisBufferEnabled) {
-        try {
-          await redis.del(redisBufferKey);
-        } catch (redisError) {
-          console.warn("[generation] failed to cleanup redis buffer", redisError);
-        }
-      }
     }
   }
 

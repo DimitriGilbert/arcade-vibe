@@ -466,15 +466,9 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     setMultipleGenerations(initialGenerations);
 
     try {
-      // Save prompt first (create new or update existing)
+      // Only create prompt if it doesn't exist - don't update during generation
       let promptId = selectedPromptId;
-      if (promptId) {
-        const result = await updatePromptMutation.mutateAsync({
-          id: promptId,
-          content: promptContent,
-        });
-        promptId = result.promptId;
-      } else {
+      if (!promptId) {
         const result = await createPromptMutation.mutateAsync({
           themeId: selection.themeId,
           content: promptContent,
@@ -583,7 +577,6 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     selectedModels,
     selectedPromptId,
     createPromptMutation,
-    updatePromptMutation,
     setMultipleGenerations,
     updateGenerationStatus,
     updateGenerationCode,
