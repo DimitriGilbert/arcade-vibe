@@ -16,7 +16,7 @@ import {
   buildLibraryListForSystemPrompt,
   extractCodeFromMarkdown,
 } from "./script-sanitizer";
-import { smoothStream, streamText, type LanguageModelUsage } from "ai";
+import { type LanguageModelUsage } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -379,6 +379,74 @@ function getProviderReportedCost(usageRaw: unknown): number | undefined {
   return undefined;
 }
 
+function mapProviderUsageToAiSdkUsage(
+  providerUsage: ProviderStreamUsage,
+): LanguageModelUsage {
+  const inputTokens = providerUsage.inputTokens.total ?? 0;
+  const outputTokens = providerUsage.outputTokens.total ?? 0;
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+    inputTokenDetails: {
+      noCacheTokens: providerUsage.inputTokens.noCache ?? undefined,
+      cacheReadTokens: providerUsage.inputTokens.cacheRead ?? undefined,
+      cacheWriteTokens: providerUsage.inputTokens.cacheWrite ?? undefined,
+    },
+    outputTokenDetails: {
+      textTokens: providerUsage.outputTokens.text ?? undefined,
+      reasoningTokens: providerUsage.outputTokens.reasoning ?? undefined,
+    },
+    raw: undefined,
+  };
+}
+
+interface ProviderPromptTextPart {
+  type: "text";
+  text: string;
+}
+
+interface ProviderPromptSystemMessage {
+  role: "system";
+  content: string;
+}
+
+interface ProviderPromptUserMessage {
+  role: "user";
+  content: ProviderPromptTextPart[];
+}
+
+type ProviderPrompt = [ProviderPromptSystemMessage, ProviderPromptUserMessage];
+
+interface ProviderStreamUsage {
+  inputTokens: {
+    total?: number;
+    noCache?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+  };
+  outputTokens: {
+    total?: number;
+    text?: number;
+    reasoning?: number;
+  };
+  raw?: Record<string, unknown>;
+}
+
+type ProviderStreamPart =
+  | { type: "text-delta"; delta: string }
+  | { type: "reasoning-delta"; delta: string }
+  | { type: "finish"; usage: ProviderStreamUsage }
+  | { type: "error"; error: unknown };
+
+interface ProviderStreamResult {
+  stream: ReadableStream<ProviderStreamPart>;
+}
+
+interface ProviderModelWithDoStream {
+  doStream(options: { prompt: ProviderPrompt }): PromiseLike<ProviderStreamResult>;
+}
+
 const selectPlatformProvider = (availableProviders: string[]): Provider => {
   for (const provider of PLATFORM_PROVIDERS_WITH_KEYS) {
     if (availableProviders.includes(provider)) {
@@ -608,27 +676,8 @@ export async function generateGame(
     { enabled: options.reasoningEnabled ?? true, maxTokens: options.reasoningMaxTokens ?? 2000 },
   );
 
-  const messages = [
-    { role: "system" as const, content: systemPrompt },
-    { role: "user" as const, content: userPrompt },
-  ];
-
-  let finishedText: string | undefined;
+  let finishedText = "";
   let finishedTotalUsage: LanguageModelUsage | undefined;
-
-  const result = streamText({
-    model,
-    messages,
-    experimental_include: { requestBody: false },
-    experimental_transform: smoothStream({
-      delayInMs: null,
-      chunking: "word",
-    }),
-    onFinish(event) {
-      finishedText = event.text;
-      finishedTotalUsage = event.totalUsage;
-    },
-  });
 
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
     let hasEmittedGenerating = false;
@@ -666,32 +715,78 @@ export async function generateGame(
         };
       }
 
-      for await (const chunk of result.fullStream) {
-        if (chunk.type === "reasoning-delta") {
-          bufferedReasoningDelta += chunk.text;
-        } else if (chunk.type === "text-delta") {
-          if (!hasEmittedGenerating) {
-            hasEmittedGenerating = true;
-            yield* flushBufferedDeltas();
-            yield {
-              type: "status",
-              gameId: confirmedGameId,
-              status: "generating",
-            };
+      // Legacy streamText path (kept as comment for quick rollback):
+      // const result = streamText({
+      //   model,
+      //   messages,
+      //   experimental_include: { requestBody: false },
+      //   experimental_transform: smoothStream({ delayInMs: null, chunking: "word" }),
+      //   onFinish(event) {
+      //     finishedText = event.text;
+      //     finishedTotalUsage = event.totalUsage;
+      //   },
+      // });
+      // for await (const chunk of result.fullStream) {
+      //   if (chunk.type === "reasoning-delta") bufferedReasoningDelta += chunk.text;
+      //   if (chunk.type === "text-delta") { bufferedCodeDelta += chunk.text; }
+      // }
+
+      const providerModel = model as unknown as ProviderModelWithDoStream;
+      const providerPrompt: ProviderPrompt = [
+        { role: "system" as const, content: systemPrompt },
+        {
+          role: "user" as const,
+          content: [{ type: "text" as const, text: userPrompt }],
+        },
+      ];
+
+      const providerStreamResult = await providerModel.doStream({
+        prompt: providerPrompt,
+      });
+
+      const reader = providerStreamResult.stream.getReader();
+      try {
+        while (true) {
+          const readResult = await reader.read();
+          if (readResult.done) {
+            break;
           }
 
-          bufferedCodeDelta += chunk.text;
-        }
+          const part = readResult.value as ProviderStreamPart;
+          if (part.type === "reasoning-delta") {
+            if (options.reasoningEnabled ?? true) {
+              bufferedReasoningDelta += part.delta;
+            }
+          } else if (part.type === "text-delta") {
+            if (!hasEmittedGenerating) {
+              hasEmittedGenerating = true;
+              yield* flushBufferedDeltas();
+              yield {
+                type: "status",
+                gameId: confirmedGameId,
+                status: "generating",
+              };
+            }
 
-        const now = Date.now();
-        if (now - lastFlushAt >= STREAM_FLUSH_INTERVAL_MS) {
-          yield* flushBufferedDeltas();
-          lastFlushAt = now;
+            bufferedCodeDelta += part.delta;
+            finishedText += part.delta;
+          } else if (part.type === "finish") {
+            finishedTotalUsage = mapProviderUsageToAiSdkUsage(part.usage);
+          } else if (part.type === "error") {
+            throw part.error;
+          }
+
+          const now = Date.now();
+          if (now - lastFlushAt >= STREAM_FLUSH_INTERVAL_MS) {
+            yield* flushBufferedDeltas();
+            lastFlushAt = now;
+          }
         }
+      } finally {
+        reader.releaseLock();
       }
       yield* flushBufferedDeltas();
-      let fullCode = finishedText ?? "";
-      finishedText = undefined;
+      const fullCode = finishedText;
       if (fullCode.length === 0) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -701,7 +796,6 @@ export async function generateGame(
 
       const normalizedFullCode = fullCode.trim();
       const extractedCode = extractCodeFromMarkdown(fullCode);
-      fullCode = "";
       const codeForSanitization =
         extractedCode.length > 0 ? extractedCode : normalizedFullCode;
 

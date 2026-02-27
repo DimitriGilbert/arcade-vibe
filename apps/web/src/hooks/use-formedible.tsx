@@ -1454,7 +1454,7 @@ export function useFormedible<TFormValues extends Record<string, unknown>>(
     tabIndex,
   }) => {
     const handleSubmit = (e: React.FormEvent) => {
-      console.log("handleSubmit");
+      // console.log("handleSubmit");
       e.preventDefault();
       e.stopPropagation();
 
@@ -1464,7 +1464,7 @@ export function useFormedible<TFormValues extends Record<string, unknown>>(
           onSubmit(e);
           await form.handleSubmit();
         } else if (isLastPage) {
-          console.log("isLastPage");
+          // console.log("isLastPage");
           await form.handleSubmit();
         } else {
           console.log("goToNextPage");
