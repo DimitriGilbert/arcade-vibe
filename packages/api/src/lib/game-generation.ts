@@ -711,8 +711,8 @@ export async function generateGame(
         }
       }
       yield* flushBufferedDeltas();
-
-      const fullCode = finishedText ?? "";
+      let fullCode = finishedText ?? "";
+      finishedText = undefined;
       if (fullCode.length === 0) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -720,14 +720,13 @@ export async function generateGame(
         });
       }
 
+      const normalizedFullCode = fullCode.trim();
       const extractedCode = extractCodeFromMarkdown(fullCode);
-      const rawCode = fullCode.trim();
+      fullCode = "";
       const codeForSanitization =
-        extractedCode.length > 0 ? extractedCode : rawCode;
-      const sanitizationResult = sanitizeGameCode(
-        codeForSanitization,
-        allAllowedPatterns,
-      );
+        extractedCode.length > 0 ? extractedCode : normalizedFullCode;
+
+      const sanitizationResult = sanitizeGameCode(codeForSanitization, allAllowedPatterns);
 
       if (sanitizationResult.blockedUrls.length > 0) {
         console.warn(

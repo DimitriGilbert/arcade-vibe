@@ -38,7 +38,7 @@ const getS3Client = (): S3Client => {
 };
 
 const uploadToCDNInternal = async (
-  gameCode: string,
+  gameCodeBytes: Uint8Array,
   gameId: string,
 ): Promise<string> => {
   const cdnUrl = process.env.CDN_URL;
@@ -50,7 +50,7 @@ const uploadToCDNInternal = async (
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
-    Body: gameCode,
+    Body: gameCodeBytes,
     ContentType: "text/html",
     CacheControl: "public, max-age=31536000, immutable",
   });
@@ -69,12 +69,15 @@ export const uploadToCDN = async (
     return uploadToLocalFilesystem(gameCode, gameId);
   }
 
+  // Encode once and reuse across retries to avoid repeated large string->byte allocations.
+  const gameCodeBytes = new TextEncoder().encode(gameCode);
+
   const maxAttempts = 3;
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await uploadToCDNInternal(gameCode, gameId);
+      return await uploadToCDNInternal(gameCodeBytes, gameId);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
