@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import { ArcadeButton } from "@/components/arcade";
+import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Game, GameStatus } from "@/lib/trpc-types";
+import type { Game, GameStatus, PromptVersion } from "@/lib/trpc-types";
 
 interface InboxGenerationHistoryProps {
   promptId: string | null;
@@ -29,6 +29,11 @@ interface InboxGenerationHistoryProps {
   selectedGameId?: string | null;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  versions?: PromptVersion[];
+  currentVersion?: number | null;
+  selectedVersionId?: string | null;
+  onSelectVersion?: (versionId: string) => void;
+  onNewVersion?: () => void;
 }
 
 function formatDate(date: Date | string): string {
@@ -61,12 +66,27 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
   return "default";
 }
 
+function getVersionVariant(
+  v: PromptVersion,
+  currentVersion: number | null | undefined,
+  selectedVersionId: string | null | undefined,
+): "neon" | "pixel" | "default" {
+  if (v.version === currentVersion) return "neon";
+  if (v.id === selectedVersionId) return "pixel";
+  return "default";
+}
+
 export function InboxGenerationHistory({ 
   promptId, 
   onSelectGame, 
   selectedGameId,
   isCollapsed = false,
   onToggleCollapse,
+  versions,
+  currentVersion,
+  selectedVersionId,
+  onSelectVersion,
+  onNewVersion,
 }: InboxGenerationHistoryProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -267,8 +287,39 @@ export function InboxGenerationHistory({
     );
   }
 
+  const sortedVersions = versions ? [...versions].sort((a, b) => a.version - b.version) : [];
+
   return (
     <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
+      {/* Version Selector Row */}
+      {sortedVersions.length > 0 && (
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center gap-1 overflow-x-auto">
+          <GitBranch className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
+          {sortedVersions.map((v) => {
+            const variant = getVersionVariant(v, currentVersion, selectedVersionId);
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => onSelectVersion?.(v.id)}
+                className="cursor-pointer shrink-0"
+              >
+                <ArcadeBadge text={`v${v.version}`} variant={variant} className="text-[10px]" />
+              </button>
+            );
+          })}
+          {onNewVersion && (
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={onNewVersion}
+              className="h-5 w-5 p-0 shrink-0"
+            >
+              <Plus className="h-3 w-3" />
+            </ArcadeButton>
+          )}
+        </div>
+      )}
       {/* Header with collapse button */}
       <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">

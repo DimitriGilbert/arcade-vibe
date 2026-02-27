@@ -8,7 +8,7 @@ import { Loader2, Play, Save, Copy, ExternalLink, Pencil, Check, X } from "lucid
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
-import type { Visibility, Game } from "@/lib/trpc-types";
+import type { Visibility, Game, PromptVersion } from "@/lib/trpc-types";
 import {
   InboxSidebar,
   InboxModelSelector,
@@ -104,6 +104,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [gameName, setGameName] = useState("");
   const [isEditingGameName, setIsEditingGameName] = useState(false);
   const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<Game | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
 
   // Generations store hooks
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -196,12 +198,25 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     queryFn: () => trpcClient.apiKeys.listKeys.query(),
   });
 
+  // Fetch prompt versions
+  const { data: versions } = useQuery({
+    queryKey: ["prompt-versions", existingPrompt?.id ?? selectedPromptId],
+    queryFn: async () => {
+      const promptId = existingPrompt?.id ?? selectedPromptId;
+      if (!promptId) return [];
+      return await trpcClient.prompts.listVersions.query({ promptId });
+    },
+    enabled: !!(existingPrompt?.id ?? selectedPromptId),
+  });
+
   // Initialize prompt content when existing prompt loads
   useEffect(() => {
     if (existingPrompt && !promptContent) {
       setPromptContent(existingPrompt.content);
       setSelectedTheme(existingPrompt.themeId);
       setSelectedPromptId(existingPrompt.id);
+      setSelectedVersionId(existingPrompt.id);
+      setIsViewingOldVersion(false);
     }
   }, [existingPrompt, promptContent]);
 
@@ -548,6 +563,9 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       setIsGenerating(false);
       void queryClient.invalidateQueries({ queryKey: ["credits"] });
       void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      if (existingPrompt?.id ?? selectedPromptId) {
+        void queryClient.invalidateQueries({ queryKey: ["prompt-versions", existingPrompt?.id ?? selectedPromptId] });
+      }
     }
   }, [
     promptContent,
@@ -608,6 +626,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
         setPromptContent(prompt.content);
         setSelectedPromptId(prompt.id);
         setSelectedTheme(prompt.themeId);
+        setSelectedVersionId(prompt.id);
+        setIsViewingOldVersion(false);
         // Auto-collapse left sidebar and expand right sidebar when prompt is selected
         setLeftSidebarCollapsed(true);
         setRightSidebarCollapsed(false);
@@ -628,12 +648,30 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     setPromptContent("");
     setGameName("");
     setSelectedPromptId(null);
+    setSelectedVersionId(null);
+    setIsViewingOldVersion(false);
     setSelectedModels([]);
     clearGenerations();
     setActiveOutputTab(null);
     setSelectedGameFromHistory(null);
     setRightSidebarCollapsed(true);
   }, [clearGenerations]);
+
+  const handleSelectVersion = useCallback(
+    async (versionId: string) => {
+      const versionData = versions?.find((v: PromptVersion) => v.id === versionId);
+      if (versionData) {
+        setPromptContent(versionData.content);
+        setSelectedVersionId(versionId);
+        setIsViewingOldVersion(versionId !== selectedPromptId);
+      }
+    },
+    [versions, selectedPromptId]
+  );
+
+  const handleNewVersion = useCallback(() => {
+    setIsViewingOldVersion(false);
+  }, []);
 
   // Handler for selecting a game from history - must be defined before any conditional code
   const handleSelectGameFromHistory = useCallback((game: Game) => {
@@ -769,6 +807,11 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             selectedGameId={selectedGameFromHistory?.id}
             isCollapsed={rightSidebarCollapsed}
             onToggleCollapse={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
+            versions={versions}
+            currentVersion={existingPrompt?.version ?? null}
+            selectedVersionId={selectedVersionId}
+            onSelectVersion={handleSelectVersion}
+            onNewVersion={handleNewVersion}
           />
         )}
 

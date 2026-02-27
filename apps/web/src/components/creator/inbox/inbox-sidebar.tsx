@@ -23,7 +23,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Plus, MoreHorizontal, Trash2, Globe, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Visibility } from "@/lib/trpc-types";
@@ -128,6 +127,8 @@ export function InboxSidebar({
     }
   };
 
+  const selectedThemeOption = themes?.find((t) => t.id === selectedTheme);
+
   return (
     <div className="h-full w-[250px] flex flex-col bg-[var(--card)] border-r border-[var(--border)]">
       {/* Header with collapse button */}
@@ -159,7 +160,14 @@ export function InboxSidebar({
         </span>
         <Select value={selectedTheme} onValueChange={handleThemeChange}>
           <SelectTrigger className="w-full h-9" id="theme-select">
-            <SelectValue placeholder="Select theme" />
+            {themesLoading ? (
+              <span className="flex items-center gap-1.5 text-[var(--muted-foreground)]">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading...
+              </span>
+            ) : (
+              selectedThemeOption?.title || "Select theme"
+            )}
           </SelectTrigger>
           <SelectContent>
             {themesLoading ? (

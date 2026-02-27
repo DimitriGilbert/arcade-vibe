@@ -613,7 +613,8 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
     setSelectedPromptId(null);
-    setSelection((prev) => ({ ...prev, type: "theme", promptId: null, runId: null }));
+    setGameName("");
+    setSelection((prev) => ({ ...prev, type: "new-prompt", promptId: null, runId: null }));
     setSelectedModels([]);
     clearGenerations();
     setActiveOutputTab(null);

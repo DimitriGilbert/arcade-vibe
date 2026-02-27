@@ -91,6 +91,28 @@ export function CenterPanel({
     );
   }
 
+  if (selection.type === "new-prompt" && theme) {
+    return (
+      <PromptEditorWithOutput
+        promptContent={promptContent}
+        onPromptContentChange={onPromptContentChange}
+        gameName={gameName}
+        onGameNameChange={onGameNameChange}
+        selectedModels={selectedModels}
+        onAddModel={onAddModel}
+        onRemoveModel={onRemoveModel}
+        activeOutputTab={activeOutputTab}
+        onOutputTabChange={onOutputTabChange}
+        visibility="private"
+        version={1}
+        versions={undefined}
+        onSelectVersion={onSelectVersion}
+        canEdit={canEdit}
+        isGenerating={isGenerating}
+      />
+    );
+  }
+
   if (selection.type === "run") {
     return (
       <OutputViewer

@@ -44,6 +44,7 @@ export function HeaderBar({
   const theme = themes?.find((t) => t.id === selection.themeId);
   const prompt = prompts?.find((p) => p.id === selection.promptId);
   const run = runs?.find((r) => r.id === selection.runId);
+  const isNewPrompt = selection.type === "new-prompt";
 
   const getBreadcrumbs = () => {
     const crumbs: Array<{ label: string; onClick?: () => void }> = [];
@@ -51,10 +52,12 @@ export function HeaderBar({
     crumbs.push({ label: "Filebrowser", onClick: onHome });
     
     if (theme) {
-      crumbs.push({ label: theme.title, onClick: selection.promptId ? () => {} : undefined });
+      crumbs.push({ label: theme.title, onClick: selection.promptId || isNewPrompt ? () => {} : undefined });
     }
     
-    if (prompt) {
+    if (isNewPrompt) {
+      crumbs.push({ label: "New Prompt" });
+    } else if (prompt) {
       const preview = prompt.content.slice(0, 30);
       crumbs.push({ label: preview.length < prompt.content.length ? `${preview}...` : preview });
     }
@@ -101,7 +104,7 @@ export function HeaderBar({
           </span>
         )}
 
-        {(selection.type === "theme" || selection.type === "prompt") && (
+        {(selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt") && (
           <>
             <ArcadeButton
               variant="outline"

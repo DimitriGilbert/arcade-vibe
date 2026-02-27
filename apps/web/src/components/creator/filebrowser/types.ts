@@ -30,7 +30,7 @@ export interface RunNode {
   promptId: string;
 }
 
-export type SelectionType = "theme" | "prompt" | "run" | null;
+export type SelectionType = "theme" | "prompt" | "run" | "new-prompt" | null;
 
 export interface FilebrowserSelection {
   type: SelectionType;
