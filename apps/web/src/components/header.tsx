@@ -2,6 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,16 @@ export default function Header() {
   return (
     <div className="sticky top-0 z-50 bg-[var(--background)] border-b border-[var(--border)]">
       <div className="flex flex-row items-center justify-center px-4 py-2">
+        <Link href="/" className="mr-3 flex-shrink-0">
+          <Image
+            src="/arcade-vibe_logo-trans.webp"
+            alt="Arcade Vibe"
+            width={100}
+            height={58}
+            className="h-8 w-auto"
+            priority
+          />
+        </Link>
         <nav className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-1">
           {MAIN_NAV_ITEMS.map((item) => {
             const isActive = getActiveTab() === item.href;

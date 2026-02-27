@@ -32,6 +32,13 @@ export const metadata: Metadata = {
     default: "Arcade Vibe - AI-Powered Game Arcade",
     template: "%s | Arcade Vibe",
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   description:
     "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry. Get better at prompting. Figure out which AI actually delivers. Have fun doing it.",
   keywords: [
