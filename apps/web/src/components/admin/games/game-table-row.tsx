@@ -67,7 +67,7 @@ export function GameTableRow({
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2">
-          <Link href={`/play/${game.id}` as Route} target="_blank">
+          <Link href={`/game/${game.id}` as Route} target="_blank">
             <ArcadeButton variant="outline" size="sm">
               <ExternalLink className="h-4 w-4" />
             </ArcadeButton>

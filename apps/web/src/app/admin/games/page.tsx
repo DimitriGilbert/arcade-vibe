@@ -330,7 +330,7 @@ export default function AdminGamesPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/play/${game.id}` as Route}
+                            href={`/game/${game.id}` as Route}
                             target="_blank"
                           >
                             <ArcadeButton variant="outline" size="sm">
