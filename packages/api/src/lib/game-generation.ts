@@ -16,7 +16,7 @@ import {
   buildLibraryListForSystemPrompt,
   extractCodeFromMarkdown,
 } from "./script-sanitizer";
-import { streamText } from "ai";
+import { streamText, type LanguageModelUsage } from "ai";
 import { z } from "zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -613,10 +613,17 @@ export async function generateGame(
     { role: "user" as const, content: userPrompt },
   ];
 
+  let finishedText: string | undefined;
+  let finishedTotalUsage: LanguageModelUsage | undefined;
+
   const result = streamText({
     model,
     messages,
     experimental_include: { requestBody: false },
+    onFinish(event) {
+      finishedText = event.text;
+      finishedTotalUsage = event.totalUsage;
+    },
   });
 
   const configuredMaxCharsRaw = Number(
@@ -630,6 +637,30 @@ export async function generateGame(
   async function* generateStream(): AsyncGenerator<GenerateGameEvent> {
     let codeCharCount = 0;
     let hasEmittedGenerating = false;
+    let bufferedCodeDelta = "";
+    let bufferedReasoningDelta = "";
+    const STREAM_FLUSH_INTERVAL_MS = 16;
+    let lastFlushAt = Date.now();
+
+    const flushBufferedDeltas = async function* (): AsyncGenerator<GenerateGameEvent> {
+      if (bufferedReasoningDelta.length > 0) {
+        yield {
+          type: "reasoning-chunk",
+          gameId: confirmedGameId,
+          delta: bufferedReasoningDelta,
+        };
+        bufferedReasoningDelta = "";
+      }
+
+      if (bufferedCodeDelta.length > 0) {
+        yield {
+          type: "chunk",
+          gameId: confirmedGameId,
+          delta: bufferedCodeDelta,
+        };
+        bufferedCodeDelta = "";
+      }
+    };
 
     try {
       if (options.reasoningEnabled ?? true) {
@@ -642,14 +673,11 @@ export async function generateGame(
 
       for await (const chunk of result.fullStream) {
         if (chunk.type === "reasoning-delta") {
-          yield {
-            type: "reasoning-chunk",
-            gameId: confirmedGameId,
-            delta: chunk.text,
-          };
+          bufferedReasoningDelta += chunk.text;
         } else if (chunk.type === "text-delta") {
           if (!hasEmittedGenerating) {
             hasEmittedGenerating = true;
+            yield* flushBufferedDeltas();
             yield {
               type: "status",
               gameId: confirmedGameId,
@@ -669,15 +697,24 @@ export async function generateGame(
             });
           }
 
-          yield {
-            type: "chunk",
-            gameId: confirmedGameId,
-            delta: chunk.text,
-          };
+          bufferedCodeDelta += chunk.text;
+        }
+
+        const now = Date.now();
+        if (now - lastFlushAt >= STREAM_FLUSH_INTERVAL_MS) {
+          yield* flushBufferedDeltas();
+          lastFlushAt = now;
         }
       }
+      yield* flushBufferedDeltas();
 
-      const fullCode = await result.text;
+      const fullCode = finishedText ?? "";
+      if (fullCode.length === 0) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Generation completed without output text",
+        });
+      }
 
       const extractedCode = extractCodeFromMarkdown(fullCode);
       const rawCode = fullCode.trim();
@@ -694,8 +731,13 @@ export async function generateGame(
         );
       }
 
-      // Get token usage from the result
-      const usage = await result.usage;
+      const usage = finishedTotalUsage;
+      if (!usage) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Generation completed without usage metrics",
+        });
+      }
       const inputTokens = usage.inputTokens ?? 0;
       const outputTokens = usage.outputTokens ?? 0;
       const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
