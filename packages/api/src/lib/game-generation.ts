@@ -622,12 +622,7 @@ export async function generateGame(
     experimental_include: { requestBody: false },
     experimental_transform: smoothStream({
       delayInMs: null,
-      chunking: (buffer) => {
-        if (buffer.length >= 512) {
-          return buffer.slice(0, 512);
-        }
-        return undefined;
-      },
+      chunking: "word",
     }),
     onFinish(event) {
       finishedText = event.text;
