@@ -9,12 +9,12 @@ import { Loader2, Key, AlertCircle, Filter, ChevronDown, ChevronRight, ArrowDown
 import { toast } from "sonner";
 import { z } from "zod";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection } from "@/lib/model-types";
+import type { ModelSelection, GenerationStatus } from "@/lib/model-types";
+import { MAX_MODELS } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import type { Visibility } from "@/lib/trpc-types";
 import { ModelChip, ModelOutputTab, OutputStatusCard, WaitingState, VersionComparisonDialog } from "@/components/creator/shared";
-import type { GenerationStatus } from "@/lib/model-types";
 
 function ModelOutputTabWithStatus({
   modelKey,
@@ -56,8 +56,6 @@ interface PromptEditorWithOutputProps {
   canEdit: boolean;
   isGenerating: boolean;
 }
-
-const MAX_MODELS = 4;
 
 const modelSelectionSchema = z.object({
   tierFilter: z.array(z.string()).optional(),
