@@ -4,13 +4,13 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Editor from "@monaco-editor/react";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
-import { Loader2, X, Key, Check, AlertCircle, Brain, Sparkles, Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Key, Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection, GenerationStatus } from "@/lib/model-types";
+import type { ModelSelection } from "@/lib/model-types";
 import { MAX_MODELS } from "@/lib/model-types";
-import { useGenerationStatus } from "@/stores/generations-store";
 import type { Visibility } from "@/lib/trpc-types";
+import { ModelChip } from "@/components/creator/shared";
 
 interface PromptEditorProps {
   promptContent: string;
@@ -25,55 +25,6 @@ interface PromptEditorProps {
   versions: Array<{ id: string; version: number; createdAt: string }> | undefined;
   onSelectVersion: (versionId: string) => void;
   canEdit: boolean;
-}
-
-function StatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3 w-3 animate-pulse text-purple-400" />;
-    case "generating":
-      return <Sparkles className="h-3 w-3 animate-spin text-cyan-400" />;
-    case "complete":
-      return <Check className="h-3 w-3 text-green-400" />;
-    case "error":
-      return <AlertCircle className="h-3 w-3 text-red-400" />;
-    default:
-      return null;
-  }
-}
-
-function ModelChip({
-  model,
-  onRemove,
-  disabled,
-}: {
-  model: ModelSelection;
-  onRemove: () => void;
-  disabled: boolean;
-}) {
-  const status = useGenerationStatus(model.id) ?? "idle";
-  const isActive = status === "reasoning" || status === "generating";
-
-  return (
-    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-[var(--muted)] rounded-md border border-[var(--border)] text-xs">
-      <StatusIcon status={status} />
-      <span className="truncate max-w-[120px]">{model.modelName}</span>
-      {model.isByok ? (
-        <ArcadeBadge text="BYOK" variant="neon" className="text-[9px] px-1" />
-      ) : (
-        <span className="text-[var(--muted-foreground)]">{model.creditCost}cr</span>
-      )}
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={disabled || isActive}
-        className="ml-1 p-0.5 rounded hover:bg-[var(--destructive)]/20 text-[var(--muted-foreground)] hover:text-[var(--destructive)] disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={`Remove ${model.modelName}`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </div>
-  );
 }
 
 export function PromptEditor({
@@ -198,8 +149,7 @@ export function PromptEditor({
           <ModelChip
             key={model.id}
             model={model}
-            onRemove={() => onRemoveModel(model.id)}
-            disabled={!canEdit}
+            onRemove={canEdit ? () => onRemoveModel(model.id) : undefined}
           />
         ))}
       </div>

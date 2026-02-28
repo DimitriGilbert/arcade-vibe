@@ -1,77 +1,8 @@
 "use client";
 
-import { memo } from "react";
-import { X, Check, AlertCircle, Brain, Sparkles, Plus } from "lucide-react";
-import { ArcadeBadge } from "@/components/arcade";
-import type { GenerationStatus, ModelSelection } from "./inbox-types";
-import { useGenerationStatus } from "@/stores/generations-store";
-
-interface ModelChipProps {
-  model: ModelSelection;
-  onRemove: (id: string) => void;
-  disabled: boolean;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function StatusIndicator({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3 w-3 animate-pulse text-purple-400" />;
-    case "generating":
-      return <Sparkles className="h-3 w-3 animate-spin text-blue-400" />;
-    case "complete":
-      return <Check className="h-3 w-3 text-green-400" />;
-    case "error":
-      return <AlertCircle className="h-3 w-3 text-red-400" />;
-    default:
-      return null;
-  }
-}
-
-const ModelChip = memo(function ModelChip({
-  model,
-  onRemove,
-  disabled,
-  isActive,
-  onClick,
-}: ModelChipProps) {
-  const status = useGenerationStatus(model.id) ?? "idle";
-  const isActiveGeneration = status === "reasoning" || status === "generating";
-
-  return (
-    <button
-      type="button"
-      className={[
-        "flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs cursor-pointer transition-all",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15"
-          : "border-[var(--border)] bg-[var(--muted)]/30 hover:bg-[var(--muted)]/50",
-      ].join(" ")}
-      onClick={onClick}
-    >
-      <StatusIndicator status={status} />
-      <span className="truncate max-w-[80px]">{model.modelName}</span>
-      {model.isByok ? (
-        <ArcadeBadge text="BYOK" variant="neon" className="text-[10px] px-1" />
-      ) : (
-        <span className="text-[var(--muted-foreground)]">{model.creditCost}cr</span>
-      )}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(model.id);
-        }}
-        disabled={disabled || isActiveGeneration}
-        className="ml-0.5 p-0.5 rounded hover:bg-[var(--destructive)]/20 text-[var(--muted-foreground)] hover:text-[var(--destructive)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={`Remove ${model.modelName}`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </button>
-  );
-});
+import { Plus } from "lucide-react";
+import { ModelChip } from "@/components/creator/shared";
+import type { ModelSelection } from "./inbox-types";
 
 interface InboxModelChipsProps {
   models: ModelSelection[];
@@ -98,10 +29,9 @@ export function InboxModelChips({
         <ModelChip
           key={model.id}
           model={model}
-          onRemove={onRemoveModel}
-          disabled={disabled}
-          isActive={model.id === activeModelId}
+          onRemove={() => onRemoveModel(model.id)}
           onClick={() => onModelClick(model.id)}
+          isActive={model.id === activeModelId}
         />
       ))}
 

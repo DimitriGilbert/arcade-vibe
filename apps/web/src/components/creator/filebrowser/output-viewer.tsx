@@ -1,108 +1,38 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, AlertCircle, Check, Sparkles, Brain, Loader2 } from "lucide-react";
+import { ArrowDown, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
-import {
-  useGenerationById,
-  useGenerationStatus,
-} from "@/stores/generations-store";
+import type { ModelSelection } from "@/lib/model-types";
+import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import type { RunNode } from "./types";
+import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
-function OutputStatusCard({
-  title,
-  description,
-  tone = "neutral",
-  icon,
-}: {
-  title: string;
-  description: string;
-  tone?: "neutral" | "error";
-  icon?: ReactNode;
-}) {
-  const toneClass =
-    tone === "error"
-      ? "border-[var(--destructive)]/40 bg-[var(--destructive)]/10"
-      : "border-[var(--border)] bg-[var(--muted)]/10";
-
-  return (
-    <div
-      className={`h-full min-h-0 rounded-xl border ${toneClass} flex items-center justify-center p-6`}
-    >
-      <div className="max-w-md text-center space-y-2">
-        {icon ? <div className="mx-auto w-fit">{icon}</div> : null}
-        <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function WaitingState({ status }: { status: "reasoning" | "generating" }) {
-  return (
-    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        {status === "reasoning" ? (
-          <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
-        ) : (
-          <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
-        )}
-        <span className="text-sm text-[var(--muted-foreground)]">
-          {status === "reasoning" ? "Waiting for reasoning..." : "Waiting for code..."}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ModelStatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3.5 w-3.5 text-blue-400 animate-pulse" />;
-    case "generating":
-      return <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />;
-    case "complete":
-      return <Check className="h-3.5 w-3.5 text-emerald-400" />;
-    case "error":
-      return <AlertCircle className="h-3.5 w-3.5 text-[var(--destructive)]" />;
-    default:
-      return null;
-  }
-}
-
-const ModelOutputTab = memo(function ModelOutputTab({
-  modelId,
+function ModelOutputTabWithStatus({
+  modelKey,
   modelName,
   isActive,
-  onSelect,
+  onClick,
 }: {
-  modelId: string;
+  modelKey: string;
   modelName: string;
   isActive: boolean;
-  onSelect: () => void;
+  onClick: () => void;
 }) {
-  const status = useGenerationStatus(modelId) ?? "idle";
-
+  const status = useGenerationStatus(modelKey) ?? "idle";
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={[
-        "group inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--foreground)]"
-          : "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)] hover:bg-[var(--muted)]/60",
-      ].join(" ")}
-    >
-      <ModelStatusIcon status={status} />
-      <span className="truncate max-w-[11rem]">{modelName}</span>
-    </button>
+    <ModelOutputTab
+      modelKey={modelKey}
+      modelName={modelName}
+      status={status}
+      isActive={isActive}
+      onClick={onClick}
+    />
   );
-});
+}
 
 interface OutputViewerProps {
   selectedModels: ModelSelection[];
@@ -287,10 +217,12 @@ export function OutputViewer({
 
   if (selectedModels.length === 0) {
     return (
-      <OutputStatusCard
-        title="No model selected"
-        description="Select models to generate or view run history."
-      />
+      <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--muted)]/10 flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-2">
+          <p className="text-sm font-medium text-[var(--foreground)]">No model selected</p>
+          <p className="text-xs text-[var(--muted-foreground)]">Select models to generate or view run history.</p>
+        </div>
+      </div>
     );
   }
 
@@ -300,12 +232,12 @@ export function OutputViewer({
         <div className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
           <div className="flex items-center gap-2 overflow-x-auto">
             {selectedModels.map((model) => (
-              <ModelOutputTab
+              <ModelOutputTabWithStatus
                 key={model.id}
-                modelId={model.id}
+                modelKey={model.id}
                 modelName={model.modelName}
                 isActive={model.id === activeOutputTab}
-                onSelect={() => onOutputTabChange(model.id)}
+                onClick={() => onOutputTabChange(model.id)}
               />
             ))}
           </div>
@@ -359,12 +291,7 @@ export function OutputViewer({
         ) : null}
 
         {!isLoadingCode && generation?.status === "error" ? (
-          <OutputStatusCard
-            tone="error"
-            icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
-            title="Generation failed"
-            description={generation.error ?? "An unknown error occurred during generation."}
-          />
+          <OutputStatusCard type="error" error={generation.error ?? "An unknown error occurred during generation."} />
         ) : null}
 
         {!isLoadingCode &&
@@ -374,14 +301,14 @@ export function OutputViewer({
         generation?.status !== "reasoning" &&
         generation?.status !== "generating" &&
         generation?.status !== "complete" ? (
-          <OutputStatusCard
-            title={
-              currentModel
-                ? `No output yet for ${currentModel.modelName}`
-                : "No output yet"
-            }
-            description="Run generation to see code stream here."
-          />
+          <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--muted)]/10 flex items-center justify-center p-6">
+            <div className="max-w-md text-center space-y-2">
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                {currentModel ? `No output yet for ${currentModel.modelName}` : "No output yet"}
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">Run generation to see code stream here.</p>
+            </div>
+          </div>
         ) : null}
       </div>
     </div>

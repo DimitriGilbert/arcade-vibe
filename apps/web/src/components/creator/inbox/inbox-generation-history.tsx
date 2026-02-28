@@ -5,13 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,9 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, GitBranch, Plus } from "lucide-react";
+import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Game, GameStatus, PromptVersion } from "@/lib/trpc-types";
+import { GameActionsDropdown } from "@/components/creator/shared";
 
 interface InboxGenerationHistoryProps {
   promptId: string | null;
@@ -169,7 +163,6 @@ export function InboxGenerationHistory({
     unpublishMutation.mutate(gameId);
   };
 
-  // Collapsed state - show minimal strip with expand button (after all hooks)
   if (isCollapsed) {
     return (
       <div className="h-full w-[28px] bg-[var(--card)] border-x border-[var(--border)] flex flex-col items-center py-2">
@@ -291,7 +284,6 @@ export function InboxGenerationHistory({
 
   return (
     <div className="h-full w-[280px] border-x border-[var(--border)] bg-[var(--card)] flex flex-col">
-      {/* Version Selector Row */}
       {sortedVersions.length > 0 && (
         <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center gap-1 overflow-x-auto">
           <GitBranch className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
@@ -320,7 +312,6 @@ export function InboxGenerationHistory({
           )}
         </div>
       )}
-      {/* Header with collapse button */}
       <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
           History
@@ -338,7 +329,6 @@ export function InboxGenerationHistory({
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <ul className="divide-y divide-[var(--border)]">
-          {/* Sort by most recent first */}
           {[...games].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((game: Game) => {
             const canSubmit = game.status === "completed" && !game.isSubmitted;
             const isSubmitting = submitMutation.isPending && submitMutation.variables === game.id;
@@ -347,10 +337,9 @@ export function InboxGenerationHistory({
             const isSelected = selectedGameId === game.id;
 
             return (
-              <div
+              <button
                 key={game.id}
-                role="button"
-                tabIndex={0}
+                type="button"
                 className={`w-full text-left flex items-center justify-between p-2 transition-colors group cursor-pointer ${
                   isSelected 
                     ? "bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]" 
@@ -385,7 +374,7 @@ export function InboxGenerationHistory({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <span role="presentation" className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                   <ArcadeButton
                     variant="outline"
                     size="sm"
@@ -407,38 +396,17 @@ export function InboxGenerationHistory({
                     </ArcadeButton>
                   )}
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--muted)] focus:opacity-100"
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    >
-                      <MoreHorizontal className="h-3 w-3 text-[var(--muted-foreground)]" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      {game.isSubmitted && (
-                        <DropdownMenuItem
-                          onClick={() => handleUnpublish(game.id)}
-                          disabled={isUnpublishing}
-                        >
-                          <EyeOff className="h-3 w-3 mr-2" />
-                          {isUnpublishing ? "Unpublishing..." : "Unpublish"}
-                        </DropdownMenuItem>
-                      )}
-                      {game.isSubmitted && <DropdownMenuSeparator />}
-                      {!game.isSubmitted && (
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteClick(game)}
-                          disabled={isDeleting}
-                          variant="destructive"
-                        >
-                          <Trash2 className="h-3 w-3 mr-2" />
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+                  <GameActionsDropdown
+                    game={game}
+                    onSubmit={() => submitMutation.mutate(game.id)}
+                    onUnpublish={() => handleUnpublish(game.id)}
+                    onDelete={() => handleDeleteClick(game)}
+                    isSubmitting={isSubmitting}
+                    isUnpublishing={isUnpublishing}
+                    isDeleting={isDeleting}
+                  />
+                </span>
+              </button>
             );
           })}
         </ul>

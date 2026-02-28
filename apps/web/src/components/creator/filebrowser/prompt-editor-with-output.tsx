@@ -1,18 +1,43 @@
 "use client";
 
-import { useState, useCallback, memo, useEffect, useRef, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Editor from "@monaco-editor/react";
 import { useFormedible } from "@/hooks/use-formedible";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
-import { Loader2, X, Key, Check, AlertCircle, Brain, Sparkles, Filter, ChevronDown, ChevronRight, ArrowDown, Plus } from "lucide-react";
+import { Loader2, Key, AlertCircle, Filter, ChevronDown, ChevronRight, ArrowDown, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
+import type { ModelSelection } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import type { Visibility } from "@/lib/trpc-types";
+import { ModelChip, ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
+import type { GenerationStatus } from "@/lib/model-types";
+
+function ModelOutputTabWithStatus({
+  modelKey,
+  modelName,
+  isActive,
+  onClick,
+}: {
+  modelKey: string;
+  modelName: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const status = useGenerationStatus(modelKey) ?? "idle";
+  return (
+    <ModelOutputTab
+      modelKey={modelKey}
+      modelName={modelName}
+      status={status}
+      isActive={isActive}
+      onClick={onClick}
+    />
+  );
+}
 
 interface PromptEditorWithOutputProps {
   promptContent: string;
@@ -34,99 +59,6 @@ interface PromptEditorWithOutputProps {
 
 const MAX_MODELS = 4;
 
-function StatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3 w-3 animate-pulse text-purple-400" />;
-    case "generating":
-      return <Sparkles className="h-3 w-3 animate-spin text-cyan-400" />;
-    case "complete":
-      return <Check className="h-3 w-3 text-green-400" />;
-    case "error":
-      return <AlertCircle className="h-3 w-3 text-red-400" />;
-    default:
-      return null;
-  }
-}
-
-const ModelChip = memo(function ModelChip({
-  model,
-  onRemove,
-  disabled,
-  isActive,
-  onClick,
-}: {
-  model: ModelSelection;
-  onRemove: () => void;
-  disabled: boolean;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const status = useGenerationStatus(model.id) ?? "idle";
-  const isActiveGeneration = status === "reasoning" || status === "generating";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-colors",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15"
-          : "border-[var(--border)] bg-[var(--muted)]/30 hover:bg-[var(--muted)]/50",
-      ].join(" ")}
-    >
-      <StatusIcon status={status} />
-      <span className="truncate max-w-[100px]">{model.modelName}</span>
-      {model.isByok ? (
-        <ArcadeBadge text="BYOK" variant="neon" className="text-[9px] px-1" />
-      ) : (
-        <span className="text-[var(--muted-foreground)]">{model.creditCost}cr</span>
-      )}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        disabled={disabled || isActiveGeneration}
-        className="ml-0.5 p-0.5 rounded hover:bg-[var(--destructive)]/20 text-[var(--muted-foreground)] hover:text-[var(--destructive)] disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={`Remove ${model.modelName}`}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </button>
-  );
-});
-
-const ModelOutputTab = memo(function ModelOutputTab({
-  model,
-  isActive,
-  onClick,
-}: {
-  model: ModelSelection;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const status = useGenerationStatus(model.id) ?? "idle";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs transition-colors",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15"
-          : "border-[var(--border)] bg-[var(--muted)]/30 hover:bg-[var(--muted)]/50",
-      ].join(" ")}
-    >
-      <StatusIcon status={status} />
-      <span className="truncate max-w-[80px]">{model.modelName}</span>
-    </button>
-  );
-});
-
 const modelSelectionSchema = z.object({
   tierFilter: z.array(z.string()).optional(),
   providerFilter: z.array(z.string()).optional(),
@@ -137,52 +69,6 @@ const modelSelectionSchema = z.object({
 });
 
 type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
-
-function OutputStatusCard({
-  title,
-  description,
-  tone = "neutral",
-  icon,
-}: {
-  title: string;
-  description: string;
-  tone?: "neutral" | "error";
-  icon?: ReactNode;
-}) {
-  const toneClass =
-    tone === "error"
-      ? "border-[var(--destructive)]/40 bg-[var(--destructive)]/10"
-      : "border-[var(--border)] bg-[var(--muted)]/10";
-
-  return (
-    <div
-      className={`h-full min-h-0 rounded-lg border ${toneClass} flex items-center justify-center p-4`}
-    >
-      <div className="max-w-sm text-center space-y-2">
-        {icon ? <div className="mx-auto w-fit">{icon}</div> : null}
-        <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function WaitingState({ status }: { status: "reasoning" | "generating" }) {
-  return (
-    <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        {status === "reasoning" ? (
-          <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
-        ) : (
-          <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
-        )}
-        <span className="text-sm text-[var(--muted-foreground)]">
-          {status === "reasoning" ? "Thinking..." : "Generating code..."}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export function PromptEditorWithOutput({
   promptContent,
@@ -488,8 +374,7 @@ export function PromptEditorWithOutput({
           <ModelChip
             key={model.id}
             model={model}
-            onRemove={() => onRemoveModel(model.id)}
-            disabled={!canEdit}
+            onRemove={canEdit ? () => onRemoveModel(model.id) : undefined}
             isActive={model.id === activeOutputTab}
             onClick={() => onOutputTabChange(model.id)}
           />
@@ -586,9 +471,10 @@ export function PromptEditorWithOutput({
               <div className="shrink-0 p-2 border-b border-[var(--border)] bg-[var(--card)]">
                 <div className="flex items-center gap-1.5 overflow-x-auto">
                   {selectedModels.map((model) => (
-                    <ModelOutputTab
+                    <ModelOutputTabWithStatus
                       key={model.id}
-                      model={model}
+                      modelKey={model.id}
+                      modelName={model.modelName}
                       isActive={model.id === activeOutputTab}
                       onClick={() => onOutputTabChange(model.id)}
                     />
@@ -626,17 +512,18 @@ export function PromptEditorWithOutput({
               ) : generation?.status === "generating" ? (
                 <WaitingState status="generating" />
               ) : generation?.status === "error" ? (
-                <OutputStatusCard
-                  tone="error"
-                  icon={<AlertCircle className="h-6 w-6 text-[var(--destructive)]" />}
-                  title="Generation failed"
-                  description={generation.error ?? "An error occurred"}
-                />
+                <OutputStatusCard type="error" error={generation.error ?? "An error occurred"} />
               ) : (
-                <OutputStatusCard
-                  title={currentModel ? `Ready: ${currentModel.modelName}` : "Ready"}
-                  description="Click Generate to create your game"
-                />
+                <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--muted)]/10 flex items-center justify-center p-4">
+                  <div className="max-w-sm text-center space-y-2">
+                    <p className="text-sm font-medium text-[var(--foreground)]">
+                      {currentModel ? `Ready: ${currentModel.modelName}` : "Ready"}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Click Generate to create your game
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

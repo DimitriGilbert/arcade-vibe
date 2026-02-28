@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo, memo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
@@ -19,16 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, ArrowDown, AlertCircle, Check, Sparkles, Brain } from "lucide-react";
+import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, ArrowDown, Brain, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
-import type { Game, GameStatus, Visibility } from "@/lib/trpc-types";
+import type { Game, GameStatus } from "@/lib/trpc-types";
 import type { GenerationStatus, ModelSelection } from "./types";
 import {
   useGenerationById,
-  useGenerationStatus,
   useAllGenerations,
 } from "@/stores/generations-store";
+import { OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
 interface WorkbenchHistoryTabProps {
   promptId: string | null;
@@ -69,98 +69,6 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
   return "default";
 }
 
-// Output display components
-function OutputStatusCard({
-  title,
-  description,
-  tone = "neutral",
-  icon,
-}: {
-  title: string;
-  description: string;
-  tone?: "neutral" | "error";
-  icon?: ReactNode;
-}) {
-  const toneClass =
-    tone === "error"
-      ? "border-[var(--destructive)]/40 bg-[var(--destructive)]/10"
-      : "border-[var(--border)] bg-[var(--muted)]/10";
-
-  return (
-    <div
-      className={`h-full min-h-0 rounded-lg border ${toneClass} flex items-center justify-center p-4`}
-    >
-      <div className="max-w-sm text-center space-y-2">
-        {icon ? <div className="mx-auto w-fit">{icon}</div> : null}
-        <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function WaitingState({ status }: { status: "reasoning" | "generating" }) {
-  return (
-    <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        {status === "reasoning" ? (
-          <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
-        ) : (
-          <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
-        )}
-        <span className="text-sm text-[var(--muted-foreground)]">
-          {status === "reasoning" ? "Thinking..." : "Generating code..."}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ModelStatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3.5 w-3.5 text-blue-400 animate-pulse" />;
-    case "generating":
-      return <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />;
-    case "complete":
-      return <Check className="h-3.5 w-3.5 text-emerald-400" />;
-    case "error":
-      return <AlertCircle className="h-3.5 w-3.5 text-[var(--destructive)]" />;
-    default:
-      return null;
-  }
-}
-
-const ModelOutputTab = memo(function ModelOutputTab({
-  modelId,
-  modelName,
-  isActive,
-  onSelect,
-}: {
-  modelId: string;
-  modelName: string;
-  isActive: boolean;
-  onSelect: () => void;
-}) {
-  const status = useGenerationStatus(modelId) ?? "idle";
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={[
-        "group inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--foreground)]"
-          : "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)] hover:bg-[var(--muted)]/60",
-      ].join(" ")}
-    >
-      <ModelStatusIcon status={status} />
-      <span className="truncate max-w-[10rem]">{modelName}</span>
-    </button>
-  );
-});
-
 interface CompletedGameOutputProps {
   game: Game;
 }
@@ -185,10 +93,12 @@ function CompletedGameOutput({ game }: CompletedGameOutputProps) {
 
   if (!rawCode) {
     return (
-      <OutputStatusCard
-        title={game.name ?? game.modelName ?? "Game"}
-        description={`Created on ${formatDate(game.createdAt)}. No code available.`}
-      />
+      <div className="h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--muted)]/10 flex items-center justify-center p-4">
+        <div className="max-w-sm text-center space-y-2">
+          <p className="text-sm font-medium text-[var(--foreground)]">{game.name ?? game.modelName ?? "Game"}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">Created on {formatDate(game.createdAt)}. No code available.</p>
+        </div>
+      </div>
     );
   }
 
@@ -502,12 +412,7 @@ export function WorkbenchHistoryTab({
                           ) : generation.status === "generating" ? (
                             <WaitingState status="generating" />
                           ) : generation.status === "error" ? (
-                            <OutputStatusCard
-                              tone="error"
-                              icon={<AlertCircle className="h-6 w-6 text-[var(--destructive)]" />}
-                              title="Generation failed"
-                              description={generation.error ?? "An error occurred"}
-                            />
+                            <OutputStatusCard type="error" error={generation.error ?? undefined} />
                           ) : null}
                         </div>
                       </div>

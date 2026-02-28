@@ -1,35 +1,19 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, memo } from "react";
 import { useFormedible } from "@/hooks/use-formedible";
 import { ArcadeBadge } from "@/components/arcade";
-import { ChevronDown, ChevronRight, Filter, Key } from "lucide-react";
+import { ChevronDown, ChevronRight, Filter, Key, X } from "lucide-react";
 import { z } from "zod";
-import { memo } from "react";
-import { X, Check, AlertCircle, Brain, Sparkles } from "lucide-react";
 import type { GenerationStatus } from "./types";
 import { MAX_MODELS, type ModelSelection, type ModelMetadata, type ApiKey } from "./types";
 import { useGenerationStatus } from "@/stores/generations-store";
+import { StatusIcon } from "@/components/creator/shared";
 
 interface SelectedModelsListProps {
   models: ModelSelection[];
   onRemoveModel: (id: string) => void;
   disabled?: boolean;
-}
-
-function StatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3 w-3 animate-pulse text-purple-400" />;
-    case "generating":
-      return <Sparkles className="h-3 w-3 animate-spin text-blue-400" />;
-    case "complete":
-      return <Check className="h-3 w-3 text-green-400" />;
-    case "error":
-      return <AlertCircle className="h-3 w-3 text-red-400" />;
-    default:
-      return null;
-  }
 }
 
 const ModelItem = memo(function ModelItem({

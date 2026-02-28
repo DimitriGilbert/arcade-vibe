@@ -1,45 +1,25 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { useRef, useState, useCallback, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, AlertCircle, Check, Sparkles, Brain, Loader2 } from "lucide-react";
+import { ArrowDown, AlertCircle, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection, GenerationStatus } from "./inbox-types";
+import type { ModelSelection } from "./inbox-types";
 import type { Game } from "@/lib/trpc-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
+import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
-interface GenerationEntry {
-  modelSelectionId: string;
-  modelKey: string;
-  status: GenerationStatus;
-  code: string;
-  reasoning?: string;
-  gameId: string | null;
-  error?: string;
-}
-
-function OutputStatusCard({
-  title,
-  description,
-  tone = "neutral",
-  icon,
-}: {
+interface EmptyStateCardProps {
   title: string;
   description: string;
-  tone?: "neutral" | "error";
   icon?: ReactNode;
-}) {
-  const toneClass =
-    tone === "error"
-      ? "border-[var(--destructive)]/40 bg-[var(--destructive)]/10"
-      : "border-[var(--border)] bg-[var(--muted)]/10";
+}
 
+function EmptyStateCard({ title, description, icon }: EmptyStateCardProps) {
   return (
-    <div
-      className={`h-full min-h-0 rounded-xl border ${toneClass} flex items-center justify-center p-4`}
-    >
+    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--muted)]/10 flex items-center justify-center p-4">
       <div className="max-w-md text-center space-y-2">
         {icon ? <div className="mx-auto w-fit">{icon}</div> : null}
         <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
@@ -48,68 +28,6 @@ function OutputStatusCard({
     </div>
   );
 }
-
-function WaitingState({ status }: { status: "reasoning" | "generating" }) {
-  return (
-    <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        {status === "reasoning" ? (
-          <Brain className="h-5 w-5 text-blue-400 animate-pulse" />
-        ) : (
-          <Sparkles className="h-5 w-5 text-cyan-400 animate-spin" />
-        )}
-        <span className="text-sm text-[var(--muted-foreground)]">
-          {status === "reasoning" ? "Waiting for reasoning..." : "Waiting for code..."}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ModelStatusIcon({ status }: { status: GenerationStatus }) {
-  switch (status) {
-    case "reasoning":
-      return <Brain className="h-3.5 w-3.5 text-blue-400 animate-pulse" />;
-    case "generating":
-      return <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />;
-    case "complete":
-      return <Check className="h-3.5 w-3.5 text-emerald-400" />;
-    case "error":
-      return <AlertCircle className="h-3.5 w-3.5 text-[var(--destructive)]" />;
-    default:
-      return null;
-  }
-}
-
-const ModelOutputTab = memo(function ModelOutputTab({
-  modelId,
-  modelName,
-  isActive,
-  onSelect,
-}: {
-  modelId: string;
-  modelName: string;
-  isActive: boolean;
-  onSelect: () => void;
-}) {
-  const status = useGenerationStatus(modelId) ?? "idle";
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={[
-        "group inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors",
-        isActive
-          ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--foreground)]"
-          : "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)] hover:bg-[var(--muted)]/60",
-      ].join(" ")}
-    >
-      <ModelStatusIcon status={status} />
-      <span className="truncate max-w-[10rem]">{modelName}</span>
-    </button>
-  );
-});
 
 export interface InboxOutputPanelProps {
   activeOutputTab: string | null | undefined;
@@ -129,7 +47,6 @@ export function InboxOutputPanel({
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Use Zustand hooks directly for reactive updates
   const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
@@ -140,7 +57,6 @@ export function InboxOutputPanel({
   const codeLength = generation?.code.length ?? 0;
   const reasoningLength = generation?.reasoning?.length ?? 0;
 
-  // Fetch game code if viewing a historical game (use raw code without SDK template)
   const { data: historicalGameCode, isLoading: isLoadingHistorical } = useQuery({
     queryKey: ["game-raw-code", selectedGameFromHistory?.id],
     queryFn: async () => {
@@ -151,8 +67,6 @@ export function InboxOutputPanel({
     enabled: !!selectedGameFromHistory?.id,
   });
 
-  // Fetch raw code for completed generations that don't have code in memory
-  // (e.g., after page reload or when navigating back to a completed generation)
   const { data: completedGameCode, isLoading: isLoadingCompleted } = useQuery({
     queryKey: ["game-raw-code", generation?.gameId],
     queryFn: async () => {
@@ -163,8 +77,6 @@ export function InboxOutputPanel({
     enabled: !!generation?.gameId && isComplete && !hasCodeInMemory,
   });
 
-  // Determine what code to show
-  // Priority: history game > completed game from API > in-memory code
   const displayCode = selectedGameFromHistory
     ? (historicalGameCode ?? "")
     : isComplete && !hasCodeInMemory
@@ -256,7 +168,6 @@ export function InboxOutputPanel({
     setShowScrollButton(false);
   };
 
-  // If viewing a historical game (even without models selected), show the code
   if (selectedGameFromHistory) {
     return (
       <div className="h-full min-h-0 overflow-hidden">
@@ -276,7 +187,7 @@ export function InboxOutputPanel({
             />
           </div>
         ) : (
-          <OutputStatusCard
+          <EmptyStateCard
             title="No code available"
             description="This game's code could not be loaded."
           />
@@ -287,7 +198,7 @@ export function InboxOutputPanel({
 
   if (selectedModels.length === 0) {
     return (
-      <OutputStatusCard
+      <EmptyStateCard
         title="No models selected"
         description="Pick models from the selector above to start generating."
       />
@@ -300,7 +211,7 @@ export function InboxOutputPanel({
         <div className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {selectedModels.map((model) => (
-              <ModelOutputTab
+              <ModelOutputTabWithStatus
                 key={model.id}
                 modelId={model.id}
                 modelName={model.modelName}
@@ -313,14 +224,12 @@ export function InboxOutputPanel({
       ) : null}
 
       <div className="flex-1 h-0 min-h-0 overflow-hidden" ref={panelRef}>
-        {/* Loading state for completed games being fetched */}
         {isLoadingCode ? (
           <div className="h-full min-h-0 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
           </div>
         ) : null}
 
-        {/* Current generation view - streaming or completed with code in memory */}
         {!isLoadingCode && displayCode ? (
           <div className="h-full min-h-0 overflow-hidden relative rounded-lg border border-[var(--border)] bg-[var(--card)] p-1.5">
             <div className="h-full min-h-0 flex flex-col gap-2">
@@ -359,12 +268,7 @@ export function InboxOutputPanel({
         ) : null}
 
         {!isLoadingCode && generation?.status === "error" ? (
-          <OutputStatusCard
-            tone="error"
-            icon={<AlertCircle className="h-8 w-8 text-[var(--destructive)]" />}
-            title="Generation failed"
-            description={generation.error ?? "An unknown error occurred."}
-          />
+          <OutputStatusCard type="error" error={generation.error} />
         ) : null}
 
         {!isLoadingCode &&
@@ -374,7 +278,7 @@ export function InboxOutputPanel({
         generation?.status !== "reasoning" &&
         generation?.status !== "generating" &&
         generation?.status !== "complete" ? (
-          <OutputStatusCard
+          <EmptyStateCard
             title={
               currentModel
                 ? `Ready for ${currentModel.modelName}`
@@ -385,5 +289,28 @@ export function InboxOutputPanel({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function ModelOutputTabWithStatus({
+  modelId,
+  modelName,
+  isActive,
+  onSelect,
+}: {
+  modelId: string;
+  modelName: string;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const status = useGenerationStatus(modelId) ?? "idle";
+  return (
+    <ModelOutputTab
+      modelKey={modelId}
+      modelName={modelName}
+      status={status}
+      isActive={isActive}
+      onClick={onSelect}
+    />
   );
 }
