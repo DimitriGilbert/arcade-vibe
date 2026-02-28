@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Editor from "@monaco-editor/react";
 import { useFormedible } from "@/hooks/use-formedible";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
-import { Loader2, Key, AlertCircle, Filter, ChevronDown, ChevronRight, ArrowDown, Plus } from "lucide-react";
+import { Loader2, Key, AlertCircle, Filter, ChevronDown, ChevronRight, ArrowDown, Plus, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trpcClient } from "@/utils/trpc";
@@ -13,7 +13,7 @@ import type { ModelSelection } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import type { Visibility } from "@/lib/trpc-types";
-import { ModelChip, ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
+import { ModelChip, ModelOutputTab, OutputStatusCard, WaitingState, VersionComparisonDialog } from "@/components/creator/shared";
 import type { GenerationStatus } from "@/lib/model-types";
 
 function ModelOutputTabWithStatus({
@@ -90,6 +90,7 @@ export function PromptEditorWithOutput({
   const [showFilters, setShowFilters] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
   const idCounterRef = useRef(0);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -342,20 +343,30 @@ export function PromptEditorWithOutput({
           <ArcadeBadge text={`v${version}`} variant="neon" />
           <ArcadeBadge text={visibility} variant="default" />
           {versions && versions.length > 1 && (
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) onSelectVersion(e.target.value);
-              }}
-              className="text-xs bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1"
-            >
-              <option value="">Load version...</option>
-              {versions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.version} - {new Date(v.createdAt).toLocaleDateString()}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onSelectVersion(e.target.value);
+                }}
+                className="text-xs bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1"
+              >
+                <option value="">Load version...</option>
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    v{v.version} - {new Date(v.createdAt).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+              <ArcadeButton
+                variant="outline"
+                size="sm"
+                onClick={() => setCompareDialogOpen(true)}
+                className="h-6 px-2"
+              >
+                <Scale className="h-3 w-3" />
+              </ArcadeButton>
+            </>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -529,6 +540,16 @@ export function PromptEditorWithOutput({
           </div>
         )}
       </div>
+
+      {versions && versions.length > 1 && (
+        <VersionComparisonDialog
+          open={compareDialogOpen}
+          onOpenChange={setCompareDialogOpen}
+          versions={versions}
+          currentVersion={version}
+          getContent={() => promptContent}
+        />
+      )}
     </div>
   );
 }

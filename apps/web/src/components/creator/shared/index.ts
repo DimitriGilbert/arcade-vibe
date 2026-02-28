@@ -6,4 +6,5 @@ export type { ModelChipProps } from "./model-chip";
 export { ModelOutputTab } from "./model-output-tab";
 export { OutputStatusCard } from "./output-status-card";
 export { StatusIcon } from "./status-icon";
+export { VersionComparisonDialog, useVersionComparison } from "./version-comparison-dialog";
 export { WaitingState } from "./waiting-state";

@@ -12,10 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Plus } from "lucide-react";
+import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Plus, Scale } from "lucide-react";
 import { toast } from "sonner";
 import type { Game, GameStatus, PromptVersion } from "@/lib/trpc-types";
-import { GameActionsDropdown } from "@/components/creator/shared";
+import { GameActionsDropdown, VersionComparisonDialog } from "@/components/creator/shared";
 
 interface InboxGenerationHistoryProps {
   promptId: string | null;
@@ -87,6 +87,7 @@ export function InboxGenerationHistory({
   const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [unpublishingGameId, setUnpublishingGameId] = useState<string | null>(null);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 
   const { data: games, isLoading, error } = useQuery({
     queryKey: ["games-by-prompt", promptId],
@@ -310,6 +311,16 @@ export function InboxGenerationHistory({
               <Plus className="h-3 w-3" />
             </ArcadeButton>
           )}
+          {sortedVersions.length > 1 && (
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={() => setCompareDialogOpen(true)}
+              className="h-5 w-5 p-0 shrink-0"
+            >
+              <Scale className="h-3 w-3" />
+            </ArcadeButton>
+          )}
         </div>
       )}
       <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
@@ -437,6 +448,15 @@ export function InboxGenerationHistory({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {versions && versions.length > 1 && (
+        <VersionComparisonDialog
+          open={compareDialogOpen}
+          onOpenChange={setCompareDialogOpen}
+          versions={versions}
+          currentVersion={currentVersion ?? 1}
+        />
+      )}
     </div>
   );
 }
