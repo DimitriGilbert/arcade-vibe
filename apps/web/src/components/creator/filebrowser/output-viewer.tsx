@@ -2,14 +2,23 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { ArcadeButton } from "@/components/arcade";
+import { ArrowDown, Loader2, Send, EyeOff, Trash2, Globe } from "lucide-react";
+import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import type { RunNode } from "./types";
 import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
+import { GameActionsDropdown } from "@/components/creator/shared";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function ModelOutputTabWithStatus({
   modelKey,
@@ -39,6 +48,12 @@ interface OutputViewerProps {
   activeOutputTab: string | null;
   onOutputTabChange: (id: string) => void;
   selectedRun: RunNode | undefined;
+  onSubmitGame?: (gameId: string) => void;
+  onUnpublishGame?: (gameId: string) => void;
+  onDeleteGame?: (gameId: string) => void;
+  submittingGameId?: string | null;
+  unpublishingGameId?: string | null;
+  deletingGameId?: string | null;
 }
 
 export function OutputViewer({
@@ -46,11 +61,19 @@ export function OutputViewer({
   activeOutputTab,
   onOutputTabChange,
   selectedRun,
+  onSubmitGame,
+  onUnpublishGame,
+  onDeleteGame,
+  submittingGameId,
+  unpublishingGameId,
+  deletingGameId,
 }: OutputViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const userScrollIntentRef = useRef(false);
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState<RunNode | null>(null);
 
   const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
@@ -171,24 +194,99 @@ export function OutputViewer({
     enabled: !!selectedRun?.gameId && selectedModels.length === 0,
   });
 
+  const handleDeleteClick = useCallback((run: RunNode) => {
+    setGameToDelete(run);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (gameToDelete && onDeleteGame) {
+      onDeleteGame(gameToDelete.id);
+      setDeleteDialogOpen(false);
+      setGameToDelete(null);
+    }
+  }, [gameToDelete, onDeleteGame]);
+
   // If we have a selected run from history with no models, show that game's code
   if (selectedRun && selectedRun.gameId && selectedModels.length === 0) {
+    const canSubmit = selectedRun.status === "completed" && !selectedRun.isSubmitted;
+    const isSubmitting = submittingGameId === selectedRun.id;
+    const isUnpublishing = unpublishingGameId === selectedRun.id;
+    const isDeleting = deletingGameId === selectedRun.id;
+
     return (
       <div className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
         <div className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{selectedRun.name ?? selectedRun.modelName}</span>
-            <ArcadeButton
-              variant="glow"
-              size="sm"
-              onClick={() => {
-                if (selectedRun.gameId) {
-                  window.open(`/game/${selectedRun.gameId}`, "_blank");
-                }
-              }}
-            >
-              Play Game
-            </ArcadeButton>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{selectedRun.name ?? selectedRun.modelName}</span>
+              {selectedRun.isSubmitted && (
+                <Globe className="h-3 w-3 text-green-500" />
+              )}
+              <ArcadeBadge
+                text={selectedRun.status}
+                variant={selectedRun.status === "completed" ? "neon" : "default"}
+                className="text-[10px]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <ArcadeButton
+                variant="glow"
+                size="sm"
+                onClick={() => {
+                  if (selectedRun.gameId) {
+                    window.open(`/game/${selectedRun.gameId}`, "_blank");
+                  }
+                }}
+              >
+                Play Game
+              </ArcadeButton>
+              {canSubmit && onSubmitGame && (
+                <ArcadeButton
+                  size="sm"
+                  onClick={() => onSubmitGame(selectedRun.id)}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Send className="h-3 w-3" />
+                  )}
+                  Submit
+                </ArcadeButton>
+              )}
+              {selectedRun.isSubmitted && onUnpublishGame && (
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onUnpublishGame(selectedRun.id)}
+                  disabled={isUnpublishing}
+                >
+                  {isUnpublishing ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <EyeOff className="h-3 w-3" />
+                  )}
+                  Unpublish
+                </ArcadeButton>
+              )}
+              {!selectedRun.isSubmitted && onDeleteGame && (
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteClick(selectedRun)}
+                  disabled={isDeleting}
+                  className="text-[var(--destructive)]"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                  Delete
+                </ArcadeButton>
+              )}
+            </div>
           </div>
         </div>
         {isLoadingHistoricalRun ? (
@@ -211,6 +309,32 @@ export function OutputViewer({
             <p className="text-sm text-[var(--muted-foreground)]">No code available</p>
           </div>
         )}
+        
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Game</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this game? This cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <ArcadeButton
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </ArcadeButton>
+              <ArcadeButton
+                onClick={handleConfirmDelete}
+                disabled={deletingGameId === gameToDelete?.id}
+                className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:bg-[var(--destructive)]/90"
+              >
+                {deletingGameId === gameToDelete?.id ? "Deleting..." : "Delete"}
+              </ArcadeButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

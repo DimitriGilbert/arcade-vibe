@@ -27,6 +27,13 @@ interface CenterPanelProps {
   promptsLoading: boolean;
   canEdit: boolean;
   isGenerating: boolean;
+  selectedRun?: RunNode;
+  onSubmitGame?: (gameId: string) => void;
+  onUnpublishGame?: (gameId: string) => void;
+  onDeleteGame?: (gameId: string) => void;
+  submittingGameId?: string | null;
+  unpublishingGameId?: string | null;
+  deletingGameId?: string | null;
 }
 
 export function CenterPanel({
@@ -50,6 +57,13 @@ export function CenterPanel({
   promptsLoading,
   canEdit,
   isGenerating,
+  selectedRun,
+  onSubmitGame,
+  onUnpublishGame,
+  onDeleteGame,
+  submittingGameId,
+  unpublishingGameId,
+  deletingGameId,
 }: CenterPanelProps) {
   const theme = themes?.find((t) => t.id === selection.themeId);
   const prompt = prompts?.find((p) => p.id === selection.promptId);
@@ -119,7 +133,13 @@ export function CenterPanel({
         selectedModels={selectedModels}
         activeOutputTab={activeOutputTab}
         onOutputTabChange={onOutputTabChange}
-        selectedRun={run}
+        selectedRun={selectedRun ?? run}
+        onSubmitGame={onSubmitGame}
+        onUnpublishGame={onUnpublishGame}
+        onDeleteGame={onDeleteGame}
+        submittingGameId={submittingGameId}
+        unpublishingGameId={unpublishingGameId}
+        deletingGameId={deletingGameId}
       />
     );
   }

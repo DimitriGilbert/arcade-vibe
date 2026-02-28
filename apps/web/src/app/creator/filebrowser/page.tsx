@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, use } from "react";
+import { Copy, Loader2 } from "lucide-react";
 import type { FilebrowserSelection } from "@/components/creator/filebrowser";
 import { FeedbackButton } from "@/components/feedback";
-import { Loader2 } from "lucide-react";
 import {
   FileTree,
   HeaderBar,
@@ -12,9 +12,24 @@ import {
 } from "@/components/creator/filebrowser";
 import { DiscoveryDialog } from "@/components/creator/shared";
 import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
+import { ArcadeButton } from "@/components/arcade";
 
-export default function FilebrowserPage() {
-  const state = useFilebrowserState();
+interface FilebrowserPageProps {
+  searchParams?: Promise<{
+    promptId?: string;
+    forkId?: string;
+  }>;
+}
+
+export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) {
+  const resolvedSearchParams = use(
+    searchParams || Promise.resolve({ promptId: undefined, forkId: undefined })
+  );
+
+  const state = useFilebrowserState({
+    promptId: resolvedSearchParams?.promptId,
+    forkId: resolvedSearchParams?.forkId,
+  });
 
   const {
     mounted,
@@ -32,6 +47,7 @@ export default function FilebrowserPage() {
     themesLoading,
     prompts,
     promptsLoading,
+    promptLoading,
     runs,
     runsLoading,
     runsByPromptId,
@@ -53,7 +69,26 @@ export default function FilebrowserPage() {
     handleTogglePromptExpand,
     clearGenerations,
     discoveryDialog,
+    isForking,
+    handleFork,
+    isForkPending,
+    handleSubmitGame,
+    handleUnpublishGame,
+    handleDeleteGame,
+    submittingGameId,
+    unpublishingGameId,
+    deletingGameId,
   } = state;
+
+  // Update URL when prompt is selected
+  useEffect(() => {
+    if (selection.promptId && selection.promptId !== resolvedSearchParams?.promptId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("promptId", selection.promptId);
+      url.searchParams.delete("forkId");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }, [selection.promptId, resolvedSearchParams?.promptId]);
 
   const handleSelectTheme = useCallback((themeId: string) => {
     setSelection({
@@ -62,7 +97,6 @@ export default function FilebrowserPage() {
       promptId: null,
       runId: null,
     });
-    // Clear generations when switching themes
     clearGenerations();
   }, [setSelection, clearGenerations]);
 
@@ -82,6 +116,10 @@ export default function FilebrowserPage() {
       promptId: null,
       runId: null,
     });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("promptId");
+    url.searchParams.delete("forkId");
+    window.history.replaceState(null, "", url.pathname + url.search);
   }, [themes, setSelection]);
 
   const handlePlayGame = useCallback(() => {
@@ -92,7 +130,6 @@ export default function FilebrowserPage() {
 
   const handleOutputTabChange = useCallback((id: string) => {
     setActiveOutputTab(id);
-    // When selecting a model tab, switch to prompt view if we're on a run
     if (selection.type === "run") {
       setSelection((prev) => ({
         ...prev,
@@ -102,7 +139,16 @@ export default function FilebrowserPage() {
     }
   }, [setActiveOutputTab, selection.type, setSelection]);
 
-  if (!mounted) {
+  // Handle new prompt - clear URL params
+  const handleNewPromptWithUrl = useCallback(() => {
+    handleNewPrompt();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("promptId");
+    url.searchParams.delete("forkId");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, [handleNewPrompt]);
+
+  if (!mounted || promptLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
@@ -110,9 +156,11 @@ export default function FilebrowserPage() {
     );
   }
 
-  const canGenerate = !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId;
-  const canSave = !!promptContent.trim() && !!selection.themeId;
+  const canGenerate = !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId && !isForking;
+  const canSave = !!promptContent.trim() && !!selection.themeId && !isForking;
   const hasActiveGame = !!activeGameId;
+
+  const selectedRun = selection.runId ? runs?.find((r) => r.id === selection.runId) : undefined;
 
   return (
     <div className="min-h-screen h-screen flex flex-col overflow-hidden bg-background">
@@ -129,12 +177,33 @@ export default function FilebrowserPage() {
         hasActiveGame={hasActiveGame}
         completedCount={completedCount}
         totalModels={selectedModels.length}
-        onNewPrompt={handleNewPrompt}
+        onNewPrompt={handleNewPromptWithUrl}
         onSave={handleSave}
         onGenerate={handleGenerate}
         onPlayGame={handlePlayGame}
         onHome={handleHome}
       />
+
+      {/* Fork Banner */}
+      {isForking && (
+        <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]/20 flex items-center justify-between">
+          <span className="text-sm text-[var(--muted-foreground)]">
+            Viewing prompt in read-only mode
+          </span>
+          <ArcadeButton
+            size="sm"
+            onClick={handleFork}
+            disabled={isForkPending}
+          >
+            {isForkPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            {isForkPending ? "Forking..." : "Fork this prompt to edit"}
+          </ArcadeButton>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -190,10 +259,17 @@ export default function FilebrowserPage() {
             versions={versions}
             onSelectVersion={handleSelectVersion}
             onSelectPrompt={handleSelectPrompt}
-            onNewPrompt={handleNewPrompt}
+            onNewPrompt={handleNewPromptWithUrl}
             promptsLoading={promptsLoading}
-            canEdit={!isGenerating}
+            canEdit={!isGenerating && !isForking}
             isGenerating={isGenerating}
+            selectedRun={selectedRun}
+            onSubmitGame={handleSubmitGame}
+            onUnpublishGame={handleUnpublishGame}
+            onDeleteGame={handleDeleteGame}
+            submittingGameId={submittingGameId}
+            unpublishingGameId={unpublishingGameId}
+            deletingGameId={deletingGameId}
           />
         </main>
       </div>

@@ -24,6 +24,7 @@ import {
   MAX_MODELS,
   GENERATION_CONCURRENCY_LIMIT,
 } from "./types";
+import type { Game } from "@/lib/trpc-types";
 
 const storageKey: typeof STORAGE_KEY = "arcade-vibe-creator-filebrowser";
 const storageExpiryMs: typeof STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -87,6 +88,7 @@ export interface UseFilebrowserStateReturn {
   themesLoading: boolean;
   prompts: PromptNode[] | undefined;
   promptsLoading: boolean;
+  promptLoading: boolean;
   runs: RunNode[] | undefined;
   runsLoading: boolean;
   runsByPromptId: Record<string, RunNode[]>;
@@ -118,9 +120,24 @@ export interface UseFilebrowserStateReturn {
   deletingPromptId: string | null;
   activeGameId: string | null;
   completedCount: number;
+
+  // Fork flow
+  isForking: boolean;
+  forkPromptId: string | null;
+  handleFork: () => void;
+  isForkPending: boolean;
+
+  // Game actions
+  handleSubmitGame: (gameId: string) => void;
+  handleUnpublishGame: (gameId: string) => void;
+  handleDeleteGame: (gameId: string) => void;
+  submittingGameId: string | null;
+  unpublishingGameId: string | null;
+  deletingGameId: string | null;
 }
 
-export function useFilebrowserState(): UseFilebrowserStateReturn {
+export function useFilebrowserState(options?: { promptId?: string; forkId?: string }): UseFilebrowserStateReturn {
+  const { promptId: urlPromptId, forkId: urlForkId } = options ?? {};
   const queryClient = useQueryClient();
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
@@ -139,6 +156,11 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
   const [deletingPromptId, setDeletingPromptId] = useState<string | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
+
+  // Game action states
+  const [submittingGameId, setSubmittingGameId] = useState<string | null>(null);
+  const [unpublishingGameId, setUnpublishingGameId] = useState<string | null>(null);
+  const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
 
   // Store actions
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -170,6 +192,44 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     }
     setMounted(true);
   }, []);
+
+  // Fetch existing prompt if editing or forking
+  const { data: existingPrompt, isLoading: promptLoading } = useQuery({
+    queryKey: ["prompt", urlPromptId || urlForkId],
+    queryFn: async () => {
+      const id = urlPromptId || urlForkId;
+      if (!id) return null;
+      return await trpcClient.prompts.getById.query({ id });
+    },
+    enabled: !!(urlPromptId || urlForkId),
+  });
+
+  // Initialize prompt content when existing prompt loads
+  useEffect(() => {
+    if (existingPrompt && !selectedPromptId) {
+      setPromptContent(existingPrompt.content);
+      setSelectedPromptId(existingPrompt.id);
+      setSelection((prev) => ({
+        ...prev,
+        type: "prompt",
+        themeId: existingPrompt.themeId,
+        promptId: existingPrompt.id,
+        runId: null,
+      }));
+      setExpandedThemes((prev) => {
+        if (!prev.includes(existingPrompt.themeId)) {
+          return [...prev, existingPrompt.themeId];
+        }
+        return prev;
+      });
+      setExpandedPrompts((prev) => {
+        if (!prev.includes(existingPrompt.id)) {
+          return [...prev, existingPrompt.id];
+        }
+        return prev;
+      });
+    }
+  }, [existingPrompt, selectedPromptId]);
 
   // Fetch themes
   const { data: themesData, isLoading: themesLoading } = useQuery({
@@ -296,7 +356,7 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
 
   // Persist state
   useEffect(() => {
-    if (!mounted || selectedPromptId) return;
+    if (!mounted || selectedPromptId || urlPromptId || urlForkId) return;
     persistState({
       promptContent,
       gameName,
@@ -305,14 +365,14 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
       selection,
       expandedThemes,
     });
-  }, [mounted, promptContent, gameName, selection, selectedModels, expandedThemes, selectedPromptId]);
+  }, [mounted, promptContent, gameName, selection, selectedModels, expandedThemes, selectedPromptId, urlPromptId, urlForkId]);
 
   // Clear persisted state when loading from URL
   useEffect(() => {
-    if (selectedPromptId) {
+    if (selectedPromptId || urlPromptId || urlForkId) {
       clearPersistedState();
     }
-  }, [selectedPromptId]);
+  }, [selectedPromptId, urlPromptId, urlForkId]);
 
   // Auto-select first output tab when models change
   useEffect(() => {
@@ -403,6 +463,75 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update visibility");
+    },
+  });
+
+  // Fork prompt mutation
+  const forkPromptMutation = useMutation({
+    mutationFn: async (input: { forkId: string }) => {
+      const result = await trpcClient.prompts.fork.mutate({
+        promptId: input.forkId,
+        visibility: "private",
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked!");
+      window.location.href = `/creator/filebrowser?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  // Game submit mutation
+  const submitGameMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      setSubmittingGameId(gameId);
+      return await trpcClient.games.submit.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game submitted!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      setSubmittingGameId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit game");
+      setSubmittingGameId(null);
+    },
+  });
+
+  // Game unpublish mutation
+  const unpublishGameMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      setUnpublishingGameId(gameId);
+      return await trpcClient.games.unpublish.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game unpublished!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      setUnpublishingGameId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to unpublish game");
+      setUnpublishingGameId(null);
+    },
+  });
+
+  // Game hard delete mutation
+  const hardDeleteGameMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      setDeletingGameId(gameId);
+      return await trpcClient.games.hardDelete.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      setDeletingGameId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete game");
+      setDeletingGameId(null);
     },
   });
 
@@ -704,6 +833,29 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     });
   }, []);
 
+  // Fork handler
+  const handleFork = useCallback(() => {
+    if (!urlForkId) return;
+    forkPromptMutation.mutate({ forkId: urlForkId });
+  }, [urlForkId, forkPromptMutation]);
+
+  // Game action handlers
+  const handleSubmitGame = useCallback((gameId: string) => {
+    submitGameMutation.mutate(gameId);
+  }, [submitGameMutation]);
+
+  const handleUnpublishGame = useCallback((gameId: string) => {
+    unpublishGameMutation.mutate(gameId);
+  }, [unpublishGameMutation]);
+
+  const handleDeleteGame = useCallback((gameId: string) => {
+    hardDeleteGameMutation.mutate(gameId);
+  }, [hardDeleteGameMutation]);
+
+  const isForking = !!urlForkId;
+  const forkPromptId = urlForkId ?? null;
+  const isForkPending = forkPromptMutation.isPending;
+
   return {
     // State
     mounted,
@@ -727,6 +879,7 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     themesLoading,
     prompts,
     promptsLoading,
+    promptLoading,
     runs,
     runsLoading,
     runsByPromptId,
@@ -758,5 +911,19 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
   deletingPromptId,
   activeGameId,
   completedCount,
+
+  // Fork flow
+  isForking,
+  forkPromptId,
+  handleFork,
+  isForkPending,
+
+  // Game actions
+  handleSubmitGame,
+  handleUnpublishGame,
+  handleDeleteGame,
+  submittingGameId,
+  unpublishingGameId,
+  deletingGameId,
   };
 }
