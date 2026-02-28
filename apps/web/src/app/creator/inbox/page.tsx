@@ -599,6 +599,16 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       toast.error("Please enter prompt content");
       return;
     }
+
+    if (isViewingOldVersion) {
+      createPromptMutation.mutate({
+        themeId: selectedTheme,
+        content: promptContent,
+      });
+      setIsViewingOldVersion(false);
+      return;
+    }
+
     const promptId = existingPrompt?.id ?? selectedPromptId;
     if (promptId) {
       updatePromptMutation.mutate({
@@ -616,6 +626,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     promptContent,
     existingPrompt,
     selectedPromptId,
+    isViewingOldVersion,
     updatePromptMutation,
     createPromptMutation,
   ]);
@@ -675,9 +686,16 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     [versions, selectedPromptId]
   );
 
-  const handleNewVersion = useCallback(() => {
+  const handleNewVersion = useCallback(async () => {
     setIsViewingOldVersion(false);
-  }, []);
+    if (selectedPromptId) {
+      const currentPrompt = await trpcClient.prompts.getById.query({ id: selectedPromptId });
+      if (currentPrompt) {
+        setPromptContent(currentPrompt.content);
+        setSelectedVersionId(selectedPromptId);
+      }
+    }
+  }, [selectedPromptId]);
 
   // Handler for selecting a game from history - must be defined before any conditional code
   const handleSelectGameFromHistory = useCallback((game: Game) => {
@@ -903,6 +921,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                       <span>{gameName || "Prompt"}</span>
                       <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
+                  )}
+                  {/* Version Badge */}
+                  {selectedPromptId && (
+                    <ArcadeBadge
+                      text={isViewingOldVersion ? `v${versions?.find((v) => v.id === selectedVersionId)?.version ?? "?"} (old)` : `v${existingPrompt?.version ?? versions?.find((v) => v.id === selectedPromptId)?.version ?? 1}`}
+                      variant={isViewingOldVersion ? "pixel" : "neon"}
+                    />
                   )}
                 </div>
                 <div className="flex items-center gap-1">

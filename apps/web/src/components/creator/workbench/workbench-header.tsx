@@ -17,7 +17,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, X, Loader2, Save, Play, ExternalLink, ChevronDown, FileText, Plus, GitBranch } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Pencil, Check, X, Loader2, Save, Play, ExternalLink, ChevronDown, FileText, Plus, GitBranch, Trash2 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import type { CreditBalanceInfo, ThemeList, Visibility, PromptVersion } from "@/lib/trpc-types";
 import type { ModelSelection } from "./types";
@@ -44,6 +52,8 @@ interface WorkbenchHeaderProps {
   selectedPromptId: string | null;
   onSelectPrompt: (promptId: string) => void;
   onNewPrompt: () => void;
+  onDeletePrompt: (promptId: string) => void;
+  deletingPromptId: string | null;
   // Version selection
   versions: PromptVersion[] | undefined;
   currentVersion: number | null;
@@ -76,6 +86,8 @@ export function WorkbenchHeader({
   selectedPromptId,
   onSelectPrompt,
   onNewPrompt,
+  onDeletePrompt,
+  deletingPromptId,
   // Version
   versions,
   currentVersion,
@@ -95,6 +107,8 @@ export function WorkbenchHeader({
 }: WorkbenchHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editValue, setEditValue] = useState(promptName);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
 
   // Fetch prompts list for the selected theme
   const { data: prompts, isLoading: promptsLoading } = useQuery({
@@ -134,6 +148,19 @@ export function WorkbenchHeader({
     },
     [handleSaveEdit, handleCancelEdit]
   );
+
+  const handleDeleteClick = useCallback((promptId: string) => {
+    setPromptToDelete(promptId);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (promptToDelete) {
+      onDeletePrompt(promptToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setPromptToDelete(null);
+  }, [promptToDelete, onDeletePrompt]);
 
   const handleGenerateClick = useCallback(() => {
     // Commit any in-progress name edit before generating
@@ -237,6 +264,22 @@ export function WorkbenchHeader({
               </span>
             </DropdownMenuItem>
           ))}
+          {selectedPromptId && prompts && prompts.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteClick(selectedPromptId);
+                }}
+                disabled={deletingPromptId === selectedPromptId}
+                variant="destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                {deletingPromptId === selectedPromptId ? "Deleting..." : "Delete Prompt"}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -399,6 +442,30 @@ export function WorkbenchHeader({
           <ArcadeBadge text={`${credits.balance} credits`} variant="neon" />
         ) : null}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Prompt</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this prompt? Games created from it will remain visible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ArcadeButton variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </ArcadeButton>
+            <ArcadeButton
+              onClick={handleConfirmDelete}
+              disabled={deletingPromptId === promptToDelete}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:bg-[var(--destructive)]/90"
+            >
+              {deletingPromptId === promptToDelete ? "Deleting..." : "Delete"}
+            </ArcadeButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, use, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2, Copy, Trash2 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { FeedbackButton } from "@/components/feedback";
 import {
@@ -334,6 +334,30 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     },
   });
 
+  // Soft delete prompt mutation
+  const [deletingPromptId, setDeletingPromptId] = useState<string | null>(null);
+  const softDeletePromptMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      setDeletingPromptId(input.id);
+      const result = await trpcClient.prompts.softDelete.mutate({
+        id: input.id,
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-for-selector"] });
+      if (selectedPromptId === data.promptId) {
+        handleNewPrompt();
+      }
+      setDeletingPromptId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete prompt");
+      setDeletingPromptId(null);
+    },
+  });
+
   // Handlers
   const handleAddModel = useCallback((selection: ModelSelection) => {
     if (selectedModels.length >= MAX_MODELS) {
@@ -630,6 +654,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     setActiveOutputTab(null);
   }, [clearGenerations]);
 
+  // Handler for deleting a prompt
+  const handleDeletePrompt = useCallback((promptId: string) => {
+    softDeletePromptMutation.mutate({ id: promptId });
+  }, [softDeletePromptMutation]);
+
   if (!mounted || promptLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
@@ -656,6 +685,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         selectedPromptId={selectedPromptId}
         onSelectPrompt={handleSelectPrompt}
         onNewPrompt={handleNewPrompt}
+        onDeletePrompt={handleDeletePrompt}
+        deletingPromptId={deletingPromptId}
         versions={versions}
         currentVersion={currentPrompt?.version ?? null}
         selectedVersionId={selectedVersionId}
