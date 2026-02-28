@@ -1,2 +1,9 @@
 export { DiscoveryDialog } from "./discovery-dialog";
 export { useDiscoveryDialog } from "./use-discovery-dialog";
+export { GameActionsDropdown } from "./game-actions-dropdown";
+export { ModelChip } from "./model-chip";
+export type { ModelChipProps } from "./model-chip";
+export { ModelOutputTab } from "./model-output-tab";
+export { OutputStatusCard } from "./output-status-card";
+export { StatusIcon } from "./status-icon";
+export { WaitingState } from "./waiting-state";
