@@ -1,54 +1,24 @@
-/**
- * Shared types for the Inbox prompt editor
- */
+import type { GenerationStatus, ModelSelection } from "@/lib/model-types";
+import {
+  GENERATION_CONCURRENCY_LIMIT,
+  MAX_MODELS,
+  generateModelSelectionId,
+  type ModelConfig,
+  type TierCost,
+  type ApiKey,
+  type ModelMetadata,
+} from "@/lib/model-types";
 
-import type { GenerationStatus, ModelSelection } from "@/lib/trpc-types";
+export type {
+  GenerationStatus,
+  ModelSelection,
+  ModelConfig,
+  TierCost,
+  ApiKey,
+  ModelMetadata,
+};
 
-export type { GenerationStatus, ModelSelection };
-
-export interface ModelConfig {
-  id: string;
-  providers: string[];
-  modelName: string;
-  tier: string;
-  tierName: string;
-  maxTokens: number;
-  supportsImages: boolean;
-}
-
-export interface TierCost {
-  id: string;
-  slug: string;
-  name: string;
-  creditCost: number;
-  description: string | null;
-  scoreMultiplier: number;
-  displayOrder: number;
-  colorClass: string | null;
-}
-
-export interface ApiKey {
-  id: string;
-  provider: string;
-  name: string;
-  isActive: boolean;
-  createdAt: Date;
-  lastUsedAt: Date | null;
-}
-
-export interface ModelMetadata {
-  models: ModelConfig[];
-  tierCosts: Record<string, number>;
-  tierCostsArray: TierCost[];
-  providers: string[];
-  tiers: string[];
-}
-
-export const MAX_MODELS = 4;
-
-export function generateModelSelectionId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
+export { GENERATION_CONCURRENCY_LIMIT, MAX_MODELS, generateModelSelectionId };
 
 export function toModelConfig(data: {
   id: string;

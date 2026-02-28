@@ -1,6 +1,6 @@
 import type { Visibility, GameStatus } from "@/lib/trpc-types";
-import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
-import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
+import type { ModelSelection, GenerationStatus } from "@/lib/model-types";
+import { GENERATION_CONCURRENCY_LIMIT, MAX_MODELS } from "@/lib/model-types";
 
 export type { Visibility, ModelSelection, GenerationStatus };
 
@@ -51,7 +51,6 @@ export interface PersistedFilebrowserState {
 }
 
 export const STORAGE_KEY = "arcade-vibe-creator-filebrowser";
-export const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
-export const MAX_MODELS = 4;
-export { GENERATION_CONCURRENCY_LIMIT };
+export { GENERATION_CONCURRENCY_LIMIT, MAX_MODELS };

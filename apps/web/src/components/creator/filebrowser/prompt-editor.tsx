@@ -7,7 +7,8 @@ import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { Loader2, X, Key, Check, AlertCircle, Brain, Sparkles, Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
-import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
+import type { ModelSelection, GenerationStatus } from "@/lib/model-types";
+import { MAX_MODELS } from "@/lib/model-types";
 import { useGenerationStatus } from "@/stores/generations-store";
 import type { Visibility } from "@/lib/trpc-types";
 
@@ -25,8 +26,6 @@ interface PromptEditorProps {
   onSelectVersion: (versionId: string) => void;
   canEdit: boolean;
 }
-
-const MAX_MODELS = 4;
 
 function StatusIcon({ status }: { status: GenerationStatus }) {
   switch (status) {

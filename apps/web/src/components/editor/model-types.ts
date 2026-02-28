@@ -1,4 +1,5 @@
-import type { GenerationStatus, ModelSelection } from "@/lib/trpc-types";
+import type { GenerationStatus, ModelSelection } from "@/lib/model-types";
+import { MAX_MODELS, generateModelSelectionId } from "@/lib/model-types";
 
 export type { GenerationStatus, ModelSelection };
 
@@ -22,8 +23,4 @@ export interface GenerationResult {
   error?: string;
 }
 
-export const MAX_MODELS = 5;
-
-export function generateModelSelectionId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
+export { MAX_MODELS, generateModelSelectionId };
