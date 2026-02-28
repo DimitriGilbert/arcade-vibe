@@ -1,4 +1,4 @@
-import type { Visibility } from "@/lib/trpc-types";
+import type { Visibility, GameStatus } from "@/lib/trpc-types";
 import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
 import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 
@@ -24,7 +24,7 @@ export interface RunNode {
   id: string;
   name: string | null;
   modelName: string | null;
-  status: GenerationStatus;
+  status: GameStatus;
   createdAt: string;
   gameId: string | null;
   isSubmitted: boolean;

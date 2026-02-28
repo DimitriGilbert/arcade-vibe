@@ -24,6 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, MoreHorizontal, Trash2, Globe, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Visibility } from "@/lib/trpc-types";
 
@@ -190,7 +191,7 @@ export function InboxSidebar({
       </div>
 
       {/* Prompts List */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <ScrollArea className="flex-1 min-h-0">
         {promptsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
@@ -298,7 +299,7 @@ export function InboxSidebar({
             </p>
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

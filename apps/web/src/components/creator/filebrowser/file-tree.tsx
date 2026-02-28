@@ -1,9 +1,44 @@
 "use client";
 
-import { memo } from "react";
-import { Loader2, ChevronRight, ChevronDown, FileCode, Folder, FolderOpen, Sparkles, CheckCircle, AlertCircle, Clock } from "lucide-react";
-import { ArcadeBadge } from "@/components/arcade";
-import type { ThemeNode, PromptNode, RunNode, GenerationStatus } from "./types";
+import { memo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Loader2,
+  ChevronRight,
+  ChevronDown,
+  FileCode,
+  Folder,
+  FolderOpen,
+  Sparkles,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Globe,
+  EyeOff,
+  MoreHorizontal,
+  Trash2,
+  Send,
+  Play,
+} from "lucide-react";
+import { toast } from "sonner";
+import { trpcClient } from "@/utils/trpc";
+import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { ThemeNode, PromptNode, RunNode } from "./types";
 import { cn } from "@/lib/utils";
 
 interface FileTreeProps {
@@ -30,16 +65,16 @@ interface FileTreeProps {
   deletingPromptId?: string | null;
 }
 
-function getStatusIcon(status: GenerationStatus) {
+function getStatusIcon(status: RunNode["status"]) {
   switch (status) {
-    case "reasoning":
-      return <Sparkles className="h-3 w-3 text-purple-400 animate-pulse" />;
     case "generating":
       return <Sparkles className="h-3 w-3 text-cyan-400 animate-spin" />;
-    case "complete":
+    case "completed":
       return <CheckCircle className="h-3 w-3 text-green-400" />;
-    case "error":
+    case "failed":
       return <AlertCircle className="h-3 w-3 text-red-400" />;
+    case "hidden":
+      return <EyeOff className="h-3 w-3 text-[var(--muted-foreground)]" />;
     default:
       return <Clock className="h-3 w-3 text-[var(--muted-foreground)]" />;
   }
@@ -68,45 +103,96 @@ function truncateContent(content: string, maxLength: number): string {
 const RunNodeComponent = memo(function RunNodeComponent({
   run,
   isSelected,
-  onClick,
+  onSelect,
+  onSubmit,
+  onUnpublish,
+  onDelete,
+  isSubmitting,
+  isUnpublishing,
+  isDeleting,
 }: {
   run: RunNode;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: () => void;
+  onSubmit: () => void;
+  onUnpublish: () => void;
+  onDelete: () => void;
+  isSubmitting: boolean;
+  isUnpublishing: boolean;
+  isDeleting: boolean;
 }) {
+  const canSubmit = run.status === "completed" && !run.isSubmitted;
+
   return (
-    <button
-      type="button"
+    <div
       className={cn(
-        "group flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded transition-colors w-full text-left",
+        "group flex items-center gap-2 px-2 py-1.5 rounded transition-colors",
         isSelected ? "bg-[var(--primary)]/15 text-[var(--foreground)]" : "hover:bg-[var(--muted)]/50"
       )}
-      onClick={onClick}
     >
-      <FileCode className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
-      {getStatusIcon(run.status)}
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="text-xs truncate">
-          {run.name ?? "Untitled"}
-        </span>
-        <span className="text-[10px] text-[var(--primary)] truncate">
-          {run.modelName ?? "Unknown model"}
-        </span>
-      </div>
+      <button type="button" className="flex items-center gap-2 min-w-0 flex-1 text-left" onClick={onSelect}>
+        <FileCode className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
+        {getStatusIcon(run.status)}
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs truncate">{run.name ?? "Untitled"}</span>
+            {run.isSubmitted && <Globe className="h-3 w-3 text-green-500 shrink-0" />}
+          </div>
+          <span className="text-[10px] text-[var(--primary)] truncate">
+            {run.modelName ?? "Unknown model"}
+          </span>
+        </div>
+      </button>
       <div className="flex items-center gap-1 shrink-0">
+        {run.gameId ? (
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/game/${run.gameId}`, "_blank")}
+          >
+            <Play className="h-3 w-3" />
+          </ArcadeButton>
+        ) : null}
+        {canSubmit ? (
+          <ArcadeButton size="sm" onClick={onSubmit} disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+          </ArcadeButton>
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--muted)] focus:opacity-100"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            {run.isSubmitted ? (
+              <DropdownMenuItem onClick={onUnpublish} disabled={isUnpublishing}>
+                <EyeOff className="h-3.5 w-3.5 mr-2" />
+                {isUnpublishing ? "Unpublishing..." : "Unpublish"}
+              </DropdownMenuItem>
+            ) : null}
+            {run.isSubmitted ? <DropdownMenuSeparator /> : null}
+            {!run.isSubmitted ? (
+              <DropdownMenuItem onClick={onDelete} disabled={isDeleting} variant="destructive">
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ArcadeBadge
           text={formatRelativeTime(run.createdAt)}
           variant="default"
           className="text-[10px] px-1"
         />
       </div>
-    </button>
+    </div>
   );
 });
 
 const PromptNodeComponent = memo(function PromptNodeComponent({
   prompt,
-  promptsLoading,
   runs,
   runsLoading,
   isExpanded,
@@ -115,9 +201,14 @@ const PromptNodeComponent = memo(function PromptNodeComponent({
   onToggle,
   onClick,
   onSelectRun,
+  onSubmitRun,
+  onUnpublishRun,
+  onDeleteRun,
+  submittingRunId,
+  unpublishingRunId,
+  deletingRunId,
 }: {
   prompt: PromptNode;
-  promptsLoading: boolean;
   runs: RunNode[] | undefined;
   runsLoading: boolean;
   isExpanded: boolean;
@@ -126,6 +217,12 @@ const PromptNodeComponent = memo(function PromptNodeComponent({
   onToggle: () => void;
   onClick: () => void;
   onSelectRun: (runId: string) => void;
+  onSubmitRun: (runId: string) => void;
+  onUnpublishRun: (runId: string) => void;
+  onDeleteRun: (run: RunNode) => void;
+  submittingRunId: string | null;
+  unpublishingRunId: string | null;
+  deletingRunId: string | null;
 }) {
   return (
     <div className="ml-2">
@@ -178,7 +275,13 @@ const PromptNodeComponent = memo(function PromptNodeComponent({
                 key={run.id}
                 run={run}
                 isSelected={run.id === selectedRunId}
-                onClick={() => onSelectRun(run.id)}
+                onSelect={() => onSelectRun(run.id)}
+                onSubmit={() => onSubmitRun(run.id)}
+                onUnpublish={() => onUnpublishRun(run.id)}
+                onDelete={() => onDeleteRun(run)}
+                isSubmitting={submittingRunId === run.id}
+                isUnpublishing={unpublishingRunId === run.id}
+                isDeleting={deletingRunId === run.id}
               />
             ))
           ) : (
@@ -206,6 +309,12 @@ const ThemeNodeComponent = memo(function ThemeNodeComponent({
   onTogglePrompt,
   onSelectPrompt,
   onSelectRun,
+  onSubmitRun,
+  onUnpublishRun,
+  onDeleteRun,
+  submittingRunId,
+  unpublishingRunId,
+  deletingRunId,
   getRunsForPrompt,
   getRunsLoadingForPrompt,
 }: {
@@ -222,6 +331,12 @@ const ThemeNodeComponent = memo(function ThemeNodeComponent({
   onTogglePrompt: (promptId: string) => void;
   onSelectPrompt: (promptId: string) => void;
   onSelectRun: (runId: string) => void;
+  onSubmitRun: (runId: string) => void;
+  onUnpublishRun: (runId: string) => void;
+  onDeleteRun: (run: RunNode) => void;
+  submittingRunId: string | null;
+  unpublishingRunId: string | null;
+  deletingRunId: string | null;
   getRunsForPrompt: (promptId: string) => RunNode[] | undefined;
   getRunsLoadingForPrompt: (promptId: string) => boolean;
 }) {
@@ -275,7 +390,6 @@ const ThemeNodeComponent = memo(function ThemeNodeComponent({
               <PromptNodeComponent
                 key={prompt.id}
                 prompt={prompt}
-                promptsLoading={promptsLoading}
                 runs={getRunsForPrompt(prompt.id)}
                 runsLoading={getRunsLoadingForPrompt(prompt.id)}
                 isExpanded={expandedPrompts.includes(prompt.id)}
@@ -284,6 +398,12 @@ const ThemeNodeComponent = memo(function ThemeNodeComponent({
                 onToggle={() => onTogglePrompt(prompt.id)}
                 onClick={() => onSelectPrompt(prompt.id)}
                 onSelectRun={onSelectRun}
+                onSubmitRun={onSubmitRun}
+                onUnpublishRun={onUnpublishRun}
+                onDeleteRun={onDeleteRun}
+                submittingRunId={submittingRunId}
+                unpublishingRunId={unpublishingRunId}
+                deletingRunId={deletingRunId}
               />
             ))
           ) : (
@@ -317,6 +437,80 @@ export function FileTree({
   onSelectPrompt,
   onSelectRun,
 }: FileTreeProps) {
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [runToDelete, setRunToDelete] = useState<RunNode | null>(null);
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+  const [unpublishingRunId, setUnpublishingRunId] = useState<string | null>(null);
+
+  const submitMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      return await trpcClient.games.submit.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game submitted!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["games", "user"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit game");
+    },
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      setUnpublishingRunId(gameId);
+      return await trpcClient.games.unpublish.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game unpublished!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["games", "user"] });
+      setUnpublishingRunId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to unpublish game");
+      setUnpublishingRunId(null);
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: async (gameId: string) => {
+      setDeletingRunId(gameId);
+      return await trpcClient.games.hardDelete.mutate({ gameId });
+    },
+    onSuccess: () => {
+      toast.success("Game deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["games", "user"] });
+      setDeleteDialogOpen(false);
+      setRunToDelete(null);
+      setDeletingRunId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete game");
+      setDeletingRunId(null);
+    },
+  });
+
+  const handleSubmitRun = (runId: string) => {
+    submitMutation.mutate(runId);
+  };
+
+  const handleUnpublishRun = (runId: string) => {
+    unpublishMutation.mutate(runId);
+  };
+
+  const handleDeleteRun = (run: RunNode) => {
+    setRunToDelete(run);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteRun = () => {
+    if (!runToDelete) return;
+    hardDeleteMutation.mutate(runToDelete.id);
+  };
+
   // Helper to get runs for a prompt - uses map for expanded prompts, falls back to selected prompt
   const getRunsForPrompt = (promptId: string): RunNode[] | undefined => {
     if (promptId in runsByPromptId) {
@@ -374,10 +568,38 @@ export function FileTree({
           onTogglePrompt={onTogglePrompt}
           onSelectPrompt={onSelectPrompt}
           onSelectRun={onSelectRun}
+          onSubmitRun={handleSubmitRun}
+          onUnpublishRun={handleUnpublishRun}
+          onDeleteRun={handleDeleteRun}
+          submittingRunId={submitMutation.isPending ? submitMutation.variables ?? null : null}
+          unpublishingRunId={unpublishingRunId}
+          deletingRunId={deletingRunId}
           getRunsForPrompt={getRunsForPrompt}
           getRunsLoadingForPrompt={getRunsLoadingForPrompt}
         />
       ))}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Game</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{runToDelete?.name || runToDelete?.modelName || "this game"}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <ArcadeButton variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </ArcadeButton>
+            <ArcadeButton
+              onClick={handleConfirmDeleteRun}
+              disabled={deletingRunId === runToDelete?.id}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:bg-[var(--destructive)]/90"
+            >
+              {deletingRunId === runToDelete?.id ? "Deleting..." : "Delete"}
+            </ArcadeButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
