@@ -60,3 +60,8 @@ apps/web/src/app/home/
 apps/web/src/app/page.backup.tsx
 plans/
 review/
+.agents/
+.claude/
+.kilocode/
+docs/
+library-patterns-import.json
