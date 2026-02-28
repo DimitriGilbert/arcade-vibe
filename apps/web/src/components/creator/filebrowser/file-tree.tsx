@@ -125,45 +125,57 @@ const RunNodeComponent = memo(function RunNodeComponent({
 
   return (
     <div
+      onClick={onSelect}
       className={cn(
-        "group flex items-center gap-2 px-2 py-1.5 rounded transition-colors",
+        "group flex flex-col gap-1 px-2 py-1.5 rounded transition-colors cursor-pointer",
         isSelected ? "bg-[var(--primary)]/15 text-[var(--foreground)]" : "hover:bg-[var(--muted)]/50"
       )}
     >
-      <button type="button" className="flex items-center gap-2 min-w-0 flex-1 text-left" onClick={onSelect}>
+      <div className="flex items-start gap-2 min-w-0 w-full text-left">
         <FileCode className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
         {getStatusIcon(run.status)}
         <div className="flex flex-col min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs truncate">{run.name ?? "Untitled"}</span>
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs leading-tight whitespace-normal break-words">{run.name ?? "Untitled"}</span>
             {run.isSubmitted && <Globe className="h-3 w-3 text-green-500 shrink-0" />}
           </div>
-          <span className="text-[10px] text-[var(--primary)] truncate">
+          <span className="text-[10px] leading-tight text-[var(--primary)] whitespace-normal break-words">
             {run.modelName ?? "Unknown model"}
           </span>
         </div>
-      </button>
-      <div className="flex items-center gap-1 shrink-0">
+      </div>
+      <div className="flex items-center justify-between gap-2 pl-7">
+        <ArcadeBadge
+          text={formatRelativeTime(run.createdAt)}
+          variant="default"
+          className="text-[9px] px-1 py-0 h-4"
+        />
+        <div className="flex items-center gap-1 shrink-0">
         {run.gameId ? (
-          <ArcadeButton
-            variant="outline"
-            size="sm"
-            onClick={() => window.open(`/game/${run.gameId}`, "_blank")}
-          >
-            <Play className="h-3 w-3" />
-          </ArcadeButton>
+          <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              className="h-6 w-6 px-0 [&_svg]:size-3"
+              onClick={() => window.open(`/game/${run.gameId}`, "_blank")}
+            >
+              <Play className="h-3 w-3" />
+            </ArcadeButton>
+          </div>
         ) : null}
         {canSubmit ? (
-          <ArcadeButton size="sm" onClick={onSubmit} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-          </ArcadeButton>
+          <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <ArcadeButton size="sm" className="h-6 w-6 px-0 [&_svg]:size-3" onClick={onSubmit} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+            </ArcadeButton>
+          </div>
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--muted)] focus:opacity-100"
+            className="inline-flex items-center justify-center h-6 w-6 p-0.5 rounded hover:bg-[var(--muted)] focus:opacity-100"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <MoreHorizontal className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+            <MoreHorizontal className="h-3 w-3 text-[var(--muted-foreground)]" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             {run.isSubmitted ? (
@@ -181,11 +193,7 @@ const RunNodeComponent = memo(function RunNodeComponent({
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
-        <ArcadeBadge
-          text={formatRelativeTime(run.createdAt)}
-          variant="default"
-          className="text-[10px] px-1"
-        />
+        </div>
       </div>
     </div>
   );

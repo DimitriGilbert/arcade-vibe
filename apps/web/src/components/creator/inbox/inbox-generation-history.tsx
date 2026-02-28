@@ -348,76 +348,88 @@ export function InboxGenerationHistory({
             const isSelected = selectedGameId === game.id;
 
             return (
-              <button
-                key={game.id}
-                type="button"
-                className={`w-full text-left flex items-center justify-between p-2 transition-colors group cursor-pointer ${
+              <li key={game.id}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className={`w-full text-left p-2 transition-colors group cursor-pointer ${
                   isSelected 
                     ? "bg-[var(--primary)]/10 border-l-2 border-[var(--primary)]" 
                     : "hover:bg-[var(--muted)]/20"
-                }`}
-                onClick={() => onSelectGame?.(game)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelectGame?.(game);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  {getStatusIcon(game.status)}
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-[var(--foreground)] truncate">
-                        {game.name ?? "Untitled"}
-                      </span>
-                      {game.isSubmitted && (
-                        <Globe className="h-3 w-3 text-green-500 shrink-0" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-[var(--primary)] truncate">
+                  }`}
+                  onClick={() => onSelectGame?.(game)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectGame?.(game);
+                    }
+                  }}
+                >
+                  <div className="flex items-start gap-2 min-w-0">
+                    {getStatusIcon(game.status)}
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-xs leading-tight text-[var(--foreground)] whitespace-normal break-words">
+                          {game.name ?? "Untitled"}
+                        </span>
+                        {game.isSubmitted && (
+                          <Globe className="h-3 w-3 text-green-500 shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-[10px] leading-tight text-[var(--primary)] whitespace-normal break-words">
                         {game.modelName ?? "Unknown model"}
-                      </span>
-                      <span className="text-[10px] text-[var(--muted-foreground)]">
-                        {formatDate(game.createdAt)}
                       </span>
                     </div>
                   </div>
-                </div>
-                <span role="presentation" className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                  <ArcadeButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/game/${game.id}`, "_blank")}
-                  >
-                    <Play className="h-3 w-3" />
-                  </ArcadeButton>
-                  {canSubmit && (
-                    <ArcadeButton
-                      size="sm"
-                      onClick={() => submitMutation.mutate(game.id)}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Send className="h-3 w-3" />
-                      )}
-                    </ArcadeButton>
-                  )}
 
-                  <GameActionsDropdown
-                    game={game}
-                    onSubmit={() => submitMutation.mutate(game.id)}
-                    onUnpublish={() => handleUnpublish(game.id)}
-                    onDelete={() => handleDeleteClick(game)}
-                    isSubmitting={isSubmitting}
-                    isUnpublishing={isUnpublishing}
-                    isDeleting={isDeleting}
-                  />
-                </span>
-              </button>
+                  <div className="mt-1 pl-5 flex items-center justify-between gap-2">
+                    <ArcadeBadge
+                      text={formatDate(game.createdAt)}
+                      variant="default"
+                      className="text-[9px] px-1 py-0 h-4"
+                    />
+                    <span
+                      role="presentation"
+                      className="flex items-center gap-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <ArcadeButton
+                        variant="outline"
+                        size="sm"
+                        className="h-6 w-6 px-0 [&_svg]:size-3"
+                        onClick={() => window.open(`/game/${game.id}`, "_blank")}
+                      >
+                        <Play className="h-3 w-3" />
+                      </ArcadeButton>
+                      {canSubmit && (
+                        <ArcadeButton
+                          size="sm"
+                          className="h-6 w-6 px-0 [&_svg]:size-3"
+                          onClick={() => submitMutation.mutate(game.id)}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                        </ArcadeButton>
+                      )}
+
+                      <GameActionsDropdown
+                        game={game}
+                        onSubmit={() => submitMutation.mutate(game.id)}
+                        onUnpublish={() => handleUnpublish(game.id)}
+                        onDelete={() => handleDeleteClick(game)}
+                        isSubmitting={isSubmitting}
+                        isUnpublishing={isUnpublishing}
+                        isDeleting={isDeleting}
+                      />
+                    </span>
+                  </div>
+                </div>
+              </li>
             );
           })}
         </ul>
