@@ -1,5 +1,6 @@
 import type { Visibility } from "@/lib/trpc-types";
 import type { ModelSelection, GenerationStatus } from "@/components/editor/model-types";
+import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 
 export type { Visibility, ModelSelection, GenerationStatus };
 
@@ -53,4 +54,4 @@ export const STORAGE_KEY = "arcade-vibe-creator-filebrowser";
 export const STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const MAX_MODELS = 4;
-export const GENERATION_CONCURRENCY_LIMIT = 2;
+export { GENERATION_CONCURRENCY_LIMIT };

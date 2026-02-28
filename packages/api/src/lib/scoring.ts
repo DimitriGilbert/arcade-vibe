@@ -30,8 +30,8 @@ interface ScoreResult {
 interface GameplayMetrics {
   uniquePlayers: number;
   totalPlays: number;
-  retention30: number;
-  retention60: number;
+  totalValidMinutes: number;
+  repeatSessions: number;
   p75Playtime: number;
 }
 
@@ -42,13 +42,6 @@ interface BatchScoreData {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function saturate(value: number, scale: number): number {
-  if (value <= 0) {
-    return 0;
-  }
-  return 1 - Math.exp(-value / scale);
 }
 
 function percentile(values: number[], p: number): number {
@@ -116,38 +109,49 @@ async function fetchBatchData(gameIds: string[], tierCostIds: string[]): Promise
         isNotNull(gameSessionMetrics.endedAt),
       ));
 
-    const grouped = new Map<string, { players: Set<string>; times: number[] }>();
+    const grouped = new Map<string, {
+      players: Set<string>;
+      times: number[];
+      playCountsByUser: Map<string, number>;
+      totalValidMinutes: number;
+    }>();
 
     for (const row of rows) {
       const existing = grouped.get(row.gameId) ?? {
         players: new Set<string>(),
         times: [],
+        playCountsByUser: new Map<string, number>(),
+        totalValidMinutes: 0,
       };
       existing.players.add(row.userId);
       existing.times.push(Math.max(0, row.playtimeSeconds));
+      const userPlayCount = existing.playCountsByUser.get(row.userId) ?? 0;
+      existing.playCountsByUser.set(row.userId, userPlayCount + 1);
+      const boundedSeconds = clamp(
+        Math.max(0, row.playtimeSeconds),
+        0,
+        SCORING_CONFIG.time.maxCountedSecondsPerSession,
+      );
+      if (boundedSeconds >= SCORING_CONFIG.time.minimumCountedSeconds) {
+        existing.totalValidMinutes += boundedSeconds / 60;
+      }
       grouped.set(row.gameId, existing);
     }
 
     for (const [gameId, data] of grouped) {
       const totalPlays = data.times.length;
       const uniquePlayers = data.players.size;
-      const retention30 =
-        totalPlays === 0
-          ? 0
-          : data.times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.shortThresholdSeconds).length /
-            totalPlays;
-      const retention60 =
-        totalPlays === 0
-          ? 0
-          : data.times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.ratingThresholdSeconds).length /
-            totalPlays;
+      let repeatSessions = 0;
+      for (const plays of data.playCountsByUser.values()) {
+        repeatSessions += Math.max(plays - 1, 0);
+      }
       const p75Playtime = percentile(data.times, 0.75);
 
       gameplayMetrics.set(gameId, {
         uniquePlayers,
         totalPlays,
-        retention30,
-        retention60,
+        totalValidMinutes: data.totalValidMinutes,
+        repeatSessions,
         p75Playtime,
       });
     }
@@ -180,31 +184,43 @@ async function getGameplayMetrics(
     return {
       uniquePlayers: 0,
       totalPlays: 0,
-      retention30: 0,
-      retention60: 0,
+      totalValidMinutes: 0,
+      repeatSessions: 0,
       p75Playtime: 0,
     };
   }
 
   const players = new Set<string>();
   const times: number[] = [];
+  const playCountsByUser = new Map<string, number>();
+  let totalValidMinutes = 0;
 
   for (const row of rows) {
     players.add(row.userId);
-    times.push(Math.max(0, row.playtimeSeconds));
+    const boundedSeconds = clamp(
+      Math.max(0, row.playtimeSeconds),
+      0,
+      SCORING_CONFIG.time.maxCountedSecondsPerSession,
+    );
+    times.push(boundedSeconds);
+    const userPlayCount = playCountsByUser.get(row.userId) ?? 0;
+    playCountsByUser.set(row.userId, userPlayCount + 1);
+    if (boundedSeconds >= SCORING_CONFIG.time.minimumCountedSeconds) {
+      totalValidMinutes += boundedSeconds / 60;
+    }
   }
 
   const totalPlays = times.length;
+  let repeatSessions = 0;
+  for (const plays of playCountsByUser.values()) {
+    repeatSessions += Math.max(plays - 1, 0);
+  }
 
   return {
     uniquePlayers: players.size,
     totalPlays,
-    retention30:
-      times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.shortThresholdSeconds).length /
-      totalPlays,
-    retention60:
-      times.filter((seconds) => seconds >= SCORING_CONFIG.engagement.ratingThresholdSeconds).length /
-      totalPlays,
+    totalValidMinutes,
+    repeatSessions,
     p75Playtime: percentile(times, 0.75),
   };
 }
@@ -269,44 +285,54 @@ export async function calculateGameScore(
   const bayes =
     (SCORING_CONFIG.bayesian.priorRatingCount * globalAverageRating + n * avgRating) /
     (SCORING_CONFIG.bayesian.priorRatingCount + n);
-  const confidence = 1 - Math.exp(-n / SCORING_CONFIG.bayesian.confidenceScale);
-  const qualityScore =
-    n === 0 ? 0 : clamp((bayes - 1) / 4, 0, 1) * clamp(confidence, 0, 1);
+  const confidence = clamp(1 - Math.exp(-n / SCORING_CONFIG.bayesian.confidenceScale), 0, 1);
+  const qualitySignal = clamp((bayes - 3) / 2, -1, 1) * confidence;
+  const qualityMultiplier =
+    n === 0
+      ? 1
+      : clamp(
+          1 + qualitySignal * SCORING_CONFIG.quality.multiplierScale,
+          SCORING_CONFIG.quality.minMultiplier,
+          SCORING_CONFIG.quality.maxMultiplier,
+        );
 
   const gameplay = await getGameplayMetrics(gameId, batchData);
-  const playersScore = saturate(gameplay.uniquePlayers, SCORING_CONFIG.players.saturation);
-  const playsProxy =
-    gameplay.uniquePlayers + Math.sqrt(Math.max(gameplay.totalPlays - gameplay.uniquePlayers, 0));
-  const playsScore = saturate(playsProxy, SCORING_CONFIG.plays.saturation);
-
   const p75Normalized =
     clamp(
-      Math.min(gameplay.p75Playtime, SCORING_CONFIG.engagement.p75CapSeconds) /
-        SCORING_CONFIG.engagement.p75CapSeconds,
+      gameplay.p75Playtime / SCORING_CONFIG.time.maxCountedSecondsPerSession,
       0,
       1,
     );
+  const timeSignal = Math.log1p(gameplay.totalValidMinutes);
+  const baseArcadePoints =
+    SCORING_CONFIG.time.pointsPerLogUnit * timeSignal * (0.8 + 0.2 * p75Normalized);
 
-  const engagementScore = clamp(
-    SCORING_CONFIG.engagement.weights.retention30 * gameplay.retention30 +
-      SCORING_CONFIG.engagement.weights.retention60 * gameplay.retention60 +
-      SCORING_CONFIG.engagement.weights.p75Playtime * p75Normalized,
+  const reachMultiplier = clamp(
+    1 + SCORING_CONFIG.reach.log10Scale * Math.log10(1 + gameplay.uniquePlayers),
+    SCORING_CONFIG.reach.minMultiplier,
+    SCORING_CONFIG.reach.maxMultiplier,
+  );
+
+  const replayPerPlayer =
+    gameplay.uniquePlayers === 0
+      ? 0
+      : gameplay.repeatSessions / gameplay.uniquePlayers;
+  const replayBonus =
+    SCORING_CONFIG.replay.pointsPerRepeat * Math.log1p(gameplay.repeatSessions) +
+    SCORING_CONFIG.replay.pointsPerReplayRatio * replayPerPlayer;
+
+  const inputTokens = game.inputTokens ?? game.prompt.tokenCount ?? 0;
+  const tokenOverage = Math.max(inputTokens - SCORING_CONFIG.efficiency.baselineInputTokens, 0);
+  const tokenUndershoot = Math.max(SCORING_CONFIG.efficiency.baselineInputTokens - inputTokens, 0);
+  const penaltyRatio = clamp(
+    Math.log1p(tokenOverage) / Math.log1p(SCORING_CONFIG.efficiency.maxPenaltyInputTokens),
     0,
     1,
   );
-
-  const replayScore =
-    gameplay.uniquePlayers === 0
-      ? 0
-      : clamp((gameplay.totalPlays / gameplay.uniquePlayers - 1) / 2, 0, 1);
-
-  const inputTokens = game.inputTokens ?? game.prompt.tokenCount ?? 0;
-  const tokenPenalty = Math.log(
-    1 + Math.max(inputTokens - SCORING_CONFIG.efficiency.baselineInputTokens, 0),
-  );
-  const maxPenalty = Math.log(1 + SCORING_CONFIG.efficiency.maxPenaltyInputTokens);
-  const efficiencyScore =
-    inputTokens <= 0 ? 0 : clamp(1 - tokenPenalty / maxPenalty, 0, 1);
+  const bonusRatio = clamp(tokenUndershoot / SCORING_CONFIG.efficiency.baselineInputTokens, 0, 1);
+  const efficiencyAdjustment =
+    SCORING_CONFIG.efficiency.maxBonusPoints * bonusRatio -
+    SCORING_CONFIG.efficiency.maxPenaltyPoints * penaltyRatio;
 
   const tierMultiplier = batchData?.tierCostMultipliers.get(game.tierCostId)
     ?? game.tierCost.scoreMultiplier
@@ -317,28 +343,19 @@ export async function calculateGameScore(
     SCORING_CONFIG.tier.maxFactor,
   );
 
-  const weightedBase =
-    100 * (
-      SCORING_CONFIG.weights.quality * qualityScore +
-      SCORING_CONFIG.weights.engagement * engagementScore +
-      SCORING_CONFIG.weights.players * playersScore +
-      SCORING_CONFIG.weights.plays * playsScore +
-      SCORING_CONFIG.weights.replay * replayScore +
-      SCORING_CONFIG.weights.efficiency * efficiencyScore
-    );
-
-  const finalScore = Math.round(weightedBase * tierFactor * 100) / 100;
+  const multipliedScore = baseArcadePoints * qualityMultiplier * reachMultiplier * tierFactor;
+  const finalScore = Math.round(Math.max(0, multipliedScore + replayBonus + efficiencyAdjustment) * 100) / 100;
 
   const result: ScoreResult = {
     gameId,
     finalScore,
     components: {
-      qualityScore,
-      engagementScore,
-      playersScore,
-      playsScore,
-      replayScore,
-      efficiencyScore,
+      qualityScore: qualityMultiplier,
+      engagementScore: timeSignal,
+      playersScore: reachMultiplier,
+      playsScore: baseArcadePoints / 100,
+      replayScore: replayBonus / 100,
+      efficiencyScore: efficiencyAdjustment / 100,
       tierFactor,
     },
   };
@@ -409,7 +426,7 @@ export async function updateGameScore(
         tierFactor: parseFloat(existingScore.tierFactor ?? "1"),
       },
       scoreResult.components,
-      "recalculation_v2",
+      "recalculation_v3",
     );
   } else {
     const [inserted] = await db
@@ -443,7 +460,7 @@ export async function updateGameScore(
         scoreResult.finalScore.toFixed(2),
         null,
         scoreResult.components,
-        "initial_v2",
+        "initial_v3",
       );
     }
   }

@@ -165,6 +165,7 @@ export type GameSubmitOutput = GamesOutput["submit"];
 export type GameHideOutput = GamesOutput["hide"];
 export type GameGetCodeOutput = GamesOutput["getCode"];
 export type GameGetRawCodeOutput = GamesOutput["getRawCode"];
+export type GameGetDiscoveryGamesOutput = GamesOutput["getDiscoveryGames"];
 
 // --- Prompts Router ---
 

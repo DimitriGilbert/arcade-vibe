@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users,
   FileText,
@@ -8,13 +8,17 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
+  RefreshCw,
 } from "lucide-react";
-import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
+import { toast } from "sonner";
+import { ArcadeButton, ArcadeCard, ArcadeBadge } from "@/components/arcade";
 import { EmptyState, LoadingState } from "@/components/reusable";
 import { trpcClient } from "@/utils/trpc";
 import type { AdminStats } from "@/lib/trpc-types";
 
 export default function AdminDashboardPage() {
+  const queryClient = useQueryClient();
+
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
@@ -49,6 +53,25 @@ export default function AdminDashboardPage() {
 
   const adminActions = adminActionsData?.actions ?? [];
   const isLoading = statsLoading || reportsLoading || actionsLoading;
+
+  const recalculateScoresMutation = useMutation({
+    mutationFn: async () => {
+      return await trpcClient.admin.stats.recalculateAllScores.mutate();
+    },
+    onSuccess: (result) => {
+      toast.success(
+        `Score recalculation complete: ${result.successful}/${result.totalGames} successful`,
+      );
+      if (result.failed > 0) {
+        toast.error(`${result.failed} games failed during recalculation`);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-recent-actions"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to recalculate scores");
+    },
+  });
 
   const statistics = [
     {
@@ -127,6 +150,19 @@ export default function AdminDashboardPage() {
         <p className="text-[var(--muted-foreground)] mt-2">
           Welcome back! Here's what's happening on the platform.
         </p>
+        <div className="mt-4">
+          <ArcadeButton
+            size="sm"
+            variant="outline"
+            onClick={() => recalculateScoresMutation.mutate()}
+            disabled={recalculateScoresMutation.isPending}
+          >
+            <RefreshCw className={recalculateScoresMutation.isPending ? "animate-spin" : ""} />
+            {recalculateScoresMutation.isPending
+              ? "Recalculating Scores..."
+              : "Recalculate All Scores"}
+          </ArcadeButton>
+        </div>
       </div>
 
       {isLoading && (

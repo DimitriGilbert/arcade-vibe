@@ -18,6 +18,7 @@ import {
   GENERATION_CONCURRENCY_LIMIT,
   WORKBENCH_STORAGE_KEY,
 } from "@/components/creator/workbench";
+import { DiscoveryDialog, useDiscoveryDialog } from "@/components/creator/shared";
 import {
   useGenerationsStore,
   useGenerationGameId,
@@ -121,6 +122,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
   const activeGameId = useGenerationGameId(activeOutputTab);
   const completedCount = useCompletedCount();
+
+  const discoveryDialog = useDiscoveryDialog();
 
   // Load persisted state on mount
   useEffect(() => {
@@ -398,6 +401,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     }
     setMultipleGenerations(initialGenerations);
 
+    discoveryDialog.open();
+
     try {
       // Only create prompt if it doesn't exist - don't update during generation
       let promptId = selectedPromptId;
@@ -523,6 +528,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     updateGenerationGameId,
     updateGenerationError,
     activeOutputTab,
+    discoveryDialog.open,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -723,6 +729,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
           description="Help us improve the Workbench editor. Share your thoughts on the layout and features."
         />
       </div>
+
+      <DiscoveryDialog {...discoveryDialog.dialogProps} />
     </div>
   );
 }

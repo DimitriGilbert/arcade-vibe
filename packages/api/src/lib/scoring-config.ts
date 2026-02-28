@@ -3,38 +3,35 @@ export const SCORING_CONFIG = {
     priorRatingCount: 20,
     confidenceScale: 15,
   },
-  players: {
-    saturation: 25,
+  quality: {
+    multiplierScale: 0.25,
+    minMultiplier: 0.85,
+    maxMultiplier: 1.25,
   },
-  plays: {
-    saturation: 60,
+  time: {
+    minimumCountedSeconds: 15,
+    maxCountedSecondsPerSession: 900,
+    pointsPerLogUnit: 450,
   },
-  engagement: {
-    shortThresholdSeconds: 30,
-    ratingThresholdSeconds: 60,
-    p75CapSeconds: 300,
-    weights: {
-      retention30: 0.45,
-      retention60: 0.35,
-      p75Playtime: 0.2,
-    },
+  reach: {
+    log10Scale: 0.12,
+    minMultiplier: 1,
+    maxMultiplier: 1.35,
+  },
+  replay: {
+    pointsPerRepeat: 80,
+    pointsPerReplayRatio: 140,
   },
   efficiency: {
     baselineInputTokens: 800,
     maxPenaltyInputTokens: 6000,
+    maxBonusPoints: 120,
+    maxPenaltyPoints: 220,
   },
   tier: {
-    scale: 0.08,
-    minFactor: 0.9,
-    maxFactor: 1.12,
-  },
-  weights: {
-    quality: 0.34,
-    engagement: 0.22,
-    players: 0.16,
-    plays: 0.1,
-    replay: 0.08,
-    efficiency: 0.1,
+    scale: 0.06,
+    minFactor: 0.95,
+    maxFactor: 1.1,
   },
   recalculation: {
     batchSize: 50,

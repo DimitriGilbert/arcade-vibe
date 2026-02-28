@@ -4,6 +4,7 @@
  */
 
 import type { GenerationStatus } from "@/components/editor/model-types";
+import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 
 export type { GenerationStatus };
 
@@ -69,5 +70,5 @@ export interface PersistedWorkbenchState {
 export type RightPanelTab = "history" | "models" | "settings";
 
 export const MAX_MODELS = 4;
-export const GENERATION_CONCURRENCY_LIMIT = 2;
+export { GENERATION_CONCURRENCY_LIMIT };
 export const WORKBENCH_STORAGE_KEY = "arcade-vibe-creator-workbench";

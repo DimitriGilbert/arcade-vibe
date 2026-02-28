@@ -5,11 +5,15 @@ import {
   moderatorProcedure,
 } from "../index";
 import { db } from "@arcade-vibe/db";
-import { games, gameVersions, GAME_NAME_MAX_LENGTH, GAME_NAME_MIN_LENGTH } from "@arcade-vibe/db/schema/games";
+import { games, gameVersions, gameSessionMetrics, GAME_NAME_MAX_LENGTH, GAME_NAME_MIN_LENGTH } from "@arcade-vibe/db/schema/games";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
+import { themes } from "@arcade-vibe/db/schema/themes";
 import { gameScores } from "@arcade-vibe/db/schema/games";
-import { eq, desc, and, lt, isNull, sql, inArray } from "drizzle-orm";
+import { scores } from "@arcade-vibe/db/schema/scores";
+import { tierCosts } from "@arcade-vibe/db/schema/credits";
+import { user } from "@arcade-vibe/db/schema/auth";
+import { eq, desc, and, lt, isNull, sql, inArray, count, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
 import {
@@ -1513,6 +1517,150 @@ export const gamesRouter = router({
       return {
         success: true,
         gameId: input.gameId,
+      };
+    }),
+
+  getDiscoveryGames: publicProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(0).default(0),
+        excludeGameIds: z.array(z.string().uuid()).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const pageSize = 3;
+      const offset = input.page * pageSize;
+      const excludeIds = input.excludeGameIds ?? [];
+
+      const baseConditions = [
+        isNull(games.deletedAt),
+        eq(games.isHidden, false),
+        eq(games.status, "completed"),
+        eq(games.isSubmitted, true),
+      ];
+
+      const excludeCondition = excludeIds.length > 0
+        ? sql`${games.id} NOT IN ${excludeIds}`
+        : sql`TRUE`;
+
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+      const [topGames, trendingGames, newGames] = await Promise.all([
+        db
+          .select({
+            gameId: games.id,
+            gameName: games.name,
+            createdAt: games.createdAt,
+            finalScore: sql<string>`COALESCE(${scores.finalScore}, '0')`,
+            modelProvider: games.modelProvider,
+            modelName: games.modelName,
+            tierSlug: tierCosts.slug,
+            tierName: tierCosts.name,
+            creatorId: user.id,
+            creatorName: user.name,
+            themeId: themes.id,
+            themeTitle: themes.title,
+          })
+          .from(games)
+          .innerJoin(prompts, eq(games.promptId, prompts.id))
+          .innerJoin(user, eq(prompts.authorId, user.id))
+          .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+          .leftJoin(themes, eq(games.themeId, themes.id))
+          .leftJoin(scores, eq(games.id, scores.gameId))
+          .where(and(...baseConditions, excludeCondition))
+          .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`))
+          .limit(pageSize)
+          .offset(offset),
+
+        db
+          .select({
+            gameId: games.id,
+            gameName: games.name,
+            createdAt: games.createdAt,
+            playCount: count(gameSessionMetrics.id),
+            modelProvider: games.modelProvider,
+            modelName: games.modelName,
+            tierSlug: tierCosts.slug,
+            tierName: tierCosts.name,
+            creatorId: user.id,
+            creatorName: user.name,
+            themeId: themes.id,
+            themeTitle: themes.title,
+          })
+          .from(games)
+          .innerJoin(prompts, eq(games.promptId, prompts.id))
+          .innerJoin(user, eq(prompts.authorId, user.id))
+          .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+          .leftJoin(themes, eq(games.themeId, themes.id))
+          .leftJoin(gameSessionMetrics, and(
+            eq(games.id, gameSessionMetrics.gameId),
+            gt(gameSessionMetrics.startedAt, oneDayAgo),
+          ))
+          .where(and(...baseConditions, excludeCondition))
+          .groupBy(games.id, games.name, games.createdAt, games.modelProvider, games.modelName, tierCosts.slug, tierCosts.name, user.id, user.name, themes.id, themes.title)
+          .orderBy(desc(count(gameSessionMetrics.id)))
+          .limit(pageSize)
+          .offset(offset),
+
+        db
+          .select({
+            gameId: games.id,
+            gameName: games.name,
+            createdAt: games.createdAt,
+            modelProvider: games.modelProvider,
+            modelName: games.modelName,
+            tierSlug: tierCosts.slug,
+            tierName: tierCosts.name,
+            creatorId: user.id,
+            creatorName: user.name,
+            themeId: themes.id,
+            themeTitle: themes.title,
+          })
+          .from(games)
+          .innerJoin(prompts, eq(games.promptId, prompts.id))
+          .innerJoin(user, eq(prompts.authorId, user.id))
+          .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+          .leftJoin(themes, eq(games.themeId, themes.id))
+          .where(and(...baseConditions, excludeCondition))
+          .orderBy(desc(games.createdAt))
+          .limit(pageSize)
+          .offset(offset),
+      ]);
+
+      return {
+        top: topGames.map((g) => ({
+          id: g.gameId,
+          name: g.gameName,
+          createdAt: g.createdAt,
+          finalScore: g.finalScore,
+          modelProvider: g.modelProvider,
+          modelName: g.modelName,
+          tier: g.tierSlug ? { slug: g.tierSlug, name: g.tierName } : null,
+          creator: { id: g.creatorId, name: g.creatorName },
+          theme: g.themeId ? { id: g.themeId, title: g.themeTitle } : null,
+        })),
+        trending: trendingGames.map((g) => ({
+          id: g.gameId,
+          name: g.gameName,
+          createdAt: g.createdAt,
+          playCount: Number(g.playCount ?? 0),
+          modelProvider: g.modelProvider,
+          modelName: g.modelName,
+          tier: g.tierSlug ? { slug: g.tierSlug, name: g.tierName } : null,
+          creator: { id: g.creatorId, name: g.creatorName },
+          theme: g.themeId ? { id: g.themeId, title: g.themeTitle } : null,
+        })),
+        new: newGames.map((g) => ({
+          id: g.gameId,
+          name: g.gameName,
+          createdAt: g.createdAt,
+          modelProvider: g.modelProvider,
+          modelName: g.modelName,
+          tier: g.tierSlug ? { slug: g.tierSlug, name: g.tierName } : null,
+          creator: { id: g.creatorId, name: g.creatorName },
+          theme: g.themeId ? { id: g.themeId, title: g.themeTitle } : null,
+        })),
       };
     }),
 });

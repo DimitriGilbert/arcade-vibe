@@ -9,6 +9,7 @@ import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
 import type { Visibility, Game, PromptVersion } from "@/lib/trpc-types";
+import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 import {
   InboxSidebar,
   InboxModelSelector,
@@ -22,6 +23,7 @@ import {
   toModelConfig,
   MAX_MODELS,
 } from "@/components/creator/inbox";
+import { DiscoveryDialog, useDiscoveryDialog } from "@/components/creator/shared";
 import {
   useGenerationsStore,
   useGenerationGameId,
@@ -38,7 +40,6 @@ interface InboxPageProps {
 }
 
 const STORAGE_KEY = "arcade-vibe-creator-inbox";
-const GENERATION_CONCURRENCY_LIMIT = 2;
 
 interface PersistedInboxState {
   promptContent: string;
@@ -118,6 +119,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
   const activeGameId = useGenerationGameId(activeOutputTab);
   const completedCount = useCompletedCount();
+
+  const discoveryDialog = useDiscoveryDialog();
 
   // Load persisted state on mount
   useEffect(() => {
@@ -453,6 +456,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
     setMultipleGenerations(initialGenerations);
 
+    discoveryDialog.open();
+
     try {
       // Only create prompt if it doesn't exist - don't update during generation
       let promptId = existingPrompt?.id ?? selectedPromptId;
@@ -582,6 +587,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     updateGenerationGameId,
     updateGenerationError,
     queryClient,
+    discoveryDialog.open,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -1009,6 +1015,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           description="Help us improve the Inbox editor. Share your thoughts on the layout and features."
         />
       </div>
+
+      <DiscoveryDialog {...discoveryDialog.dialogProps} />
     </div>
   );
 }

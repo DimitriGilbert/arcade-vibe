@@ -10,6 +10,7 @@ import {
   CenterPanel,
   useFilebrowserState,
 } from "@/components/creator/filebrowser";
+import { DiscoveryDialog } from "@/components/creator/shared";
 import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
 
 export default function FilebrowserPage() {
@@ -51,6 +52,7 @@ export default function FilebrowserPage() {
     handleToggleThemeExpand,
     handleTogglePromptExpand,
     clearGenerations,
+    discoveryDialog,
   } = state;
 
   const handleSelectTheme = useCallback((themeId: string) => {
@@ -207,6 +209,8 @@ export default function FilebrowserPage() {
           description="Help us improve the File Browser editor. Share your thoughts on the layout and features."
         />
       </div>
+
+      <DiscoveryDialog {...discoveryDialog.dialogProps} />
     </div>
   );
 }

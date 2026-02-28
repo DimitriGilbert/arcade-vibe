@@ -6,6 +6,7 @@ import { user, session } from "@arcade-vibe/db/schema/auth";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { games } from "@arcade-vibe/db/schema/games";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
+import { recalculateAllScores } from "../../lib/scoring";
 import { z } from "zod";
 import { eq, and, gte, lte, desc, count, avg, sql, type SQL } from "drizzle-orm";
 
@@ -161,5 +162,25 @@ export const statsRouter = router({
         })),
         total: totalResult[0]?.count ?? 0,
       };
+    }),
+
+  recalculateAllScores: adminProcedure
+    .mutation(async ({ ctx }) => {
+      const result = await recalculateAllScores();
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "recalculate_scores",
+        targetType: "platform",
+        targetId: null,
+        reason: "Manual full score recalculation",
+        metadata: JSON.stringify({
+          totalGames: result.totalGames,
+          successful: result.successful,
+          failed: result.failed,
+        }),
+      });
+
+      return result;
     }),
 });

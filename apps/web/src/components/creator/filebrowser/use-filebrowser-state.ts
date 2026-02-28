@@ -10,12 +10,15 @@ import {
   useCompletedCount,
   type GenerationEntry,
 } from "@/stores/generations-store";
+import { useDiscoveryDialog } from "@/components/creator/shared";
 import type {
   FilebrowserSelection,
   PersistedFilebrowserState,
   ThemeNode,
   PromptNode,
   RunNode,
+} from "./types";
+import {
   STORAGE_KEY,
   STORAGE_EXPIRY_MS,
   MAX_MODELS,
@@ -25,7 +28,6 @@ import type {
 const storageKey: typeof STORAGE_KEY = "arcade-vibe-creator-filebrowser";
 const storageExpiryMs: typeof STORAGE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const maxModels: typeof MAX_MODELS = 4;
-const generationConcurrencyLimit: typeof GENERATION_CONCURRENCY_LIMIT = 2;
 
 function loadPersistedState(): PersistedFilebrowserState | null {
   if (typeof window === "undefined") return null;
@@ -108,6 +110,9 @@ export interface UseFilebrowserStateReturn {
   // Store actions
   clearGenerations: () => void;
 
+  // Discovery dialog
+  discoveryDialog: ReturnType<typeof useDiscoveryDialog>;
+
   // Derived
   currentPromptId: string | null;
   deletingPromptId: string | null;
@@ -146,6 +151,8 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
   const activeGameId = useGenerationGameId(activeOutputTab);
   const completedCount = useCompletedCount();
+
+  const discoveryDialog = useDiscoveryDialog();
 
   // Load persisted state on mount
   useEffect(() => {
@@ -465,6 +472,8 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     }
     setMultipleGenerations(initialGenerations);
 
+    discoveryDialog.open();
+
     try {
       // Only create prompt if it doesn't exist - don't update during generation
       let promptId = selectedPromptId;
@@ -544,8 +553,8 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
         }
       };
 
-      for (let index = 0; index < selectedModels.length; index += generationConcurrencyLimit) {
-        const batch = selectedModels.slice(index, index + generationConcurrencyLimit);
+      for (let index = 0; index < selectedModels.length; index += GENERATION_CONCURRENCY_LIMIT) {
+        const batch = selectedModels.slice(index, index + GENERATION_CONCURRENCY_LIMIT);
         await Promise.all(batch.map((model) => runGenerationForModel(model)));
       }
 
@@ -584,6 +593,7 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     updateGenerationGameId,
     updateGenerationError,
     queryClient,
+    discoveryDialog.open,
   ]);
 
   // Save handler
@@ -737,13 +747,16 @@ export function useFilebrowserState(): UseFilebrowserStateReturn {
     handleToggleThemeExpand,
     handleTogglePromptExpand,
 
-    // Store actions
-    clearGenerations,
+  // Store actions
+  clearGenerations,
 
-    // Derived
-    currentPromptId: selectedPromptId,
-    deletingPromptId,
-    activeGameId,
-    completedCount,
+  // Discovery dialog
+  discoveryDialog,
+
+  // Derived
+  currentPromptId: selectedPromptId,
+  deletingPromptId,
+  activeGameId,
+  completedCount,
   };
 }
