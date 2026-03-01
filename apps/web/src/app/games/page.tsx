@@ -66,7 +66,7 @@ export default async function GamesLibraryPage({
               All Published Games
             </h1>
             <p className="mt-3 text-[var(--muted-foreground)] max-w-2xl">
-              SEO-friendly game profiles with creator, theme, model, and score data.
+              Browse submitted games.
             </p>
           </div>
           <div className="p-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -108,10 +108,6 @@ export default async function GamesLibraryPage({
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {result.items.map((game) => {
               const gameTitle = game.name ?? game.theme?.title ?? "Untitled Game";
-              const promptPreview =
-                game.prompt.content.length > 140
-                  ? `${game.prompt.content.slice(0, 140)}...`
-                  : game.prompt.content;
 
               return (
                 <ArcadeCard key={game.id} className="h-full flex flex-col p-4">
@@ -124,10 +120,6 @@ export default async function GamesLibraryPage({
                         <ArcadeBadge text={game.tierCost.slug} variant="default" />
                       )}
                     </div>
-
-                    <p className="text-sm text-[var(--muted-foreground)] line-clamp-3">
-                      {promptPreview}
-                    </p>
 
                     <div className="space-y-2 text-xs text-[var(--muted-foreground)]">
                       <p className="inline-flex items-center gap-2">

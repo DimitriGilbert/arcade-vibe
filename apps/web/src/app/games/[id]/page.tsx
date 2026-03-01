@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ArrowUpRight,
   Calendar,
   Clock,
   Code2,
@@ -15,8 +16,17 @@ import {
   User,
 } from "lucide-react";
 
-import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
+import {
+  ArcadeBadge,
+  ArcadeButton,
+  ArcadeCard,
+  ArcadeTabs,
+  ArcadeTabsContent,
+  ArcadeTabsList,
+  ArcadeTabsTrigger,
+} from "@/components/arcade";
 import { InfoCard } from "@/components/reusable";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getServerCaller } from "@/utils/trpc-server";
 
 interface GameInfoPageProps {
@@ -28,13 +38,25 @@ interface GameInfoPageProps {
 async function getGameData(gameId: string) {
   try {
     const caller = await getServerCaller();
-    const [game, stats, leaderboard] = await Promise.all([
+    const [game, stats, leaderboard, models] = await Promise.all([
       caller.games.getPublicById({ id: gameId }),
       caller.gameLeaderboard.getStats({ gameId }),
       caller.gameLeaderboard.getLeaderboard({ gameId, limit: 10 }),
+      caller.models.listWithStats(),
     ]);
 
-    return { game, stats, leaderboard };
+    const matchedModel = models.find(
+      (model) =>
+        model.modelName === game.modelName &&
+        model.providers.some((provider) => provider === game.modelProvider),
+    );
+
+    return {
+      game,
+      stats,
+      leaderboard,
+      modelPageId: matchedModel?.id ?? null,
+    };
   } catch {
     return null;
   }
@@ -82,7 +104,7 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
     notFound();
   }
 
-  const { game, stats, leaderboard } = data;
+  const { game, stats, leaderboard, modelPageId } = data;
   const gameTitle = game.name ?? game.theme?.title ?? "Untitled Game";
   const creatorName = game.prompt.user?.name ?? "Anonymous";
   const hasPromptContent = game.prompt.content.trim().length > 0;
@@ -105,7 +127,29 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
             </div>
             <h1 className="text-4xl font-black tracking-tight">{gameTitle}</h1>
             <p className="mt-3 text-[var(--muted-foreground)] max-w-3xl">
-              Dedicated game information page for search indexing and discovery.
+              Created by{" "}
+              {game.prompt.user ? (
+                <Link
+                  href={`/profile/${game.prompt.user.id}` as Route}
+                  className="text-[var(--foreground)] hover:text-[var(--primary)]"
+                >
+                  {creatorName}
+                </Link>
+              ) : (
+                creatorName
+              )}{" "}
+              with{" "}
+              {modelPageId ? (
+                <Link
+                  href={`/models/${modelPageId}` as Route}
+                  className="text-[var(--foreground)] hover:text-[var(--primary)]"
+                >
+                  {game.modelName}
+                </Link>
+              ) : (
+                game.modelName
+              )}{" "}
+              ({game.modelProvider}).
             </p>
           </div>
 
@@ -149,16 +193,18 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
           </div>
         </ArcadeCard>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
           <InfoCard
             title="Prompt"
             subtitle="Original generation instruction"
             icon={<Layers className="h-4 w-4 text-[var(--primary)]" />}
           >
             {hasPromptContent ? (
-              <pre className="text-sm whitespace-pre-wrap break-words text-[var(--muted-foreground)]">
-                {game.prompt.content}
-              </pre>
+              <ScrollArea className="h-[640px] rounded-md border border-[var(--border)] bg-[var(--muted)]/10 p-4">
+                <pre className="text-sm whitespace-pre-wrap break-words text-[var(--muted-foreground)]">
+                  {game.prompt.content}
+                </pre>
+              </ScrollArea>
             ) : (
               <p className="text-sm text-[var(--muted-foreground)]">
                 Prompt content is private for this game.
@@ -166,105 +212,154 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
             )}
           </InfoCard>
 
-          <InfoCard
-            title="Metadata"
-            subtitle="Core game details"
-            icon={<Calendar className="h-4 w-4 text-[var(--primary)]" />}
-          >
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Game ID</span>
-                <span className="font-mono text-xs">{game.id}</span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Created</span>
-                <span>
-                  {new Date(game.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Theme</span>
-                <span>{game.theme?.title ?? "No theme"}</span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Provider</span>
-                <span>{game.modelProvider}</span>
-              </p>
-            </div>
-          </InfoCard>
+          <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <ArcadeCard>
+              <div className="p-4 border-b border-[var(--border)]">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-[var(--accent)]" />
+                  Top Scores
+                </h2>
+              </div>
+              <div className="p-4">
+                {leaderboard.length === 0 ? (
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    No scores yet for this game.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-[var(--border)]">
+                    {leaderboard.slice(0, 10).map((entry, index) => (
+                      <div
+                        key={entry.id}
+                        className="py-3 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">
+                            #{index + 1} {entry.user?.name ?? "Anonymous"}
+                          </p>
+                          <p className="text-xs text-[var(--muted-foreground)]">
+                            {new Date(entry.playedAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <p className="font-bold text-[var(--primary)]">
+                          {entry.score.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ArcadeCard>
 
-          <InfoCard
-            title="Performance"
-            subtitle="Gameplay statistics"
-            icon={<Clock className="h-4 w-4 text-[var(--primary)]" />}
-          >
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Average Score</span>
-                <span>{avgScore !== null ? avgScore.toFixed(1) : "N/A"}</span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">Unique Players</span>
-                <span>{stats?.uniquePlayers ?? 0}</span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-[var(--muted-foreground)]">
-                  Avg Completion Time
-                </span>
-                <span>
-                  {stats?.avgPlaytime !== null && stats?.avgPlaytime !== undefined
-                    ? `${Math.round(Number(stats.avgPlaytime))}s`
-                    : "N/A"}
-                </span>
-              </p>
-            </div>
-          </InfoCard>
-        </section>
+            <ArcadeCard className="p-4">
+              <ArcadeTabs defaultValue="metadata">
+                <ArcadeTabsList className="w-full">
+                  <ArcadeTabsTrigger value="metadata" className="flex-1">
+                    <Calendar className="h-4 w-4" />
+                    Metadata
+                  </ArcadeTabsTrigger>
+                  <ArcadeTabsTrigger value="performance" className="flex-1">
+                    <Clock className="h-4 w-4" />
+                    Performance
+                  </ArcadeTabsTrigger>
+                </ArcadeTabsList>
 
-        <ArcadeCard>
-          <div className="p-4 border-b border-[var(--border)]">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-[var(--accent)]" />
-              Top Scores
-            </h2>
-          </div>
-          <div className="p-4">
-            {leaderboard.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">
-                No scores yet for this game.
-              </p>
-            ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {leaderboard.slice(0, 10).map((entry, index) => (
-                  <div
-                    key={entry.id}
-                    className="py-3 flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
-                        #{index + 1} {entry.user?.name ?? "Anonymous"}
-                      </p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {new Date(entry.playedAt).toLocaleDateString("en-US", {
+                <ArcadeTabsContent value="metadata">
+                  <div className="space-y-2 text-sm">
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Game ID</span>
+                      <span className="font-mono text-xs">{game.id}</span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Created</span>
+                      <span>
+                        {new Date(game.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
                         })}
-                      </p>
-                    </div>
-                    <p className="font-bold text-[var(--primary)]">
-                      {entry.score.toLocaleString()}
+                      </span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Creator</span>
+                      {game.prompt.user ? (
+                        <Link
+                          href={`/profile/${game.prompt.user.id}` as Route}
+                          className="inline-flex items-center gap-1 hover:text-[var(--primary)]"
+                        >
+                          {game.prompt.user.name ?? "Anonymous"}
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      ) : (
+                        <span>Anonymous</span>
+                      )}
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Theme</span>
+                      <span>{game.theme?.title ?? "No theme"}</span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Model</span>
+                      {modelPageId ? (
+                        <Link
+                          href={`/models/${modelPageId}` as Route}
+                          className="inline-flex items-center gap-1 hover:text-[var(--primary)]"
+                        >
+                          {game.modelName}
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      ) : (
+                        <span>{game.modelName}</span>
+                      )}
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Provider</span>
+                      <span>{game.modelProvider}</span>
                     </p>
                   </div>
-                ))}
-              </div>
-            )}
+                </ArcadeTabsContent>
+
+                <ArcadeTabsContent value="performance">
+                  <div className="space-y-2 text-sm">
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Average Score</span>
+                      <span>{avgScore !== null ? avgScore.toFixed(1) : "N/A"}</span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">High Score</span>
+                      <span>
+                        {stats?.highScore !== null && stats?.highScore !== undefined
+                          ? Number(stats.highScore).toLocaleString()
+                          : "N/A"}
+                      </span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Total Plays</span>
+                      <span>{(stats?.totalPlays ?? 0).toLocaleString()}</span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">Unique Players</span>
+                      <span>{stats?.uniquePlayers ?? 0}</span>
+                    </p>
+                    <p className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--muted-foreground)]">
+                        Avg Completion Time
+                      </span>
+                      <span>
+                        {stats?.avgPlaytime !== null && stats?.avgPlaytime !== undefined
+                          ? `${Math.round(Number(stats.avgPlaytime))}s`
+                          : "N/A"}
+                      </span>
+                    </p>
+                  </div>
+                </ArcadeTabsContent>
+              </ArcadeTabs>
+            </ArcadeCard>
           </div>
-        </ArcadeCard>
+        </section>
       </div>
     </main>
   );
