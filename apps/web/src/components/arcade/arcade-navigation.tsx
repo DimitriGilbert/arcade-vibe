@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Models", href: "/models" },
+  { label: "Games", href: "/games" },
   {
     label: "Creator",
     href: "/creator",

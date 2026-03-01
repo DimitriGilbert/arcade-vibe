@@ -13,7 +13,7 @@ import { gameScores } from "@arcade-vibe/db/schema/games";
 import { scores } from "@arcade-vibe/db/schema/scores";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { user } from "@arcade-vibe/db/schema/auth";
-import { eq, desc, and, lt, isNull, sql, inArray, count, gt } from "drizzle-orm";
+import { eq, desc, and, lt, isNull, isNotNull, sql, inArray, count, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
 import {
@@ -276,6 +276,72 @@ export const gamesRouter = router({
     }),
 
   /**
+   * Get public game by ID for SEO/discovery pages
+   * Only returns submitted, completed, visible, non-deleted games
+   */
+  getPublicById: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const game = await db.query.games.findFirst({
+        where: and(
+          eq(games.id, input.id),
+          eq(games.status, "completed"),
+          eq(games.isSubmitted, true),
+          eq(games.isHidden, false),
+          isNull(games.deletedAt),
+        ),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+          theme: {
+            columns: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              visibility: true,
+              startDate: true,
+              endDate: true,
+              mediaConfig: true,
+            },
+          },
+        },
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      if (game.prompt.visibility !== "public") {
+        return {
+          ...game,
+          prompt: {
+            ...game.prompt,
+            content: "",
+          },
+        };
+      }
+
+      return game;
+    }),
+
+  /**
    * List all games for a prompt
    * Only includes non-hidden games
    * Supports pagination
@@ -516,6 +582,99 @@ export const gamesRouter = router({
         games: games_result,
         nextCursor,
         hasMore,
+      };
+    }),
+
+  /**
+   * Public game library for SEO/discovery pages
+   * Includes only visible, submitted, completed games
+   * Supports page-based pagination
+   */
+  listPublicPaginated: publicProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(12),
+      }),
+    )
+    .query(async ({ input }) => {
+      const conditions = and(
+        eq(games.isSubmitted, true),
+        isNotNull(games.submittedAt),
+        isNull(games.deletedAt),
+        eq(games.isHidden, false),
+        eq(games.status, "completed"),
+      );
+
+      const totalResult = await db
+        .select({ total: count() })
+        .from(games)
+        .where(conditions);
+
+      const totalItems = totalResult[0]?.total ?? 0;
+      const totalPages =
+        totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize);
+      const offset = (input.page - 1) * input.pageSize;
+
+      const items = await db.query.games.findMany({
+        where: conditions,
+        orderBy: [desc(games.createdAt)],
+        limit: input.pageSize,
+        offset,
+        with: {
+          prompt: {
+            columns: {
+              id: true,
+              content: true,
+              visibility: true,
+            },
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+          theme: {
+            columns: {
+              id: true,
+              title: true,
+            },
+          },
+          tierCost: {
+            columns: {
+              slug: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      const sanitizedItems = items.map((item) => {
+        if (item.prompt.visibility === "public") {
+          return item;
+        }
+
+        return {
+          ...item,
+          prompt: {
+            ...item.prompt,
+            content: "",
+          },
+        };
+      });
+
+      return {
+        items: sanitizedItems,
+        total: totalItems,
+        page: input.page,
+        pageSize: input.pageSize,
+        totalPages,
+        hasNextPage: totalPages > 0 && input.page < totalPages,
+        hasPreviousPage: input.page > 1,
       };
     }),
 

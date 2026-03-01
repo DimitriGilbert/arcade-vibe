@@ -159,8 +159,10 @@ export type GamesOutput = RouterOutput["games"];
 export type GamesInput = RouterInput["games"];
 
 export type GameByIdOutput = GamesOutput["getById"];
+export type GamePublicByIdOutput = GamesOutput["getPublicById"];
 export type GameListByPromptOutput = GamesOutput["listByPrompt"];
 export type GameListByThemeOutput = GamesOutput["listByTheme"];
+export type GameListPublicPaginatedOutput = GamesOutput["listPublicPaginated"];
 export type GameSubmitOutput = GamesOutput["submit"];
 export type GameHideOutput = GamesOutput["hide"];
 export type GameGetCodeOutput = GamesOutput["getCode"];
@@ -281,6 +283,8 @@ export type Game = GameByIdOutput;
  * @source RouterOutput["games"]["listByTheme"]["games"][number]
  */
 export type GameFromApi = NonNullable<GameListByThemeOutput>["games"][number];
+export type PublicGameListItem =
+  NonNullable<GameListPublicPaginatedOutput>["items"][number];
 
 /**
  * Game with ranking information for leaderboard display
