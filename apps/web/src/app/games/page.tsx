@@ -7,7 +7,7 @@ import { Calendar, Gamepad2, Layers, Play, Star, User } from "lucide-react";
 
 import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
-import { trpcClient } from "@/utils/trpc";
+import { getServerCaller } from "@/utils/trpc-server";
 
 const PAGE_SIZE = 12;
 
@@ -40,11 +40,12 @@ function getPageHref(page: number): Route {
 export default async function GamesLibraryPage({
   searchParams,
 }: GamesLibraryPageProps) {
+  const caller = await getServerCaller();
   const resolvedSearchParams =
     (await searchParams) ?? ({ page: undefined } as { page?: string });
   const page = parsePageParam(resolvedSearchParams.page);
 
-  const result = await trpcClient.games.listPublicPaginated.query({
+  const result = await caller.games.listPublicPaginated({
     page,
     pageSize: PAGE_SIZE,
   });

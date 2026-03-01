@@ -17,7 +17,7 @@ import {
 
 import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
 import { InfoCard } from "@/components/reusable";
-import { trpcClient } from "@/utils/trpc";
+import { getServerCaller } from "@/utils/trpc-server";
 
 interface GameInfoPageProps {
   params: Promise<{
@@ -27,10 +27,11 @@ interface GameInfoPageProps {
 
 async function getGameData(gameId: string) {
   try {
+    const caller = await getServerCaller();
     const [game, stats, leaderboard] = await Promise.all([
-      trpcClient.games.getPublicById.query({ id: gameId }),
-      trpcClient.gameLeaderboard.getStats.query({ gameId }),
-      trpcClient.gameLeaderboard.getLeaderboard.query({ gameId, limit: 10 }),
+      caller.games.getPublicById({ id: gameId }),
+      caller.gameLeaderboard.getStats({ gameId }),
+      caller.gameLeaderboard.getLeaderboard({ gameId, limit: 10 }),
     ]);
 
     return { game, stats, leaderboard };
