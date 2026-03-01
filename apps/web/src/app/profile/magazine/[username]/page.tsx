@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@arcade-vibe/auth";
 import { ArcadeCard } from "@/components/arcade";
 import { getProfileData } from "@/lib/profile-data";
-import { trpcClient } from "@/utils/trpc";
+import { getServerCaller } from "@/utils/trpc-server";
 import MagazineProfileClient from "./magazine-profile-client";
 
 interface ProfilePageProps {
@@ -36,9 +36,15 @@ export default async function MagazineLayoutProfile({ params }: ProfilePageProps
   }
 
   const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
-  const publicCollections = await trpcClient.collections.listPublicByUser.query({
+  const caller = await getServerCaller();
+  const rawPublicCollections = await caller.collections.listPublicByUser({
     userId: user.id,
   });
+  const publicCollections = rawPublicCollections.map((collection) => ({
+    ...collection,
+    createdAt: collection.createdAt.toISOString(),
+    updatedAt: collection.updatedAt.toISOString(),
+  }));
 
   return (
     <MagazineProfileClient
