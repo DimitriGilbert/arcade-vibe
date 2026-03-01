@@ -22,6 +22,7 @@ import {
 } from "./library-patterns";
 import { feedback } from "./feedback";
 import { emailLogs, emailTemplates } from "./email";
+import { collections, collectionGames } from "./collections";
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -44,6 +45,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
   gameSessionMetrics: many(gameSessionMetrics),
   feedback: many(feedback),
   emailLogs: many(emailLogs),
+  collections: many(collections),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -170,6 +172,26 @@ export const gamesRelations = relations(games, ({ one, many }) => ({
   promptRuns: many(promptRuns),
   ratings: many(ratings),
   versions: many(gameVersions),
+  collectionGames: many(collectionGames),
+}));
+
+export const collectionsRelations = relations(collections, ({ one, many }) => ({
+  user: one(user, {
+    fields: [collections.userId],
+    references: [user.id],
+  }),
+  collectionGames: many(collectionGames),
+}));
+
+export const collectionGamesRelations = relations(collectionGames, ({ one }) => ({
+  collection: one(collections, {
+    fields: [collectionGames.collectionId],
+    references: [collections.id],
+  }),
+  game: one(games, {
+    fields: [collectionGames.gameId],
+    references: [games.id],
+  }),
 }));
 
 export const gameVersionsRelations = relations(gameVersions, ({ one }) => ({

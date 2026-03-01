@@ -266,6 +266,18 @@ export type ModelsListWithStatsOutput = ModelsOutput["listWithStats"];
 export type ModelsGetByIdWithStatsOutput = ModelsOutput["getByIdWithStats"];
 export type ModelsListGamesByModelOutput = ModelsOutput["listGamesByModel"];
 
+// --- Collections Router ---
+
+export type CollectionsOutput = RouterOutput["collections"];
+export type CollectionsInput = RouterInput["collections"];
+
+export type CollectionsListMineOutput = CollectionsOutput["listMine"];
+export type CollectionsGetByIdOutput = CollectionsOutput["getById"];
+export type CollectionsGetPublicByIdOutput = CollectionsOutput["getPublicById"];
+export type CollectionsCreateOutput = CollectionsOutput["create"];
+export type CollectionsUpdateOutput = CollectionsOutput["update"];
+export type CollectionsAddGameOutput = CollectionsOutput["addGame"];
+
 // ============================================
 // ENTITY TYPES (derived from router outputs)
 // ============================================
@@ -553,6 +565,10 @@ export type SortOrder = SortConfigInput["order"];
 export type ModelWithStats = ModelsListWithStatsOutput[number];
 export type ModelDetail = ModelsGetByIdWithStatsOutput;
 export type ModelGame = ModelsListGamesByModelOutput[number];
+
+export type Collection = CollectionsListMineOutput[number];
+export type CollectionDetails = CollectionsGetByIdOutput;
+export type PublicCollectionDetails = CollectionsGetPublicByIdOutput;
 
 // --- Admin Models Router Types ---
 

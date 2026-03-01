@@ -17,6 +17,7 @@ import { modelsRouter } from "./models";
 import { userRouter } from "./user";
 import { stripeRouter } from "./stripe";
 import { feedbackRouter } from "./feedback";
+import { collectionsRouter } from "./collections";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -33,6 +34,7 @@ export const appRouter = router({
   themes: themesRouter,
   prompts: promptsRouter,
   games: gamesRouter,
+  collections: collectionsRouter,
   ratings: ratingsRouter,
   promptRuns: promptRunsRouter,
 

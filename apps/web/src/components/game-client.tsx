@@ -35,9 +35,11 @@ import {
   XCircle,
   GitFork,
   Code,
+  FolderPlus,
 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { RatingForm } from "@/components/game/rating-form";
+import { AddToCollectionDialog } from "@/components/game/add-to-collection-dialog";
 import { ViewPromptDialog } from "@/components/game/view-prompt-dialog";
 import { ReportDialog } from "@/components/game/report-dialog";
 import LoadingState from "@/components/reusable/loading-state";
@@ -58,6 +60,7 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showPromptDialog, setShowPromptDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   const router = useRouter();
@@ -395,6 +398,16 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
           {session?.user && (
             <button
               type="button"
+              onClick={() => setShowCollectionDialog(true)}
+              className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
+              title="Save to collection"
+            >
+              <FolderPlus className="size-4" />
+            </button>
+          )}
+          {session?.user && (
+            <button
+              type="button"
               onClick={handleDownload}
               disabled={downloadMutation.isPending}
               className="hidden sm:flex p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors disabled:opacity-50"
@@ -634,6 +647,12 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
         isOpen={canViewPrompt && showPromptDialog}
         onClose={() => setShowPromptDialog(false)}
         promptContent={promptSnippet || ""}
+      />
+
+      <AddToCollectionDialog
+        gameId={gameId}
+        open={showCollectionDialog}
+        onOpenChange={setShowCollectionDialog}
       />
 
       <ReportDialog
