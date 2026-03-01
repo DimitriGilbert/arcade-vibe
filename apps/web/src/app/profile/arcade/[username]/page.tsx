@@ -1,8 +1,9 @@
-import { AlertCircle, Trophy, Zap, Gamepad2, Target } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { headers } from "next/headers";
 import { auth } from "@arcade-vibe/auth";
-import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
+import { ArcadeCard } from "@/components/arcade";
 import { getProfileData } from "@/lib/profile-data";
+import { trpcClient } from "@/utils/trpc";
 import ArcadeProfileClient from "./arcade-profile-client";
 
 interface ProfilePageProps {
@@ -35,12 +36,16 @@ export default async function ArcadeCabinetProfile({ params }: ProfilePageProps)
   }
 
   const { user, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
+  const publicCollections = await trpcClient.collections.listPublicByUser.query({
+    userId: user.id,
+  });
 
   return (
     <ArcadeProfileClient
       user={user}
       gamesWithRankings={gamesWithRankings}
       ratings={ratings}
+      publicCollections={publicCollections}
       stats={stats}
       isOwnProfile={isOwnProfile}
     />

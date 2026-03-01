@@ -54,6 +54,10 @@ const collectionIdInput = z.object({
   id: z.string().uuid(),
 });
 
+const listPublicByUserInput = z.object({
+  userId: z.string().min(1),
+});
+
 const collectionGameInput = z.object({
   collectionId: z.string().uuid(),
   gameId: z.string().uuid(),
@@ -75,6 +79,25 @@ async function getOwnedCollectionOrThrow(collectionId: string, userId: string) {
 }
 
 export const collectionsRouter = router({
+  listPublicByUser: publicProcedure
+    .input(listPublicByUserInput)
+    .query(async ({ input }) => {
+      return await db.query.collections.findMany({
+        where: and(
+          eq(collections.userId, input.userId),
+          eq(collections.isPublic, true),
+        ),
+        orderBy: [desc(collections.updatedAt)],
+        with: {
+          collectionGames: {
+            columns: {
+              id: true,
+            },
+          },
+        },
+      });
+    }),
+
   listMine: protectedProcedure.query(async ({ ctx }) => {
     return await db.query.collections.findMany({
       where: eq(collections.userId, ctx.user.id),

@@ -272,6 +272,8 @@ export type CollectionsOutput = RouterOutput["collections"];
 export type CollectionsInput = RouterInput["collections"];
 
 export type CollectionsListMineOutput = CollectionsOutput["listMine"];
+export type CollectionsListPublicByUserOutput =
+  CollectionsOutput["listPublicByUser"];
 export type CollectionsGetByIdOutput = CollectionsOutput["getById"];
 export type CollectionsGetPublicByIdOutput = CollectionsOutput["getPublicById"];
 export type CollectionsCreateOutput = CollectionsOutput["create"];
@@ -567,6 +569,8 @@ export type ModelDetail = ModelsGetByIdWithStatsOutput;
 export type ModelGame = ModelsListGamesByModelOutput[number];
 
 export type Collection = CollectionsListMineOutput[number];
+export type PublicCollectionListItem =
+  CollectionsListPublicByUserOutput[number];
 export type CollectionDetails = CollectionsGetByIdOutput;
 export type PublicCollectionDetails = CollectionsGetPublicByIdOutput;
 

@@ -7,7 +7,14 @@ import { PromptList } from "@/components/profile/prompt-list";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { GamesListCard } from "@/components/profile/games-list-card";
 import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
-import type { GameWithRanking, Prompt, Rating, UserProfile } from "@/lib/trpc-types";
+import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
+import type {
+  GameWithRanking,
+  Prompt,
+  PublicCollectionListItem,
+  Rating,
+  UserProfile,
+} from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
 
 interface ProfilePageClientProps {
@@ -15,6 +22,7 @@ interface ProfilePageClientProps {
   prompts: Prompt[];
   gamesWithRankings: GameWithRanking[];
   ratings: Rating[];
+  publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
   isOwnProfile: boolean;
 }
@@ -24,6 +32,7 @@ export default function ProfilePageClient({
   prompts,
   gamesWithRankings,
   ratings,
+  publicCollections,
   stats,
   isOwnProfile,
 }: ProfilePageClientProps) {
@@ -82,6 +91,7 @@ export default function ProfilePageClient({
         </div>
 
         <div className="mt-8 space-y-6">
+          <PublicCollectionsCard collections={publicCollections} />
           <RatingsHistoryCard
             ratings={ratings || []}
             isLoading={false}

@@ -2,8 +2,15 @@
 
 import { Gamepad2, Star, Zap, Play } from "lucide-react";
 import { MagazineHeader, GamesSection, ActivityFeed } from "@/components/profile/magazine";
+import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { StatBlock } from "@/components/profile/shared";
-import type { GameWithRanking, Prompt, Rating, UserProfile } from "@/lib/trpc-types";
+import type {
+  GameWithRanking,
+  Prompt,
+  PublicCollectionListItem,
+  Rating,
+  UserProfile,
+} from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
 
 interface MagazineProfileClientProps {
@@ -11,6 +18,7 @@ interface MagazineProfileClientProps {
   prompts: Prompt[];
   gamesWithRankings: GameWithRanking[];
   ratings: Rating[];
+  publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
   isOwnProfile: boolean;
 }
@@ -20,6 +28,7 @@ export default function MagazineProfileClient({
   prompts,
   gamesWithRankings,
   ratings,
+  publicCollections,
   stats,
   isOwnProfile,
 }: MagazineProfileClientProps) {
@@ -40,6 +49,10 @@ export default function MagazineProfileClient({
         )}
 
         <GamesSection games={gamesWithRankings} />
+
+        <div className="mb-16">
+          <PublicCollectionsCard collections={publicCollections} />
+        </div>
 
         <ActivityFeed ratings={ratings} prompts={prompts} />
       </div>

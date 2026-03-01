@@ -3,14 +3,21 @@
 import { Trophy, Gamepad2, Target } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import { ProfileHero, TrophyCase, AllGamesGrid } from "@/components/profile/arcade";
+import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { QuickStats } from "@/components/profile/shared/quick-stats";
-import type { GameWithRanking, Rating, UserProfile } from "@/lib/trpc-types";
+import type {
+  GameWithRanking,
+  PublicCollectionListItem,
+  Rating,
+  UserProfile,
+} from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
 
 interface ArcadeProfileClientProps {
   user: UserProfile;
   gamesWithRankings: GameWithRanking[];
   ratings: Rating[];
+  publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
   isOwnProfile: boolean;
 }
@@ -19,6 +26,7 @@ export default function ArcadeProfileClient({
   user,
   gamesWithRankings,
   ratings,
+  publicCollections,
   stats,
   isOwnProfile,
 }: ArcadeProfileClientProps) {
@@ -53,6 +61,10 @@ export default function ArcadeProfileClient({
             <ArcadeBadge text={String(gamesWithRankings.length)} variant="default" />
           </h2>
           <AllGamesGrid games={gamesWithRankings} />
+        </section>
+
+        <section className="mt-12">
+          <PublicCollectionsCard collections={publicCollections} />
         </section>
       </div>
     </div>

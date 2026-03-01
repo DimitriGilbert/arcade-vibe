@@ -1,13 +1,9 @@
-import { AlertCircle, Trophy, Zap } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { headers } from "next/headers";
 import { auth } from "@arcade-vibe/auth";
 import { ArcadeCard } from "@/components/arcade";
-import { StatsCard } from "@/components/profile/stats-card";
-import { PromptList } from "@/components/profile/prompt-list";
-import { ProfileHeader } from "@/components/profile/profile-header";
-import { GamesListCard } from "@/components/profile/games-list-card";
-import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
 import { getProfileData } from "@/lib/profile-data";
+import { trpcClient } from "@/utils/trpc";
 import ProfilePageClient from "./profile-page-client";
 
 interface ProfilePageProps {
@@ -49,7 +45,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     );
   }
 
-  const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
+  const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } =
+    profileData;
+  const publicCollections = await trpcClient.collections.listPublicByUser.query({
+    userId: user.id,
+  });
 
   return (
     <ProfilePageClient
@@ -57,6 +57,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       prompts={prompts}
       gamesWithRankings={gamesWithRankings}
       ratings={ratings}
+      publicCollections={publicCollections}
       stats={stats}
       isOwnProfile={isOwnProfile}
     />

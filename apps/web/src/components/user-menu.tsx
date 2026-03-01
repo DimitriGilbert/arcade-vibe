@@ -1,7 +1,8 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Settings, User, LogOut } from "lucide-react";
+import { Settings, User, LogOut, FolderOpen } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -62,6 +63,10 @@ export default function UserMenu() {
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="h-4 w-4 mr-2" />
             Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/collections" as Route)}>
+            <FolderOpen className="h-4 w-4 mr-2" />
+            My collections
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

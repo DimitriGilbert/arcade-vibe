@@ -162,13 +162,6 @@
       "when": 1771905600000,
       "tag": "0022_collections_launch",
       "breakpoints": true
-    },
-    {
-      "idx": 23,
-      "version": "7",
-      "when": 1772393331038,
-      "tag": "0023_polite_blazing_skull",
-      "breakpoints": true
     }
   ]
 }
