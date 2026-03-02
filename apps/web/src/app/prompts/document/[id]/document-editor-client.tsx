@@ -96,9 +96,11 @@ export default function DocumentEditorClient({ promptId }: DocumentEditorClientP
     );
   }
 
-  const truncatedContent = prompt.content.length > 200
-    ? prompt.content.slice(0, 200) + "..."
-    : prompt.content;
+  const truncatedContent = prompt.title
+    ? prompt.title
+    : prompt.content.length > 200
+      ? prompt.content.slice(0, 200) + "..."
+      : prompt.content;
   const displayContent = isExpanded ? prompt.content : truncatedContent;
 
   return (

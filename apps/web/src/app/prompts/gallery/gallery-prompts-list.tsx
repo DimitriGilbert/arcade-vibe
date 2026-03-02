@@ -60,7 +60,7 @@ export function GalleryPromptsList() {
                   </div>
                   
                   <pre className="text-sm text-[var(--muted-foreground)] line-clamp-4 whitespace-pre-wrap flex-1 mb-4">
-                    {prompt.content.slice(0, 150)}{prompt.content.length > 150 ? "..." : ""}
+                    {prompt.title || `${prompt.content.slice(0, 150)}${prompt.content.length > 150 ? "..." : ""}`}
                   </pre>
                   
                   <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] pt-3 border-t border-[var(--border)]">

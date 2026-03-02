@@ -12,6 +12,7 @@ import type { Visibility } from "@/lib/trpc-types";
 
 interface PromptListItemProps {
   id: string;
+  title: string | null;
   content: string;
   version: number;
   updatedAt: Date | string;
@@ -67,6 +68,7 @@ function truncateContent(content: string, maxLength: number): string {
 
 export function PromptListItem({
   id,
+  title,
   content,
   version,
   updatedAt,
@@ -77,7 +79,10 @@ export function PromptListItem({
   onToggleVisibility,
   isDeleting = false,
 }: PromptListItemProps): React.ReactElement {
-  const displayContent = truncateContent(content, 60);
+  // Display title if available, otherwise fall back to truncated content
+  const displayContent = title && title.trim().length > 0
+    ? title
+    : truncateContent(content, 50);
   const relativeTime = formatRelativeTime(updatedAt);
 
   const handleDelete = (e: React.MouseEvent) => {

@@ -30,6 +30,7 @@ import type { Visibility } from "@/lib/trpc-types";
 
 interface InboxPrompt {
   id: string;
+  title?: string | null;
   content: string;
   version: number;
   updatedAt: string;
@@ -224,7 +225,7 @@ export function InboxSidebar({
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-[var(--foreground)] line-clamp-2">
-                          {truncateContent(prompt.content, 50)}
+                          {prompt.title ?? truncateContent(prompt.content, 50)}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <ArcadeBadge

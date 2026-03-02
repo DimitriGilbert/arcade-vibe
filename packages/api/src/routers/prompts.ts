@@ -25,6 +25,7 @@ export const promptsRouter = router({
       z.object({
         themeId: z.string().uuid(),
         content: z.string().min(1),
+        title: z.string().max(100).optional(),
         tokenizer: z.string().default("gpt-4"),
         visibility: z
           .enum(["private", "public_on_freeze", "public"])
@@ -73,6 +74,7 @@ export const promptsRouter = router({
           authorId: ctx.user.id,
           themeId: input.themeId,
           content: input.content,
+          title: input.title,
           contentHash,
           tokenCount,
           tokenizer: input.tokenizer,
@@ -96,6 +98,7 @@ export const promptsRouter = router({
       z.object({
         id: z.string().uuid(),
         content: z.string().min(1),
+        title: z.string().max(100).optional(),
         tokenizer: z.string().default("gpt-4"),
         visibility: z
           .enum(["private", "public_on_freeze", "public"])
@@ -139,6 +142,7 @@ export const promptsRouter = router({
           themeId: originalPrompt.themeId,
           parentId: originalPrompt.id,
           content: input.content,
+          title: input.title ?? originalPrompt.title,
           contentHash,
           tokenCount,
           tokenizer: input.tokenizer,
@@ -222,6 +226,7 @@ export const promptsRouter = router({
           themeId: targetThemeId,
           parentId: originalPrompt.id,
           content: originalPrompt.content,
+          title: originalPrompt.title,
           contentHash: originalPrompt.contentHash,
           tokenCount: originalPrompt.tokenCount,
           tokenizer: originalPrompt.tokenizer,
@@ -367,6 +372,7 @@ export const promptsRouter = router({
         orderBy: [desc(prompts.updatedAt)],
         columns: {
           id: true,
+          title: true,
           content: true,
           version: true,
           visibility: true,
@@ -677,6 +683,7 @@ export const promptsRouter = router({
 
       return {
         id: prompt.id,
+        title: prompt.title,
         content: prompt.content,
         tokenCount: prompt.tokenCount,
         tokenizer: prompt.tokenizer,

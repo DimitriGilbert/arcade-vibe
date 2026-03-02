@@ -32,6 +32,7 @@ import type { ModelSelection } from "./types";
 
 interface PromptListItem {
   id: string;
+  title: string | null;
   content: string;
   version: number;
   updatedAt: string;
@@ -39,8 +40,8 @@ interface PromptListItem {
 }
 
 interface WorkbenchHeaderProps {
-  promptName: string;
-  onPromptNameChange: (name: string) => void;
+  promptTitle: string;
+  onPromptTitleChange: (title: string) => void;
   credits: CreditBalanceInfo | null | undefined;
   isLoading?: boolean;
   // Theme selection
@@ -73,8 +74,8 @@ interface WorkbenchHeaderProps {
 }
 
 export function WorkbenchHeader({
-  promptName,
-  onPromptNameChange,
+  promptTitle,
+  onPromptTitleChange,
   credits,
   isLoading,
   // Theme
@@ -106,7 +107,7 @@ export function WorkbenchHeader({
   onPlayGame,
 }: WorkbenchHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editValue, setEditValue] = useState(promptName);
+  const [editValue, setEditValue] = useState(promptTitle);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
 
@@ -124,19 +125,19 @@ export function WorkbenchHeader({
   });
 
   const handleStartEdit = useCallback(() => {
-    setEditValue(promptName);
+    setEditValue(promptTitle);
     setIsEditingName(true);
-  }, [promptName]);
+  }, [promptTitle]);
 
   const handleSaveEdit = useCallback(() => {
-    onPromptNameChange(editValue.trim() || "Untitled Prompt");
+    onPromptTitleChange(editValue.trim());
     setIsEditingName(false);
-  }, [editValue, onPromptNameChange]);
+  }, [editValue, onPromptTitleChange]);
 
   const handleCancelEdit = useCallback(() => {
-    setEditValue(promptName);
+    setEditValue(promptTitle);
     setIsEditingName(false);
-  }, [promptName]);
+  }, [promptTitle]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -163,13 +164,13 @@ export function WorkbenchHeader({
   }, [promptToDelete, onDeletePrompt]);
 
   const handleGenerateClick = useCallback(() => {
-    // Commit any in-progress name edit before generating
+    // Commit any in-progress title edit before generating
     if (isEditingName) {
-      onPromptNameChange(editValue.trim() || "Untitled Prompt");
+      onPromptTitleChange(editValue.trim());
       setIsEditingName(false);
     }
     onGenerate();
-  }, [isEditingName, editValue, onPromptNameChange, onGenerate]);
+  }, [isEditingName, editValue, onPromptTitleChange, onGenerate]);
 
   const totalCredits = useMemo(
     () => selectedModels.reduce((sum, m) => sum + m.creditCost, 0),
@@ -260,7 +261,7 @@ export function WorkbenchHeader({
               className={prompt.id === selectedPromptId ? "bg-[var(--muted)]/50" : ""}
             >
               <span className="truncate">
-                v{prompt.version}: {prompt.content.slice(0, 40)}...
+                v{prompt.version}: {prompt.title || prompt.content.slice(0, 40)}
               </span>
             </DropdownMenuItem>
           ))}
@@ -358,7 +359,7 @@ export function WorkbenchHeader({
             onClick={handleStartEdit}
             className="flex items-center gap-1.5 text-sm font-medium hover:text-[var(--primary)] transition-colors truncate w-full"
           >
-            <span className="truncate">{promptName || "Untitled Prompt"}</span>
+            <span className="truncate">{promptTitle || "Untitled Prompt"}</span>
             <Pencil className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
           </button>
         )}

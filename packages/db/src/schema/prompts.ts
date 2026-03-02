@@ -23,6 +23,7 @@ export const prompts = pgTable(
       .references(() => themes.id, { onDelete: "cascade" })
       .notNull(),
     parentId: uuid("parent_id").references((): AnyPgColumn => prompts.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 100 }),
     content: text("content").notNull(),
     contentHash: varchar("content_hash", { length: 64 }).notNull(),
     tokenCount: integer("token_count").notNull(),
@@ -41,6 +42,7 @@ export const prompts = pgTable(
     index("prompts_authorId_idx").on(table.authorId),
     index("prompts_themeId_idx").on(table.themeId),
     index("prompts_parentId_idx").on(table.parentId),
+    index("prompts_title_idx").on(table.title),
     index("prompts_contentHash_idx").on(table.contentHash),
     index("prompts_visibility_idx").on(table.visibility),
     index("idx_prompts_author_theme").on(table.authorId, table.themeId),

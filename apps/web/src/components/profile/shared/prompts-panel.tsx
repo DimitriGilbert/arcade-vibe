@@ -49,7 +49,7 @@ export function PromptsPanel({ prompts }: PromptsPanelProps) {
               <ArcadeBadge text={prompt.visibility} variant="default" />
             </div>
             <p className="text-xs text-[var(--muted-foreground)] line-clamp-2">
-              {prompt.content.slice(0, 100)}...
+              {prompt.title || `${prompt.content.slice(0, 100)}...`}
             </p>
             <p className="text-xs text-[var(--muted-foreground)]/60 mt-1">
               {new Date(prompt.createdAt).toLocaleDateString()}

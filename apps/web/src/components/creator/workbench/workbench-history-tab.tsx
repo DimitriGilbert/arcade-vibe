@@ -27,6 +27,7 @@ import type { GenerationStatus, ModelSelection } from "./types";
 import {
   useGenerationById,
   useAllGenerations,
+  useGenerationsStore,
 } from "@/stores/generations-store";
 import { OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
@@ -133,14 +134,19 @@ export function WorkbenchHistoryTab({
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Get current generation state
+  // Get current generation state - need to look up by gameId for completed generations
   const generation = useGenerationById(activeOutputTab);
+  // Also find generation by gameId if activeOutputTab is a gameId
+  const generationByGameId = useGenerationsStore((state) => 
+    Object.values(state.generations).find(g => g.gameId === activeOutputTab)
+  );
+  const activeGeneration = generation ?? generationByGameId;
   const hasMultipleModels = selectedModels.length > 1;
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
-    generation?.status === "reasoning" || generation?.status === "generating";
-  const codeLength = generation?.code.length ?? 0;
-  const reasoningLength = generation?.reasoning?.length ?? 0;
+    activeGeneration?.status === "reasoning" || activeGeneration?.status === "generating";
+  const codeLength = activeGeneration?.code.length ?? 0;
+  const reasoningLength = activeGeneration?.reasoning?.length ?? 0;
 
   // Get all running generations
   const allGenerations = useAllGenerations();
@@ -161,19 +167,19 @@ export function WorkbenchHistoryTab({
     const items: HistoryItem[] = [];
     const seenGameIds = new Set<string>();
 
-    // Add running generations (include complete to track gameIds)
+    // Add running and completed generations from store
     for (const gen of allGenerations) {
       if (gen.status !== "idle" && gen.status !== "error") {
-        if (gen.status === "complete" && gen.gameId) {
-          // Track gameId to dedupe with query results
+        // Track gameId to dedupe with query results
+        if (gen.gameId) {
           seenGameIds.add(gen.gameId);
-          continue; // Don't add - will come from query
         }
 
         const model = selectedModels.find((m) => m.id === gen.modelSelectionId);
+        // Use gameId as id when complete so it matches activeOutputTab
         items.push({
           type: "running",
-          id: gen.modelSelectionId,
+          id: gen.status === "complete" && gen.gameId ? gen.gameId : gen.modelSelectionId,
           modelName: model?.modelName ?? gen.modelKey,
           status: gen.status,
         });
@@ -382,15 +388,15 @@ export function WorkbenchHistoryTab({
                         )}
                       </div>
                     </button>
-                    {isExpanded && generation && (
+                    {isExpanded && activeGeneration && (
                       <div className="border-t border-[var(--border)] bg-[var(--card)]">
                         <div className="h-[50vh] min-h-[300px] max-h-[60vh] overflow-hidden relative p-1.5" ref={panelRef}>
-                          {generation.code || generation.reasoning ? (
+                          {activeGeneration.code || activeGeneration.reasoning ? (
                             <>
                               <StreamingCodeViewerV2
                                 key={activeOutputTab ?? "no-active"}
-                                code={generation.code ?? ""}
-                                reasoning={generation.reasoning}
+                                code={activeGeneration.code ?? ""}
+                                reasoning={activeGeneration.reasoning}
                                 language="html"
                                 isStreaming={isStreaming}
                                 fileName="game.html"
@@ -407,12 +413,12 @@ export function WorkbenchHistoryTab({
                                 </ArcadeButton>
                               )}
                             </>
-                          ) : generation.status === "reasoning" ? (
+                          ) : activeGeneration.status === "reasoning" ? (
                             <WaitingState status="reasoning" />
-                          ) : generation.status === "generating" ? (
+                          ) : activeGeneration.status === "generating" ? (
                             <WaitingState status="generating" />
-                          ) : generation.status === "error" ? (
-                            <OutputStatusCard type="error" error={generation.error ?? undefined} />
+                          ) : activeGeneration.status === "error" ? (
+                            <OutputStatusCard type="error" error={activeGeneration.error ?? undefined} />
                           ) : null}
                         </div>
                       </div>

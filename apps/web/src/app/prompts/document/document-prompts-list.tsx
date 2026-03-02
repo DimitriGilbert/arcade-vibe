@@ -60,7 +60,7 @@ export function DocumentPromptsList() {
                       <ArcadeBadge text={prompt.visibility} variant="default" />
                     </div>
                     <pre className="text-sm text-[var(--muted-foreground)] line-clamp-3 whitespace-pre-wrap">
-                      {prompt.content.slice(0, 200)}{prompt.content.length > 200 ? "..." : ""}
+                      {prompt.title || `${prompt.content.slice(0, 200)}${prompt.content.length > 200 ? "..." : ""}`}
                     </pre>
                     <div className="flex items-center gap-4 mt-3 text-xs text-[var(--muted-foreground)]">
                       <span className="inline-flex items-center gap-1">

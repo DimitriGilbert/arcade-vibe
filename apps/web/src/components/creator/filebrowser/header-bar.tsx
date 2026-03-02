@@ -2,6 +2,7 @@
 
 import { Loader2, Save, Play, Plus, ExternalLink, Home, ChevronRight } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
+import { Input } from "@/components/ui/input";
 import type { ThemeNode, PromptNode, RunNode, FilebrowserSelection } from "./types";
 
 interface HeaderBarProps {
@@ -16,6 +17,8 @@ interface HeaderBarProps {
   hasActiveGame: boolean;
   completedCount: number;
   totalModels: number;
+  promptTitle: string;
+  onPromptTitleChange: (title: string) => void;
   onNewPrompt: () => void;
   onSave: () => void;
   onGenerate: () => void;
@@ -35,6 +38,8 @@ export function HeaderBar({
   hasActiveGame,
   completedCount,
   totalModels,
+  promptTitle,
+  onPromptTitleChange,
   onNewPrompt,
   onSave,
   onGenerate,
@@ -95,6 +100,21 @@ export function HeaderBar({
           );
         })}
       </div>
+
+      {/* Title Input */}
+      {(selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt") && (
+        <div className="flex items-center gap-2 mx-4 min-w-0 max-w-xs">
+          <Input
+            type="text"
+            placeholder="Prompt title (required)"
+            value={promptTitle}
+            onChange={(e) => onPromptTitleChange(e.target.value)}
+            maxLength={100}
+            className="h-8 text-sm bg-[var(--background)]"
+            disabled={isGenerating}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">

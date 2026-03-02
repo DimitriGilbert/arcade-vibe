@@ -34,6 +34,7 @@ interface Theme {
 
 interface Prompt {
   id: string;
+  title: string | null;
   content: string;
   version: number;
   updatedAt: string;
@@ -177,6 +178,7 @@ export function EditorSidebar({
                       <PromptListItem
                         key={prompt.id}
                         id={prompt.id}
+                        title={prompt.title}
                         content={prompt.content}
                         version={prompt.version}
                         updatedAt={prompt.updatedAt}

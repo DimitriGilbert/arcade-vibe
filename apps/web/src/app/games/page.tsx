@@ -58,47 +58,35 @@ export default async function GamesLibraryPage({
   }
 
   return (
-    <main className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4 max-w-6xl space-y-6">
-        <ArcadeCard>
-          <div className="p-6 border-b border-[var(--border)] bg-[var(--muted)]/20">
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-              Game Library
-            </p>
-            <h1 className="mt-2 text-4xl font-black tracking-tight">
-              All Published Games
-            </h1>
-            <p className="mt-3 text-[var(--muted-foreground)] max-w-2xl">
-              Browse submitted games.
+    <main className="min-h-screen bg-background">
+      <div className="container mx-auto max-w-6xl space-y-8 px-4 py-8">
+        <header className="space-y-4 border-b border-[var(--border)] pb-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+            Game Library
+          </p>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-4xl font-black tracking-tight">All Published Games</h1>
+              <p className="mt-2 max-w-2xl text-[var(--muted-foreground)]">
+                Browse submitted games.
+              </p>
+            </div>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Page {page} of {Math.max(result.totalPages, 1)}
             </p>
           </div>
-          <div className="p-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
-                Total Games
-              </p>
-              <p className="mt-1 text-2xl font-bold">{result.total.toLocaleString()}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
-                Page
-              </p>
-              <p className="mt-1 text-2xl font-bold">{page}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
-                Per Page
-              </p>
-              <p className="mt-1 text-2xl font-bold">{PAGE_SIZE}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
-                Total Pages
-              </p>
-              <p className="mt-1 text-2xl font-bold">{Math.max(result.totalPages, 1)}</p>
-            </div>
-          </div>
-        </ArcadeCard>
+          <ul className="flex flex-wrap gap-2 text-xs">
+            <li className="rounded-full border border-[var(--border)] px-3 py-1 text-[var(--muted-foreground)]">
+              {result.total.toLocaleString()} total games
+            </li>
+            <li className="rounded-full border border-[var(--border)] px-3 py-1 text-[var(--muted-foreground)]">
+              {PAGE_SIZE} per page
+            </li>
+            <li className="rounded-full border border-[var(--border)] px-3 py-1 text-[var(--muted-foreground)]">
+              {Math.max(result.totalPages, 1)} total pages
+            </li>
+          </ul>
+        </header>
 
         {result.items.length === 0 ? (
           <ArcadeCard className="p-12">
@@ -108,7 +96,7 @@ export default async function GamesLibraryPage({
             />
           </ArcadeCard>
         ) : (
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {result.items.map((game) => {
               const gameTitle = game.name ?? game.theme?.title ?? "Untitled Game";
               const matchedModel = models.find(
@@ -118,18 +106,28 @@ export default async function GamesLibraryPage({
               );
 
               return (
-                <ArcadeCard key={game.id} className="h-full flex flex-col p-4">
-                  <div className="space-y-4 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h2 className="font-bold text-lg leading-tight line-clamp-2">
-                        {gameTitle}
-                      </h2>
+                <ArcadeCard key={game.id} className="flex h-full flex-col overflow-hidden p-0">
+                  <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-3 text-xs text-[var(--muted-foreground)]">
+                    <span className="inline-flex items-center gap-2">
                       {game.tierCost?.slug && (
                         <ArcadeBadge text={game.tierCost.slug} variant="default" />
                       )}
-                    </div>
+                      {!game.tierCost?.slug && "Standard"}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(game.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
 
-                    <div className="space-y-2 text-xs text-[var(--muted-foreground)]">
+                  <div className="flex flex-1 flex-col p-5">
+                    <h2 className="line-clamp-2 text-lg font-bold leading-tight">{gameTitle}</h2>
+
+                    <div className="mt-4 space-y-2 text-xs text-[var(--muted-foreground)]">
                       <p className="inline-flex items-center gap-2">
                         <User className="h-3.5 w-3.5" />
                         {game.prompt.user ? (
@@ -162,30 +160,22 @@ export default async function GamesLibraryPage({
                           </Link>
                         )}
                       </p>
-                      <p className="inline-flex items-center gap-2">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {new Date(game.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
                     </div>
-                  </div>
 
-                  <div className="mt-5 grid grid-cols-2 gap-2">
-                    <Link href={`/games/${game.id}` as Route}>
-                      <ArcadeButton variant="outline" className="w-full">
-                        <Gamepad2 className="h-4 w-4" />
-                        Details
-                      </ArcadeButton>
-                    </Link>
-                    <Link href={`/game/${game.id}` as Route}>
-                      <ArcadeButton variant="primary" className="w-full">
-                        <Play className="h-4 w-4" />
-                        Play
-                      </ArcadeButton>
-                    </Link>
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      <Link href={`/games/${game.id}` as Route}>
+                        <ArcadeButton variant="outline" className="w-full">
+                          <Gamepad2 className="h-4 w-4" />
+                          Details
+                        </ArcadeButton>
+                      </Link>
+                      <Link href={`/game/${game.id}` as Route}>
+                        <ArcadeButton variant="primary" className="w-full">
+                          <Play className="h-4 w-4" />
+                          Play
+                        </ArcadeButton>
+                      </Link>
+                    </div>
                   </div>
                 </ArcadeCard>
               );
@@ -194,33 +184,31 @@ export default async function GamesLibraryPage({
         )}
 
         {result.totalPages > 1 && (
-          <ArcadeCard className="p-4">
-            <div className="flex items-center justify-between gap-2">
-              {result.hasPreviousPage ? (
-                <Link href={getPageHref(page - 1)}>
-                  <ArcadeButton variant="outline">Previous</ArcadeButton>
-                </Link>
-              ) : (
-                <ArcadeButton variant="outline" disabled>
-                  Previous
-                </ArcadeButton>
-              )}
+          <nav className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-6">
+            {result.hasPreviousPage ? (
+              <Link href={getPageHref(page - 1)}>
+                <ArcadeButton variant="outline">Previous</ArcadeButton>
+              </Link>
+            ) : (
+              <ArcadeButton variant="outline" disabled>
+                Previous
+              </ArcadeButton>
+            )}
 
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Page {page} of {result.totalPages}
-              </p>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Page {page} of {result.totalPages}
+            </p>
 
-              {result.hasNextPage ? (
-                <Link href={getPageHref(page + 1)}>
-                  <ArcadeButton variant="outline">Next</ArcadeButton>
-                </Link>
-              ) : (
-                <ArcadeButton variant="outline" disabled>
-                  Next
-                </ArcadeButton>
-              )}
-            </div>
-          </ArcadeCard>
+            {result.hasNextPage ? (
+              <Link href={getPageHref(page + 1)}>
+                <ArcadeButton variant="outline">Next</ArcadeButton>
+              </Link>
+            ) : (
+              <ArcadeButton variant="outline" disabled>
+                Next
+              </ArcadeButton>
+            )}
+          </nav>
         )}
       </div>
     </main>

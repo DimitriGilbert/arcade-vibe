@@ -37,7 +37,7 @@ interface WorkbenchPageProps {
 
 interface PersistedState {
   promptContent: string;
-  gameName: string;
+  promptTitle: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];
   timestamp: number;
@@ -98,7 +98,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
-  const [promptName, setPromptName] = useState("Untitled Prompt");
+  const [promptTitle, setPromptTitle] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("private");
@@ -130,7 +130,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     const persistedState = loadPersistedState();
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
-      setPromptName(persistedState.gameName || "Untitled Prompt");
+      setPromptTitle(persistedState.promptTitle || "");
       setSelectedTheme(persistedState.selectedTheme);
       setSelectedModels(persistedState.selectedModels);
     }
@@ -211,7 +211,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       setSelectedTheme(existingPrompt.themeId);
       setSelectedPromptId(existingPrompt.id);
       setSelectedVersionId(existingPrompt.id);
-      setPromptName(`Prompt v${existingPrompt.version}`);
+      setPromptTitle(existingPrompt.title ?? "");
       if (existingPrompt.visibility) {
         setVisibility(existingPrompt.visibility);
       }
@@ -226,11 +226,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     }
     persistState({
       promptContent,
-      gameName: promptName,
+      promptTitle,
       selectedTheme,
       selectedModels,
     });
-  }, [promptContent, promptName, selectedTheme, selectedModels, resolvedSearchParams, existingPrompt]);
+  }, [promptContent, promptTitle, selectedTheme, selectedModels, resolvedSearchParams, existingPrompt]);
 
   // Clear persisted state when loading from URL params
   useEffect(() => {
@@ -249,10 +249,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
-    mutationFn: async (input: { themeId: string; content: string; visibility: Visibility }) => {
+    mutationFn: async (input: { themeId: string; content: string; title: string; visibility: Visibility }) => {
       const result = await trpcClient.prompts.create.mutate({
         themeId: input.themeId,
         content: input.content,
+        title: input.title || undefined,
         tokenizer: "gpt-4",
         visibility: input.visibility,
       });
@@ -275,10 +276,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
 
   // Update prompt mutation
   const updatePromptMutation = useMutation({
-    mutationFn: async (input: { id: string; content: string }) => {
+    mutationFn: async (input: { id: string; content: string; title: string }) => {
       const result = await trpcClient.prompts.update.mutate({
         id: input.id,
         content: input.content,
+        title: input.title || undefined,
         tokenizer: "gpt-4",
       });
       return result;
@@ -393,6 +395,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   }, [removeGeneration]);
 
   const handleGenerate = useCallback(async () => {
+    // Validate title (minimum 3 characters)
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Please enter a title (at least 3 characters)");
+      return;
+    }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -434,6 +441,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
+          title: promptTitle.trim(),
           visibility,
         });
         promptId = result.promptId;
@@ -466,7 +474,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
             promptId,
             modelKey: model.modelKey,
             apiKeyId: model.apiKeyId ?? undefined,
-            name: promptName.trim() || undefined,
+            name: promptTitle.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
             reasoningMaxTokens: model.reasoningMaxTokens,
           });
@@ -538,10 +546,10 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     }
   }, [
     promptContent,
+    promptTitle,
     selectedTheme,
     selectedModels,
     selectedPromptId,
-    promptName,
     visibility,
     createPromptMutation,
     queryClient,
@@ -556,6 +564,11 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   ]);
 
   const handleSave = useCallback(async () => {
+    // Validate title (minimum 3 characters)
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Please enter a title (at least 3 characters)");
+      return;
+    }
     if (!selectedTheme) {
       toast.error("Please select a theme");
       return;
@@ -567,18 +580,18 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     
     // If viewing old version, always create new prompt (new version)
     if (isViewingOldVersion) {
-      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, visibility });
+      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, title: promptTitle.trim(), visibility });
       setIsViewingOldVersion(false);
       return;
     }
     
     const promptId = selectedPromptId;
     if (promptId) {
-      updatePromptMutation.mutate({ id: promptId, content: promptContent });
+      updatePromptMutation.mutate({ id: promptId, content: promptContent, title: promptTitle.trim() });
     } else {
-      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, visibility });
+      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, title: promptTitle.trim(), visibility });
     }
-  }, [selectedTheme, promptContent, selectedPromptId, visibility, isViewingOldVersion, updatePromptMutation, createPromptMutation]);
+  }, [promptTitle, selectedTheme, promptContent, selectedPromptId, visibility, isViewingOldVersion, updatePromptMutation, createPromptMutation]);
 
   const handleFork = useCallback(() => {
     if (!resolvedSearchParams?.forkId) return;
@@ -626,7 +639,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         setSelectedVersionId(prompt.id);
         setIsViewingOldVersion(false);
         setSelectedTheme(prompt.themeId);
-        setPromptName(`Prompt v${prompt.version}`);
+        setPromptTitle(prompt.title ?? "");
         if (prompt.visibility) {
           setVisibility(prompt.visibility);
         }
@@ -647,7 +660,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     setSelectedPromptId(null);
     setSelectedVersionId(null);
     setIsViewingOldVersion(false);
-    setPromptName("Untitled Prompt");
+    setPromptTitle("");
     setActiveRightTab("models");
     setSelectedModels([]);
     clearGenerations();
@@ -674,8 +687,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     <div className="min-h-screen h-screen flex flex-col bg-[var(--background)] overflow-hidden">
       {/* Header with actions */}
       <WorkbenchHeader
-        promptName={promptName}
-        onPromptNameChange={setPromptName}
+        promptTitle={promptTitle}
+        onPromptTitleChange={setPromptTitle}
         credits={credits}
         isLoading={modelsLoading}
         themes={themes}

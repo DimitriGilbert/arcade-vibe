@@ -35,6 +35,8 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
     mounted,
     promptContent,
     setPromptContent,
+    promptTitle,
+    setPromptTitle,
     gameName,
     setGameName,
     selectedModels,
@@ -156,8 +158,8 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
     );
   }
 
-  const canGenerate = !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId && !isForking;
-  const canSave = !!promptContent.trim() && !!selection.themeId && !isForking;
+  const canGenerate = !!promptTitle.trim() && promptTitle.trim().length >= 3 && !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId && !isForking;
+  const canSave = !!promptTitle.trim() && promptTitle.trim().length >= 3 && !!promptContent.trim() && !!selection.themeId && !isForking;
   const hasActiveGame = !!activeGameId;
 
   const selectedRun = selection.runId ? runs?.find((r) => r.id === selection.runId) : undefined;
@@ -177,6 +179,8 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
         hasActiveGame={hasActiveGame}
         completedCount={completedCount}
         totalModels={selectedModels.length}
+        promptTitle={promptTitle}
+        onPromptTitleChange={setPromptTitle}
         onNewPrompt={handleNewPromptWithUrl}
         onSave={handleSave}
         onGenerate={handleGenerate}

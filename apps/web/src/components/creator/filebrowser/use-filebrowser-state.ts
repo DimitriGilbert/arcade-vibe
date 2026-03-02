@@ -70,6 +70,8 @@ export interface UseFilebrowserStateReturn {
   mounted: boolean;
   promptContent: string;
   setPromptContent: (content: string) => void;
+  promptTitle: string;
+  setPromptTitle: (title: string) => void;
   gameName: string;
   setGameName: (name: string) => void;
   selectedModels: ModelSelection[];
@@ -141,6 +143,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
   const queryClient = useQueryClient();
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
+  const [promptTitle, setPromptTitle] = useState("");
   const [gameName, setGameName] = useState("");
   const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -181,6 +184,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     const persistedState = loadPersistedState();
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
+      setPromptTitle(persistedState.promptTitle ?? "");
       setGameName(persistedState.gameName);
       if (persistedState.selectedTheme) {
         setExpandedThemes([persistedState.selectedTheme]);
@@ -208,6 +212,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
   useEffect(() => {
     if (existingPrompt && !selectedPromptId) {
       setPromptContent(existingPrompt.content);
+      setPromptTitle(existingPrompt.title ?? "");
       setSelectedPromptId(existingPrompt.id);
       setSelection((prev) => ({
         ...prev,
@@ -269,6 +274,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   const prompts = promptsData?.map((p): PromptNode => ({
     id: p.id,
+    title: p.title,
     content: p.content,
     version: p.version,
     visibility: p.visibility ?? "private",
@@ -359,13 +365,14 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     if (!mounted || selectedPromptId || urlPromptId || urlForkId) return;
     persistState({
       promptContent,
+      promptTitle,
       gameName,
       selectedTheme: selection.themeId ?? "",
       selectedModels,
       selection,
       expandedThemes,
     });
-  }, [mounted, promptContent, gameName, selection, selectedModels, expandedThemes, selectedPromptId, urlPromptId, urlForkId]);
+  }, [mounted, promptContent, promptTitle, gameName, selection, selectedModels, expandedThemes, selectedPromptId, urlPromptId, urlForkId]);
 
   // Clear persisted state when loading from URL
   useEffect(() => {
@@ -384,10 +391,11 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
-    mutationFn: async (input: { themeId: string; content: string }) => {
+    mutationFn: async (input: { themeId: string; content: string; title?: string }) => {
       return await trpcClient.prompts.create.mutate({
         themeId: input.themeId,
         content: input.content,
+        title: input.title,
         tokenizer: "gpt-4",
         visibility: "private",
       });
@@ -407,10 +415,11 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   // Update prompt mutation
   const updatePromptMutation = useMutation({
-    mutationFn: async (input: { id: string; content: string }) => {
+    mutationFn: async (input: { id: string; content: string; title?: string }) => {
       return await trpcClient.prompts.update.mutate({
         id: input.id,
         content: input.content,
+        title: input.title,
         tokenizer: "gpt-4",
       });
     },
@@ -571,6 +580,10 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   // Generate handler
   const handleGenerate = useCallback(async () => {
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Please enter a title (minimum 3 characters)");
+      return;
+    }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -610,6 +623,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
         const result = await createPromptMutation.mutateAsync({
           themeId: selection.themeId,
           content: promptContent,
+          title: promptTitle.trim(),
         });
         promptId = result.promptId ?? null;
         setSelectedPromptId(promptId);
@@ -710,6 +724,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     }
   }, [
     promptContent,
+    promptTitle,
     gameName,
     selection.themeId,
     selectedModels,
@@ -727,6 +742,10 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   // Save handler
   const handleSave = useCallback(async () => {
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Please enter a title (minimum 3 characters)");
+      return;
+    }
     if (!selection.themeId) {
       toast.error("Please select a theme");
       return;
@@ -739,18 +758,21 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
       await updatePromptMutation.mutateAsync({
         id: selectedPromptId,
         content: promptContent,
+        title: promptTitle.trim(),
       });
     } else {
       await createPromptMutation.mutateAsync({
         themeId: selection.themeId,
         content: promptContent,
+        title: promptTitle.trim(),
       });
     }
-  }, [selection.themeId, promptContent, selectedPromptId, updatePromptMutation, createPromptMutation]);
+  }, [promptTitle, selection.themeId, promptContent, selectedPromptId, updatePromptMutation, createPromptMutation]);
 
   // New prompt handler
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
+    setPromptTitle("");
     setSelectedPromptId(null);
     setGameName("");
     setSelection((prev) => ({ ...prev, type: "new-prompt", promptId: null, runId: null }));
@@ -765,6 +787,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
       const prompt = await trpcClient.prompts.getById.query({ id: promptId });
       if (prompt) {
         setPromptContent(prompt.content);
+        setPromptTitle(prompt.title ?? "");
         setSelectedPromptId(prompt.id);
         setSelection((prev) => ({
           ...prev,
@@ -861,6 +884,8 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     mounted,
     promptContent,
     setPromptContent,
+    promptTitle,
+    setPromptTitle,
     gameName,
     setGameName,
     selectedModels,

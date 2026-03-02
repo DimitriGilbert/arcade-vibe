@@ -265,7 +265,7 @@ const PromptNodeComponent = memo(function PromptNodeComponent({
             <Folder className="h-3.5 w-3.5 text-amber-500 shrink-0" />
           )}
           <span className="text-xs truncate flex-1">
-            {truncateContent(prompt.content, 30)}
+            {prompt.title ?? truncateContent(prompt.content, 30)}
           </span>
           <ArcadeBadge text={`v${prompt.version}`} variant="default" className="text-[10px] px-1 shrink-0" />
         </button>

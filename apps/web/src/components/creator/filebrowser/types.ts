@@ -13,6 +13,7 @@ export interface ThemeNode {
 
 export interface PromptNode {
   id: string;
+  title: string | null;
   content: string;
   version: number;
   visibility: Visibility;
@@ -42,6 +43,7 @@ export interface FilebrowserSelection {
 
 export interface PersistedFilebrowserState {
   promptContent: string;
+  promptTitle: string;
   gameName: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];

@@ -40,8 +40,7 @@ export function PromptList({ prompts, isLoading }: PromptListProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <p className="font-medium text-sm truncate flex-1">
-                {prompt.content.slice(0, 60)}
-                {prompt.content.length > 60 && "..."}
+                {prompt.title || `${prompt.content.slice(0, 60)}${prompt.content.length > 60 ? "..." : ""}`}
               </p>
               <ArcadeBadge text={`v${prompt.version}`} variant="default" />
             </div>

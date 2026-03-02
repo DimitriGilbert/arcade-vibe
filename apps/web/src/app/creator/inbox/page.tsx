@@ -43,6 +43,7 @@ const STORAGE_KEY = "arcade-vibe-creator-inbox";
 
 interface PersistedInboxState {
   promptContent: string;
+  promptTitle: string;
   gameName: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];
@@ -92,6 +93,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
+  const [promptTitle, setPromptTitle] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -127,6 +129,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     const persistedState = loadPersistedState();
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
+      setPromptTitle(persistedState.promptTitle ?? "");
       setGameName(persistedState.gameName);
       setSelectedTheme(persistedState.selectedTheme);
       setSelectedModels(persistedState.selectedModels);
@@ -238,12 +241,14 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
     persistState({
       promptContent,
+      promptTitle,
       gameName,
       selectedTheme,
       selectedModels,
     });
   }, [
     promptContent,
+    promptTitle,
     gameName,
     selectedTheme,
     selectedModels,
@@ -419,6 +424,10 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
   // Generation function
   const handleGenerate = useCallback(async () => {
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -574,6 +583,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
   }, [
     promptContent,
+    promptTitle,
     gameName,
     existingPrompt,
     selectedTheme,
@@ -591,6 +601,10 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   ]);
 
   const handleSave = useCallback(async () => {
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
     if (!selectedTheme) {
       toast.error("Please select a theme");
       return;
@@ -622,6 +636,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       });
     }
   }, [
+    promptTitle,
     selectedTheme,
     promptContent,
     existingPrompt,
@@ -641,6 +656,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       const prompt = await trpcClient.prompts.getById.query({ id: promptId });
       if (prompt) {
         setPromptContent(prompt.content);
+        setPromptTitle(prompt.title ?? "");
         setSelectedPromptId(prompt.id);
         setSelectedTheme(prompt.themeId);
         setSelectedVersionId(prompt.id);
@@ -663,6 +679,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
+    setPromptTitle("");
     setGameName("");
     setSelectedPromptId(null);
     setSelectedVersionId(null);
@@ -733,6 +750,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             size="sm"
             onClick={handleSave}
             disabled={
+              !promptTitle.trim() ||
+              promptTitle.trim().length < 3 ||
               !promptContent.trim() ||
               createPromptMutation.isPending ||
               updatePromptMutation.isPending
@@ -748,7 +767,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           <ArcadeButton
             size="sm"
             onClick={handleGenerate}
-            disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
+            disabled={
+              isGenerating ||
+              !promptTitle.trim() ||
+              promptTitle.trim().length < 3 ||
+              !promptContent.trim() ||
+              selectedModels.length === 0
+            }
           >
             {isGenerating ? (
               <>
@@ -799,6 +824,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             // Clear prompt-related state when theme changes
             setSelectedPromptId(null);
             setPromptContent("");
+            setPromptTitle("");
             setSelectedModels([]);
             clearGenerations();
             setActiveOutputTab(null);
@@ -807,6 +833,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           themesLoading={themesLoading}
           prompts={myPrompts?.map((p) => ({
             id: p.id,
+            title: p.title,
             content: p.content,
             version: p.version,
             updatedAt: p.updatedAt,
@@ -881,6 +908,18 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
             {/* Left: Prompt Editor */}
             <div className="flex-1 min-h-[200px] lg:min-h-0 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
+              {/* Title Input Row */}
+              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)]">
+                <input
+                  type="text"
+                  value={promptTitle}
+                  onChange={(e) => setPromptTitle(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm font-medium bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)] placeholder:text-[var(--muted-foreground)]"
+                  placeholder="Prompt title (required, min 3 characters)"
+                  maxLength={100}
+                />
+              </div>
+              {/* Header Row with Game Name and Actions */}
               <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
                 {/* Game Name - Editable */}
                 <div className="flex items-center gap-2">
@@ -944,6 +983,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                     size="sm"
                     onClick={handleSave}
                     disabled={
+                      !promptTitle.trim() ||
+                      promptTitle.trim().length < 3 ||
                       !promptContent.trim() ||
                       createPromptMutation.isPending ||
                       updatePromptMutation.isPending

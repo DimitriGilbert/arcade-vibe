@@ -52,6 +52,7 @@ const GENERATION_CONCURRENCY_LIMIT = 2;
 
 interface PersistedEditorState {
   promptContent: string;
+  promptTitle: string;
   gameName: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];
@@ -101,6 +102,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
+  const [promptTitle, setPromptTitle] = useState("");
   const [gameName, setGameName] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
@@ -140,6 +142,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     const persistedState = loadPersistedState();
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
+      setPromptTitle(persistedState.promptTitle);
       setGameName(persistedState.gameName);
       setSelectedTheme(persistedState.selectedTheme);
       setSelectedModels(persistedState.selectedModels);
@@ -235,6 +238,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   useEffect(() => {
     if (existingPrompt && !promptContent) {
       setPromptContent(existingPrompt.content);
+      setPromptTitle(existingPrompt.title ?? "");
       setSelectedTheme(existingPrompt.themeId);
       setSelectedPromptId(existingPrompt.id);
       setSelectedVersionId(existingPrompt.id);
@@ -256,12 +260,14 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     }
     persistState({
       promptContent,
+      promptTitle,
       gameName,
       selectedTheme,
       selectedModels,
     });
   }, [
     promptContent,
+    promptTitle,
     gameName,
     selectedTheme,
     selectedModels,
@@ -287,10 +293,11 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
-    mutationFn: async (input: { themeId: string; content: string }) => {
+    mutationFn: async (input: { themeId: string; content: string; title: string }) => {
       const result = await trpcClient.prompts.create.mutate({
         themeId: input.themeId,
         content: input.content,
+        title: input.title,
         tokenizer: "gpt-4",
         visibility: "private",
       });
@@ -312,10 +319,11 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Update prompt mutation
   const updatePromptMutation = useMutation({
-    mutationFn: async (input: { id: string; content: string }) => {
+    mutationFn: async (input: { id: string; content: string; title: string }) => {
       const result = await trpcClient.prompts.update.mutate({
         id: input.id,
         content: input.content,
+        title: input.title,
         tokenizer: "gpt-4",
       });
       return result;
@@ -438,6 +446,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   // Generate content using tRPC streaming API - parallel multi-model
   const handleGenerate = useCallback(async () => {
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -486,6 +498,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
+          title: promptTitle.trim(),
         });
         promptId = result.promptId;
         setSelectedPromptId(promptId);
@@ -592,6 +605,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       setIsGenerating(false);
     }
   }, [
+    promptTitle,
     promptContent,
     gameName,
     existingPrompt,
@@ -613,6 +627,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       toast.error("Please select a theme");
       return;
     }
+    if (!promptTitle.trim() || promptTitle.trim().length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -622,15 +640,18 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       updatePromptMutation.mutate({
         id: promptId,
         content: promptContent,
+        title: promptTitle.trim(),
       });
     } else {
       createPromptMutation.mutate({
         themeId: selectedTheme,
         content: promptContent,
+        title: promptTitle.trim(),
       });
     }
   }, [
     selectedTheme,
+    promptTitle,
     promptContent,
     existingPrompt,
     selectedPromptId,
@@ -655,6 +676,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       const prompt = await trpcClient.prompts.getById.query({ id: promptId });
       if (prompt) {
         setPromptContent(prompt.content);
+        setPromptTitle(prompt.title ?? "");
         setSelectedPromptId(prompt.id);
         setSelectedVersionId(prompt.id);
         setSelectedTheme(prompt.themeId);
@@ -668,6 +690,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
   const handleNewPrompt = useCallback(() => {
     setPromptContent("");
+    setPromptTitle("");
     setSelectedPromptId(null);
     setSelectedVersionId(null);
     setActiveTab("editor");
@@ -749,12 +772,14 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             prompts={myPrompts?.map(
               (p: {
                 id: string;
+                title: string | null;
                 content: string;
                 version: number;
                 updatedAt: string;
                 visibility?: "private" | "public" | "public_on_freeze";
               }) => ({
                 id: p.id,
+                title: p.title,
                 content: p.content,
                 version: p.version,
                 updatedAt: p.updatedAt,
@@ -859,6 +884,15 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
           {/* Action Bar */}
           <div className="p-4 border-t border-[var(--border)] space-y-3 shrink-0">
+            {/* Prompt Title Input */}
+            <input
+              type="text"
+              placeholder="Prompt title (required, 3-100 chars)"
+              value={promptTitle}
+              onChange={(e) => setPromptTitle(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent placeholder:text-[var(--muted-foreground)]"
+              maxLength={100}
+            />
             {/* Game Name Input */}
             <input
               type="text"
@@ -872,6 +906,8 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               <ArcadeButton
                 onClick={handleSave}
                 disabled={
+                  !promptTitle.trim() ||
+                  promptTitle.trim().length < 3 ||
                   !promptContent.trim() ||
                   createPromptMutation.isPending ||
                   updatePromptMutation.isPending
@@ -893,7 +929,13 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
               </ArcadeButton>
               <ArcadeButton
                 onClick={handleGenerate}
-                disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
+                disabled={
+                  isGenerating ||
+                  !promptTitle.trim() ||
+                  promptTitle.trim().length < 3 ||
+                  !promptContent.trim() ||
+                  selectedModels.length === 0
+                }
                 className="flex-1"
               >
                 {isGenerating ? (

@@ -81,7 +81,7 @@ export function DashboardPromptsList() {
                         <ArcadeBadge text={prompt.visibility} variant="default" />
                       </div>
                       <p className="text-sm text-[var(--muted-foreground)] line-clamp-1">
-                        {prompt.content.slice(0, 100)}{prompt.content.length > 100 ? "..." : ""}
+                        {prompt.title || `${prompt.content.slice(0, 100)}${prompt.content.length > 100 ? "..." : ""}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-4 text-right shrink-0">

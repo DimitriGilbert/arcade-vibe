@@ -636,7 +636,7 @@ export async function generateGame(
       modelName: modelConfigEntry.modelName,
       tierCostId: tierCost.id,
       status: "generating",
-      name: options.name,
+      name: options.name ?? prompt.title ?? null,
     })
     .returning();
 

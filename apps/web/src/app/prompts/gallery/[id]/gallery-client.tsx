@@ -56,9 +56,10 @@ export default function GalleryClient({ promptId, initialPrompt }: GalleryClient
     );
   }
 
-  const contentPreview = prompt.content.length > 150
-    ? `${prompt.content.slice(0, 150)}...`
-    : prompt.content;
+  const contentPreview = prompt.title
+    || (prompt.content.length > 150
+      ? `${prompt.content.slice(0, 150)}...`
+      : prompt.content);
 
   return (
     <main className="min-h-screen bg-background pb-12">
