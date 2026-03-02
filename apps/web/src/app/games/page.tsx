@@ -45,10 +45,13 @@ export default async function GamesLibraryPage({
     (await searchParams) ?? ({ page: undefined } as { page?: string });
   const page = parsePageParam(resolvedSearchParams.page);
 
-  const result = await caller.games.listPublicPaginated({
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const [result, models] = await Promise.all([
+    caller.games.listPublicPaginated({
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    caller.models.listWithStats(),
+  ]);
 
   if (result.totalPages > 0 && page > result.totalPages) {
     notFound();
@@ -108,6 +111,11 @@ export default async function GamesLibraryPage({
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {result.items.map((game) => {
               const gameTitle = game.name ?? game.theme?.title ?? "Untitled Game";
+              const matchedModel = models.find(
+                (model) =>
+                  model.modelName === game.modelName &&
+                  model.providers.some((provider) => provider === game.modelProvider),
+              );
 
               return (
                 <ArcadeCard key={game.id} className="h-full flex flex-col p-4">
@@ -124,7 +132,16 @@ export default async function GamesLibraryPage({
                     <div className="space-y-2 text-xs text-[var(--muted-foreground)]">
                       <p className="inline-flex items-center gap-2">
                         <User className="h-3.5 w-3.5" />
-                        {game.prompt.user?.name ?? "Anonymous"}
+                        {game.prompt.user ? (
+                          <Link
+                            href={`/profile/${game.prompt.user.id}` as Route}
+                            className="hover:text-[var(--primary)]"
+                          >
+                            {game.prompt.user.name ?? "Anonymous"}
+                          </Link>
+                        ) : (
+                          "Anonymous"
+                        )}
                       </p>
                       <p className="inline-flex items-center gap-2">
                         <Layers className="h-3.5 w-3.5" />
@@ -132,7 +149,18 @@ export default async function GamesLibraryPage({
                       </p>
                       <p className="inline-flex items-center gap-2">
                         <Star className="h-3.5 w-3.5" />
-                        {game.modelName}
+                        {matchedModel ? (
+                          <Link
+                            href={`/models/${matchedModel.id}` as Route}
+                            className="hover:text-[var(--primary)]"
+                          >
+                            {game.modelName}
+                          </Link>
+                        ) : (
+                          <Link href={"/models" as Route} className="hover:text-[var(--primary)]">
+                            {game.modelName}
+                          </Link>
+                        )}
                       </p>
                       <p className="inline-flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5" />

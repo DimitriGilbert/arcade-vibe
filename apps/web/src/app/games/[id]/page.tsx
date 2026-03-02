@@ -157,12 +157,34 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
             <StatTile
               icon={<User className="h-4 w-4" />}
               label="Creator"
-              value={creatorName}
+              value={
+                game.prompt.user ? (
+                  <Link
+                    href={`/profile/${game.prompt.user.id}` as Route}
+                    className="hover:text-[var(--primary)]"
+                  >
+                    {creatorName}
+                  </Link>
+                ) : (
+                  creatorName
+                )
+              }
             />
             <StatTile
               icon={<Code2 className="h-4 w-4" />}
               label="Model"
-              value={game.modelName}
+              value={
+                modelPageId ? (
+                  <Link
+                    href={`/models/${modelPageId}` as Route}
+                    className="hover:text-[var(--primary)]"
+                  >
+                    {game.modelName}
+                  </Link>
+                ) : (
+                  game.modelName
+                )
+              }
             />
             <StatTile
               icon={<Trophy className="h-4 w-4" />}
@@ -372,7 +394,7 @@ function StatTile({
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
