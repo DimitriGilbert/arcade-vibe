@@ -32,7 +32,7 @@ export function ReportDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] min-w-7xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report Details</DialogTitle>
           <DialogDescription>

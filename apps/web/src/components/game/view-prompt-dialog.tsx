@@ -19,7 +19,7 @@ export function ViewPromptDialog({
 }: ViewPromptDialogProps) {
   return (
     <ArcadeDialog open={isOpen} onOpenChange={onClose}>
-      <ArcadeDialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <ArcadeDialogContent className="sm:max-w-2xl max-h-[90vh] min-w-7xl overflow-y-auto">
         <ArcadeDialogHeader>
           <ArcadeDialogTitle>Prompt</ArcadeDialogTitle>
           <ArcadeDialogDescription>

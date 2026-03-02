@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
-import { Loader2, Play, Save, Copy, ExternalLink, X } from "lucide-react";
+import { Loader2, Play, Save, Copy, ExternalLink, X, Pencil, Check } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
@@ -105,6 +105,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [gameName, setGameName] = useState("");
+  const [isEditingGameName, setIsEditingGameName] = useState(false);
   const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<Game | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
@@ -506,7 +507,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             promptId,
             modelKey: model.modelKey,
             apiKeyId: model.apiKeyId ?? undefined,
-            name: gameName.trim() || undefined,
+            name: gameName.trim() || promptTitle.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
             reasoningMaxTokens: model.reasoningMaxTokens,
           });
@@ -914,15 +915,61 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
             {/* Left: Prompt Editor */}
             <div className="flex-1 min-h-[200px] lg:min-h-0 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
-              {/* Simple Header with Prompt label and version badge */}
-              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center gap-2">
-                <span className="text-xs font-medium text-[var(--muted-foreground)]">Prompt</span>
-                {selectedPromptId && (
-                  <ArcadeBadge
-                    text={isViewingOldVersion ? `v${versions?.find((v) => v.id === selectedVersionId)?.version ?? "?"} (old)` : `v${existingPrompt?.version ?? versions?.find((v) => v.id === selectedPromptId)?.version ?? 1}`}
-                    variant={isViewingOldVersion ? "pixel" : "neon"}
-                  />
-                )}
+              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isEditingGameName ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={gameName}
+                        onChange={(e) => setGameName(e.target.value)}
+                        className="px-2 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+                        placeholder="Game name"
+                        maxLength={100}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingGameName(false)}
+                        className="p-1 hover:bg-[var(--muted)] rounded"
+                      >
+                        <Check className="h-3 w-3 text-green-500" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingGameName(false);
+                          setGameName("");
+                        }}
+                        className="p-1 hover:bg-[var(--muted)] rounded"
+                      >
+                        <X className="h-3 w-3 text-[var(--destructive)]" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingGameName(true)}
+                      className="group flex items-center gap-1.5 text-xs font-medium hover:text-[var(--primary)] transition-colors"
+                    >
+                      <span>{gameName || promptTitle || "Prompt"}</span>
+                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  )}
+                  {selectedPromptId && (
+                    <ArcadeBadge
+                      text={isViewingOldVersion ? `v${versions?.find((v) => v.id === selectedVersionId)?.version ?? "?"} (old)` : `v${existingPrompt?.version ?? versions?.find((v) => v.id === selectedPromptId)?.version ?? 1}`}
+                      variant={isViewingOldVersion ? "pixel" : "neon"}
+                    />
+                  )}
+                </div>
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingGameName(true)}
+                  disabled={isEditingGameName}
+                >
+                  <Pencil className="h-3 w-3" />
+                </ArcadeButton>
               </div>
               <div className="flex-1 min-h-0 [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4">
                 <Editor

@@ -426,7 +426,7 @@ export default function AdminUsersPage() {
           !open && setSuspendDialog({ open: false, user: null })
         }
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] min-w-7xl">
           <DialogHeader>
             <DialogTitle>Suspend User</DialogTitle>
             <DialogDescription>
@@ -471,7 +471,7 @@ export default function AdminUsersPage() {
         open={editDialog.open}
         onOpenChange={(open) => !open && setEditDialog({ open: false, user: null })}
       >
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>

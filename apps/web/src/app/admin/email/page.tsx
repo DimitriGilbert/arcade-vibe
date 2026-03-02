@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
@@ -12,6 +12,7 @@ import {
   ChevronUp,
   BarChart3,
   X,
+  Eye,
 } from "lucide-react";
 import {
   ArcadeCard,
@@ -25,7 +26,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { LoadingState, EmptyState } from "@/components/reusable";
@@ -42,10 +42,6 @@ import type {
   SortOrder,
 } from "@/lib/trpc-types";
 
-// ============================================
-// Component
-// ============================================
-
 export default function AdminEmailPage() {
   const [activeTab, setActiveTab] = useState<"compose" | "logs" | "stats">("compose");
   const [filters, setFilters] = useState<UserFilterInput>({});
@@ -54,15 +50,17 @@ export default function AdminEmailPage() {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [composeDialog, setComposeDialog] = useState(false);
+  const [previewDialog, setPreviewDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [logPage, setLogPage] = useState(1);
   const [logStatusFilter, setLogStatusFilter] = useState<
     "pending" | "sent" | "delivered" | "bounced" | "complained" | "failed" | undefined
   >(undefined);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewText, setPreviewText] = useState("");
   const pageSize = 50;
   const queryClient = useQueryClient();
 
-  // Fetch filtered users
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["admin-email-users", filters, sortField, sortOrder, page],
     queryFn: async () => {
@@ -76,7 +74,6 @@ export default function AdminEmailPage() {
     enabled: activeTab === "compose",
   });
 
-  // Fetch email logs
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ["admin-email-logs", logPage, logStatusFilter],
     queryFn: async () => {
@@ -89,7 +86,6 @@ export default function AdminEmailPage() {
     enabled: activeTab === "logs",
   });
 
-  // Fetch email stats
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-email-stats"],
     queryFn: async () => {
@@ -98,10 +94,32 @@ export default function AdminEmailPage() {
     enabled: activeTab === "stats",
   });
 
-  // Send email mutation
+  const previewMutation = useMutation({
+    mutationFn: async (variables: Record<string, unknown>) => {
+      return await trpcClient.admin.email.previewTemplate.mutate({
+        templateId: variables.templateId as string,
+        variables,
+      });
+    },
+    onSuccess: (data) => {
+      setPreviewHtml(data.html);
+      setPreviewText(data.text);
+      setPreviewDialog(true);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to preview");
+    },
+  });
+
   const sendEmailMutation = useMutation({
-    mutationFn: async (input: { userIds: string[]; subject: string; content: string }) => {
-      return await trpcClient.admin.email.sendToUsers.mutate(input);
+    mutationFn: async (variables: { templateId: string; subject: string; content: string }) => {
+      return await trpcClient.admin.email.sendToUsers.mutate({
+        userIds: Array.from(selectedUsers),
+        templateId: variables.templateId as "welcome" | "broadcast" | "custom",
+        subject: variables.subject,
+        content: variables.content,
+        variables: {},
+      });
     },
     onSuccess: (data) => {
       toast.success(`Email sent to ${data.sentCount} users`);
@@ -118,7 +136,6 @@ export default function AdminEmailPage() {
     },
   });
 
-  // Handlers
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -154,54 +171,114 @@ export default function AdminEmailPage() {
     setFilters({});
   };
 
-  // ============================================
-  // Compose Form Component
-  // ============================================
-
-  const ComposeForm = () => {
+  const ComposeEmailForm = () => {
     const schema = z.object({
+      templateId: z.enum(["welcome", "broadcast", "custom"]),
       subject: z.string().min(1, "Subject is required").max(200),
       content: z.string().min(1, "Content is required"),
+      ctaText: z.string().optional(),
+      ctaUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
     });
+
+    const handlePreview = useCallback((values: Record<string, unknown>) => {
+      previewMutation.mutate({
+        ...values,
+        userName: "Preview User",
+      });
+    }, []);
+
+    const handleSubmit = useCallback(
+      async ({ value }: { value: Record<string, unknown> }) => {
+        await sendEmailMutation.mutateAsync({
+          templateId: value.templateId as string,
+          subject: value.subject as string,
+          content: value.content as string,
+        });
+      },
+      [],
+    );
 
     const { Form } = useFormedible({
       schema,
       fields: [
         {
+          name: "templateId",
+          type: "radio",
+          label: "Template",
+          tab: "template",
+          options: [
+            { value: "broadcast", label: "Broadcast - Send announcements to users" },
+            { value: "welcome", label: "Welcome - Welcome new users" },
+            { value: "custom", label: "Custom HTML - Write your own HTML" },
+          ],
+        },
+        {
           name: "subject",
           type: "text",
-          label: "Subject",
-          placeholder: "Enter email subject...",
+          label: "Subject Line",
+          tab: "content",
+          description: "The subject line recipients will see",
         },
         {
           name: "content",
           type: "textarea",
-          label: "Content (HTML supported)",
-          textareaConfig: { rows: 10 },
-          placeholder: "Enter email content...",
+          label: "Email Content",
+          tab: "content",
+          description: "Use {{user.name}}, {{user.email}}, {{user.credits}}, etc. for personalization",
+          textareaConfig: {
+            rows: 12,
+            showWordCount: true,
+          },
+          conditional: (values) => values.templateId !== "custom",
         },
+        {
+          name: "content",
+          type: "textarea",
+          label: "HTML Content",
+          tab: "content",
+          description: "Write raw HTML. Use {{userName}} for personalization.",
+          textareaConfig: {
+            rows: 12,
+            showWordCount: true,
+          },
+          conditional: (values) => values.templateId === "custom",
+        },
+        {
+          name: "ctaText",
+          type: "text",
+          label: "Button Text",
+          tab: "content",
+          placeholder: "e.g., Click Here, Learn More",
+          conditional: (values) => values.templateId === "broadcast",
+        },
+        {
+          name: "ctaUrl",
+          type: "text",
+          label: "Button URL",
+          tab: "content",
+          placeholder: "https://example.com",
+          conditional: (values) => values.templateId === "broadcast" && !!values.ctaText,
+        },
+      ],
+      tabs: [
+        { id: "template", label: "Template", description: "Choose an email template" },
+        { id: "content", label: "Content", description: "Write your email content" },
       ],
       formOptions: {
         defaultValues: {
+          templateId: "broadcast" as const,
           subject: "",
           content: "",
+          ctaText: "",
+          ctaUrl: "",
         },
-        onSubmit: async ({ value }) => {
-          await sendEmailMutation.mutateAsync({
-            userIds: Array.from(selectedUsers),
-            subject: value.subject,
-            content: value.content,
-          });
-        },
+        onSubmit: handleSubmit,
       },
+      submitLabel: `Send to ${selectedUsers.size} users`,
     });
 
     return <Form className="space-y-4" />;
   };
-
-  // ============================================
-  // Filter Panel Component
-  // ============================================
 
   const FilterPanel = () => (
     <ArcadeCard className="mb-4">
@@ -215,7 +292,6 @@ export default function AdminEmailPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Search */}
           <div className="md:col-span-2 lg:col-span-4">
             <span className="text-sm text-[var(--muted-foreground)] block">Search</span>
             <ArcadeInput
@@ -231,7 +307,6 @@ export default function AdminEmailPage() {
             />
           </div>
 
-          {/* Role Filter */}
           <div>
             <span className="text-sm text-[var(--muted-foreground)] block">Role</span>
             <select
@@ -252,7 +327,6 @@ export default function AdminEmailPage() {
             </select>
           </div>
 
-          {/* Game Count Filters */}
           <div>
             <span className="text-sm text-[var(--muted-foreground)] block">Min Games</span>
             <ArcadeInput
@@ -285,7 +359,6 @@ export default function AdminEmailPage() {
             />
           </div>
 
-          {/* Credit Filters */}
           <div>
             <span className="text-sm text-[var(--muted-foreground)] block">Min Credits</span>
             <ArcadeInput
@@ -318,7 +391,6 @@ export default function AdminEmailPage() {
             />
           </div>
 
-          {/* Credit Spent Filters */}
           <div>
             <span className="text-sm text-[var(--muted-foreground)] block">Min Credits Spent</span>
             <ArcadeInput
@@ -335,7 +407,6 @@ export default function AdminEmailPage() {
             />
           </div>
 
-          {/* Reputation Filters */}
           <div>
             <span className="text-sm text-[var(--muted-foreground)] block">Min Reputation</span>
             <ArcadeInput
@@ -352,7 +423,6 @@ export default function AdminEmailPage() {
             />
           </div>
 
-          {/* Status Filters */}
           <div className="flex items-center gap-6 lg:col-span-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -388,13 +458,8 @@ export default function AdminEmailPage() {
     </ArcadeCard>
   );
 
-  // ============================================
-  // Render
-  // ============================================
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-[var(--foreground)]">Email Management</h1>
         <p className="text-[var(--muted-foreground)] mt-2">
@@ -402,7 +467,6 @@ export default function AdminEmailPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2">
         {[
           { id: "compose" as const, label: "Compose", icon: Send },
@@ -420,10 +484,8 @@ export default function AdminEmailPage() {
         ))}
       </div>
 
-      {/* Compose Tab */}
       {activeTab === "compose" && (
         <>
-          {/* Selection Actions */}
           {selectedUsers.size > 0 && (
             <ArcadeCard>
               <div className="p-4 flex items-center justify-between">
@@ -443,7 +505,6 @@ export default function AdminEmailPage() {
             </ArcadeCard>
           )}
 
-          {/* Filter Toggle */}
           <div className="flex items-center gap-2">
             <ArcadeButton variant="outline" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="h-4 w-4" />
@@ -455,10 +516,8 @@ export default function AdminEmailPage() {
             </ArcadeButton>
           </div>
 
-          {/* Filters */}
           {showFilters && <FilterPanel />}
 
-          {/* Users Table */}
           <ArcadeCard>
             <div className="p-6">
               {usersLoading ? (
@@ -560,7 +619,6 @@ export default function AdminEmailPage() {
                 </div>
               )}
 
-              {/* Pagination */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
                 <ArcadeButton
                   variant="outline"
@@ -585,15 +643,11 @@ export default function AdminEmailPage() {
         </>
       )}
 
-      {/* Logs Tab */}
       {activeTab === "logs" && (
         <ArcadeCard>
           <div className="p-6">
-            {/* Status Filter */}
             <div className="mb-4">
-              <span className="text-sm text-[var(--muted-foreground)] mr-2">
-                Filter by Status:
-              </span>
+              <span className="text-sm text-[var(--muted-foreground)] mr-2">Filter by Status:</span>
               <select
                 className="p-2 rounded border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
                 value={logStatusFilter ?? ""}
@@ -685,7 +739,6 @@ export default function AdminEmailPage() {
               </div>
             )}
 
-            {/* Pagination */}
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)]">
               <ArcadeButton
                 variant="outline"
@@ -709,7 +762,6 @@ export default function AdminEmailPage() {
         </ArcadeCard>
       )}
 
-      {/* Stats Tab */}
       {activeTab === "stats" && (
         <div className="space-y-6">
           {statsLoading ? (
@@ -718,7 +770,6 @@ export default function AdminEmailPage() {
             </ArcadeCard>
           ) : (
             <>
-              {/* Overview */}
               <ArcadeCard>
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
@@ -731,12 +782,9 @@ export default function AdminEmailPage() {
                 </div>
               </ArcadeCard>
 
-              {/* By Status */}
               <ArcadeCard>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-                    By Status
-                  </h3>
+                  <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">By Status</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {(
                       ["pending", "sent", "delivered", "bounced", "complained", "failed"] as const
@@ -754,7 +802,6 @@ export default function AdminEmailPage() {
                 </div>
               </ArcadeCard>
 
-              {/* By Type */}
               <ArcadeCard>
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">By Type</h3>
@@ -779,40 +826,63 @@ export default function AdminEmailPage() {
         </div>
       )}
 
-      {/* Compose Dialog */}
       <Dialog open={composeDialog} onOpenChange={setComposeDialog}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Send Email</DialogTitle>
+        <DialogContent
+          className="p-0 gap-0 min-w-7xl"
+        >
+          <DialogHeader className="p-6 pb-4 border-b border-[var(--border)] shrink-0">
+            <DialogTitle className="text-xl">Compose Email</DialogTitle>
             <DialogDescription>
-              Send an email to {selectedUsers.size} selected user(s)
+              Send to {selectedUsers.size} selected user(s). Templates have access to full user object via {"{{user.name}}"}, {"{{user.email}}"}, {"{{user.credits}}"}, etc.
             </DialogDescription>
           </DialogHeader>
-          <ComposeForm />
-          <DialogFooter>
-            <ArcadeButton variant="outline" onClick={() => setComposeDialog(false)}>
-              Cancel
+
+          <div className="flex-1 overflow-auto p-6" style={{ height: "calc(92vh - 140px)" }}>
+            <ComposeEmailForm />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={previewDialog} onOpenChange={setPreviewDialog}>
+        <DialogContent
+          className=" min-w-7xl p-0 gap-0"
+        >
+          <DialogHeader className="p-6 pb-4 border-b border-[var(--border)] shrink-0">
+            <DialogTitle className="text-xl">Email Preview</DialogTitle>
+            <DialogDescription>How your email will look to recipients</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: "calc(92vh - 180px)" }}>
+            <div className="w-1/2 flex flex-col min-h-0 border-r border-[var(--border)]">
+              <div className="p-2 bg-[var(--muted)]/50 text-sm font-medium text-[var(--foreground)] shrink-0">
+                HTML Preview
+              </div>
+              <div className="flex-1 overflow-auto p-4 bg-white">
+                <iframe
+                  srcDoc={previewHtml}
+                  className="w-full h-full border-0"
+                  title="Email Preview"
+                />
+              </div>
+            </div>
+
+            <div className="w-1/2 shrink-0 flex flex-col min-h-0">
+              <div className="p-2 bg-[var(--muted)]/50 text-sm font-medium text-[var(--foreground)] shrink-0">
+                Plain Text
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                <pre className="text-xs text-[var(--foreground)] whitespace-pre-wrap font-mono">
+                  {previewText}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-[var(--border)] flex justify-end shrink-0">
+            <ArcadeButton variant="outline" onClick={() => setPreviewDialog(false)}>
+              Close
             </ArcadeButton>
-            <ArcadeButton
-              variant="primary"
-              onClick={() => {
-                // Form submission is handled by Formedible
-              }}
-              disabled={sendEmailMutation.isPending}
-            >
-              {sendEmailMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Send Email
-                </>
-              )}
-            </ArcadeButton>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

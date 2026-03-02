@@ -141,7 +141,7 @@ export default function AdminFeedbackPage() {
             <div className="space-y-4">
               {feedbackList.map((item) => {
                 const isExpanded = expandedId === item.id;
-                
+
                 return (
                   <div
                     key={item.id}
@@ -241,7 +241,7 @@ export default function AdminFeedbackPage() {
           !open && setDeleteDialog({ open: false, feedback: null })
         }
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] min-w-7xl">
           <DialogHeader>
             <DialogTitle>Delete Feedback</DialogTitle>
             <DialogDescription>

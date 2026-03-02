@@ -57,7 +57,7 @@ export function HideGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] min-w-7xl">
         <DialogHeader>
           <DialogTitle>Hide Game</DialogTitle>
           <DialogDescription>

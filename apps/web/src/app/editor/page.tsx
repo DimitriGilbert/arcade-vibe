@@ -563,7 +563,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           }
         } catch (error) {
           if (generationAbortedRef.current) return;
-          
+
           const errorMsg = error instanceof Error ? error.message : "Generation failed";
           completionStats.errors++;
           toast.error(`${model.modelName}: ${errorMsg}`);
@@ -583,7 +583,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
         );
         await Promise.all(batch.map((model) => runGenerationForModel(model)));
       }
-      
+
       // Show aggregate toast based on tracked stats
       if (completionStats.completed === completionStats.total) {
         toast.success(`All ${completionStats.total} games generated successfully!`);
@@ -963,7 +963,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
       {/* Version Comparison Dialog */}
       {showComparison && compareLeft && compareRight && (
         <Dialog open={showComparison} onOpenChange={setShowComparison}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] min-w-7xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Version Comparison</DialogTitle>
               <DialogDescription>

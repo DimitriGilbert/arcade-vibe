@@ -185,7 +185,7 @@ export default function AdminLibraryPatternsPage() {
     try {
       const parsed = JSON.parse(importDialog.jsonInput);
       const patternsArray = Array.isArray(parsed) ? parsed : [parsed];
-      
+
       const importSchema = z.array(
         z.object({
           name: z.string().min(1),
@@ -575,7 +575,7 @@ export default function AdminLibraryPatternsPage() {
         open={!!editingPattern}
         onOpenChange={(open) => !open && setEditingPattern(null)}
       >
-        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Library Pattern</DialogTitle>
             <DialogDescription>
@@ -587,7 +587,7 @@ export default function AdminLibraryPatternsPage() {
       </Dialog>
 
       <Dialog open={addingPattern} onOpenChange={setAddingPattern}>
-        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Library Pattern</DialogTitle>
             <DialogDescription>
@@ -638,7 +638,7 @@ export default function AdminLibraryPatternsPage() {
           !open && setImportDialog({ open: false, jsonInput: "" })
         }
       >
-        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Library Patterns</DialogTitle>
             <DialogDescription>

@@ -5,7 +5,7 @@ import { userExtended } from "@arcade-vibe/db/schema/users";
 import { games } from "@arcade-vibe/db/schema/games";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { creditTransactions } from "@arcade-vibe/db/schema/credits";
-import { emailLogs } from "@arcade-vibe/db/schema/email";
+import { emailLogs, emailTemplates } from "@arcade-vibe/db/schema/email";
 import { adminActions } from "@arcade-vibe/db/schema/platform";
 import { z } from "zod";
 import {
@@ -23,45 +23,31 @@ import {
 import { TRPCError } from "@trpc/server";
 import {
   sendBatchEmails,
-  getBroadcastEmailHtml,
+  getAvailableTemplates,
+  renderEmail,
+  type EmailTemplateId,
+  type EmailUser,
 } from "@arcade-vibe/email";
 import { randomUUID } from "node:crypto";
 
-// ========================================
-// Schemas
-// ========================================
-
 const UserFilterSchema = z.object({
-  // Role filter
   role: z.enum(["admin", "moderator", "participant", "viewer"]).optional(),
-
-  // Activity filters
   minGames: z.number().int().min(0).optional(),
   maxGames: z.number().int().min(0).optional(),
   minPrompts: z.number().int().min(0).optional(),
   maxPrompts: z.number().int().min(0).optional(),
-
-  // Credit filters
   minCredits: z.number().int().min(0).optional(),
   maxCredits: z.number().int().min(0).optional(),
   minCreditSpent: z.number().int().min(0).optional(),
   maxCreditSpent: z.number().int().min(0).optional(),
-
-  // Reputation filters
   minReputation: z.number().int().min(0).optional(),
   maxReputation: z.number().int().min(0).optional(),
-
-  // Date filters
   registeredAfter: z.coerce.date().optional(),
   registeredBefore: z.coerce.date().optional(),
   lastActiveAfter: z.coerce.date().optional(),
   lastActiveBefore: z.coerce.date().optional(),
-
-  // Status filters
   isSuspended: z.boolean().optional(),
   hasVerifiedEmail: z.boolean().optional(),
-
-  // Search
   searchQuery: z.string().optional(),
 });
 
@@ -91,17 +77,229 @@ const EmailStatusSchema = z.enum([
   "failed",
 ]);
 
-// ========================================
-// Router
-// ========================================
+function mapUserToEmailUser(u: {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  credits: number;
+  reputation: number;
+  gameCount: number | null;
+  promptCount: number | null;
+  creditSpent: number | null;
+  createdAt: Date | null;
+}): EmailUser {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    credits: u.credits,
+    reputation: u.reputation,
+    gameCount: u.gameCount ?? 0,
+    promptCount: u.promptCount ?? 0,
+    creditSpent: u.creditSpent ? Math.abs(u.creditSpent) : 0,
+    createdAt: u.createdAt,
+  };
+}
 
 export const emailRouter = router({
-  /**
-   * Get filtered users for email targeting
-   *
-   * Returns users with aggregated stats (game count, prompt count, credits spent)
-   * that can be filtered and sorted for email targeting.
-   */
+  getTemplates: adminProcedure.query(async () => {
+    const templates = getAvailableTemplates();
+    const dbTemplates = await db.query.emailTemplates.findMany({
+      where: eq(emailTemplates.isActive, true),
+      orderBy: [desc(emailTemplates.createdAt)],
+    });
+
+    return {
+      predefined: templates,
+      custom: dbTemplates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        subject: t.subject,
+        variables: t.variables ?? [],
+        createdAt: t.createdAt,
+      })),
+    };
+  }),
+
+  getTemplateDefinition: adminProcedure
+    .input(z.object({ templateId: z.string() }))
+    .query(async ({ input }) => {
+      const predefined = getAvailableTemplates().find(
+        (t) => t.id === input.templateId,
+      );
+      if (predefined) {
+        return { type: "predefined" as const, template: predefined };
+      }
+
+      const dbTemplate = await db.query.emailTemplates.findFirst({
+        where: eq(emailTemplates.id, input.templateId),
+      });
+
+      if (dbTemplate) {
+        return {
+          type: "custom" as const,
+          template: {
+            id: dbTemplate.id,
+            name: dbTemplate.name,
+            subject: dbTemplate.subject,
+            htmlContent: dbTemplate.htmlContent,
+            textContent: dbTemplate.textContent,
+            variables: dbTemplate.variables ?? [],
+          },
+        };
+      }
+
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Template not found",
+      });
+    }),
+
+  createTemplate: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(100),
+        subject: z.string().min(1).max(200),
+        htmlContent: z.string().min(1),
+        textContent: z.string().optional(),
+        variables: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const [template] = await db
+        .insert(emailTemplates)
+        .values({
+          name: input.name,
+          subject: input.subject,
+          htmlContent: input.htmlContent,
+          textContent: input.textContent,
+          variables: input.variables,
+          createdBy: ctx.user.id,
+        })
+        .returning();
+
+      return template;
+    }),
+
+  updateTemplate: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(100).optional(),
+        subject: z.string().min(1).max(200).optional(),
+        htmlContent: z.string().min(1).optional(),
+        textContent: z.string().optional(),
+        variables: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { id, ...updates } = input;
+
+      const [template] = await db
+        .update(emailTemplates)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(emailTemplates.id, id))
+        .returning();
+
+      if (!template) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Template not found",
+        });
+      }
+
+      return template;
+    }),
+
+  deleteTemplate: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const [template] = await db
+        .update(emailTemplates)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(emailTemplates.id, input.id))
+        .returning();
+
+      if (!template) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Template not found",
+        });
+      }
+
+      return { success: true };
+    }),
+
+  previewTemplate: adminProcedure
+    .input(
+      z.object({
+        templateId: z.string(),
+        variables: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const predefinedTemplate = getAvailableTemplates().find(
+        (t) => t.id === input.templateId,
+      );
+
+      const previewUser: EmailUser = {
+        id: "preview-user",
+        name: (input.variables.userName as string) ?? "Preview User",
+        email: "preview@example.com",
+        role: "participant",
+        credits: 100,
+        reputation: 50,
+        gameCount: 10,
+        promptCount: 5,
+        creditSpent: 25,
+        createdAt: new Date(),
+      };
+
+      if (predefinedTemplate) {
+        const rendered = await renderEmail({
+          templateId: input.templateId as EmailTemplateId,
+          user: previewUser,
+          variables: input.variables,
+        });
+        return { html: rendered.html, text: rendered.text };
+      }
+
+      const dbTemplate = await db.query.emailTemplates.findFirst({
+        where: eq(emailTemplates.id, input.templateId),
+      });
+
+      if (dbTemplate) {
+        let html = dbTemplate.htmlContent;
+        let text = dbTemplate.textContent ?? "";
+
+        for (const [key, value] of Object.entries(input.variables)) {
+          const placeholder = `{{${key}}}`;
+          const strValue = String(value);
+          html = html.replaceAll(placeholder, strValue);
+          text = text.replaceAll(placeholder, strValue);
+        }
+
+        for (const [key, value] of Object.entries(previewUser)) {
+          const placeholder = `{{user.${key}}}`;
+          const strValue = value === null ? "" : String(value);
+          html = html.replaceAll(placeholder, strValue);
+          text = text.replaceAll(placeholder, strValue);
+        }
+
+        return { html, text };
+      }
+
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Template not found",
+      });
+    }),
+
   getFilteredUsers: adminProcedure
     .input(
       z.object({
@@ -112,7 +310,6 @@ export const emailRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      // Build base query conditions for userExtended
       const userWhereConditions: SQL[] = [];
 
       if (input.filters.role) {
@@ -134,7 +331,6 @@ export const emailRouter = router({
         userWhereConditions.push(eq(userExtended.isSuspended, input.filters.isSuspended));
       }
 
-      // Build base query conditions for user
       const authWhereConditions: SQL[] = [];
 
       if (input.filters.registeredAfter) {
@@ -161,12 +357,10 @@ export const emailRouter = router({
         }
       }
 
-      // Combine conditions
       const allConditions = [...userWhereConditions, ...authWhereConditions];
       const whereClause =
         allConditions.length > 0 ? and(...allConditions) : undefined;
 
-      // Build the query with aggregations
       const usersWithStats = await db
         .select({
           id: user.id,
@@ -197,7 +391,6 @@ export const emailRouter = router({
         .limit(input.limit)
         .offset(input.offset);
 
-      // Apply in-memory filters for complex aggregations
       let filtered = usersWithStats.filter((u) => {
         const gameCount = u.gameCount ?? 0;
         const promptCount = u.promptCount ?? 0;
@@ -237,7 +430,6 @@ export const emailRouter = router({
         return true;
       });
 
-      // Handle lastActiveAt filter separately (using session table)
       if (
         input.filters.lastActiveAfter ||
         input.filters.lastActiveBefore
@@ -275,7 +467,6 @@ export const emailRouter = router({
             !input.filters.lastActiveAfter &&
             !input.filters.lastActiveBefore
           ) {
-            // No sessions but no filter means keep it
             activeUserIds.add(u.id);
           }
         }
@@ -283,7 +474,6 @@ export const emailRouter = router({
         filtered = filtered.filter((u) => activeUserIds.has(u.id));
       }
 
-      // Apply sorting
       filtered.sort((a, b) => {
         let aVal: number | string = 0;
         let bVal: number | string = 0;
@@ -322,8 +512,6 @@ export const emailRouter = router({
             bVal = b.createdAt?.getTime() ?? 0;
             break;
           case "lastActiveAt":
-            // For sorting by last active, we'd need to join sessions
-            // Default to createdAt for now
             aVal = a.createdAt?.getTime() ?? 0;
             bVal = b.createdAt?.getTime() ?? 0;
             break;
@@ -360,9 +548,6 @@ export const emailRouter = router({
       };
     }),
 
-  /**
-   * Get count of users matching filters (for preview before sending)
-   */
   getFilteredUserCount: adminProcedure
     .input(
       z.object({
@@ -370,7 +555,6 @@ export const emailRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      // Build base query conditions
       const userWhereConditions: SQL[] = [];
 
       if (input.filters.role) {
@@ -431,27 +615,43 @@ export const emailRouter = router({
       return { count: result[0]?.count ?? 0 };
     }),
 
-  /**
-   * Send email to selected users
-   *
-   * Sends an email to a list of specific user IDs.
-   * Max 100 recipients per request.
-   */
   sendToUsers: adminProcedure
     .input(
       z.object({
         userIds: z.array(z.string().min(1)).min(1).max(100),
+        templateId: z.enum(["welcome", "broadcast", "custom"]),
         subject: z.string().min(1).max(200),
         content: z.string().min(1),
+        variables: z.record(z.string(), z.unknown()).optional(),
         emailType: z.string().default("admin_broadcast"),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Get users
-      const users = await db.query.user.findMany({
-        where: inArray(user.id, input.userIds),
-        columns: { id: true, name: true, email: true },
-      });
+      const users = await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+          role: userExtended.role,
+          credits: userExtended.credits,
+          reputation: userExtended.reputation,
+          gameCount:
+            sql<number>`(SELECT COUNT(*) FROM ${games} g JOIN ${prompts} p ON g.prompt_id = p.id WHERE p.author_id = ${user.id} AND g.status = 'completed')`.as(
+              "gameCount",
+            ),
+          promptCount:
+            sql<number>`(SELECT COUNT(*) FROM ${prompts} WHERE author_id = ${user.id})`.as(
+              "promptCount",
+            ),
+          creditSpent:
+            sql<number>`(SELECT COALESCE(SUM(ABS(amount)), 0) FROM ${creditTransactions} WHERE user_id = ${user.id} AND type = 'spend')`.as(
+              "creditSpent",
+            ),
+        })
+        .from(user)
+        .innerJoin(userExtended, eq(user.id, userExtended.id))
+        .where(inArray(user.id, input.userIds));
 
       if (users.length === 0) {
         throw new TRPCError({
@@ -461,22 +661,53 @@ export const emailRouter = router({
       }
 
       const batchId = randomUUID();
-      const html = getBroadcastEmailHtml({
-        subject: input.subject,
-        content: input.content,
-      });
+      const emails = await Promise.all(
+        users.map(async (u) => {
+          const emailUser = mapUserToEmailUser(u);
+          const variables = {
+            ...input.variables,
+            subject: input.subject,
+            content: input.content,
+            contentHtml: input.content,
+          };
 
-      const emails = users.map((u) => ({
-        userId: u.id,
-        to: u.email,
-        subject: input.subject,
-        emailType: input.emailType,
-        html,
-      }));
+          let html: string;
+          let text: string;
+
+          if (input.templateId === "custom") {
+            const rendered = await renderEmail({
+              templateId: input.templateId,
+              user: emailUser,
+              variables: { subject: input.subject, contentHtml: input.content },
+            });
+            html = rendered.html;
+            text = rendered.text;
+          } else {
+            const rendered = await renderEmail({
+              templateId: input.templateId,
+              user: emailUser,
+              variables,
+            });
+            html = rendered.html;
+            text = rendered.text;
+          }
+
+          return {
+            userId: u.id,
+            to: u.email,
+            subject: input.subject,
+            emailType: input.emailType,
+            html,
+            text,
+            templateId: input.templateId,
+            user: emailUser,
+            templateVariables: variables,
+          };
+        }),
+      );
 
       const result = await sendBatchEmails(emails, batchId);
 
-      // Log admin action
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
         actionType: "send_email_broadcast",
@@ -500,24 +731,19 @@ export const emailRouter = router({
       };
     }),
 
-  /**
-   * Send email to all users matching filters
-   *
-   * Sends an email to all users matching the provided filters.
-   * Supports dry-run mode to preview count without sending.
-   */
   sendToFiltered: adminProcedure
     .input(
       z.object({
         filters: UserFilterSchema,
+        templateId: z.enum(["welcome", "broadcast", "custom"]),
         subject: z.string().min(1).max(200),
         content: z.string().min(1),
+        variables: z.record(z.string(), z.unknown()).optional(),
         emailType: z.string().default("admin_broadcast"),
         dryRun: z.boolean().default(false),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Build base query conditions
       const userWhereConditions: SQL[] = [];
 
       if (input.filters.role) {
@@ -569,12 +795,27 @@ export const emailRouter = router({
       const whereClause =
         allConditions.length > 0 ? and(...allConditions) : undefined;
 
-      // Get matching users
       const matchingUsers = await db
         .select({
           id: user.id,
           name: user.name,
           email: user.email,
+          createdAt: user.createdAt,
+          role: userExtended.role,
+          credits: userExtended.credits,
+          reputation: userExtended.reputation,
+          gameCount:
+            sql<number>`(SELECT COUNT(*) FROM ${games} g JOIN ${prompts} p ON g.prompt_id = p.id WHERE p.author_id = ${user.id} AND g.status = 'completed')`.as(
+              "gameCount",
+            ),
+          promptCount:
+            sql<number>`(SELECT COUNT(*) FROM ${prompts} WHERE author_id = ${user.id})`.as(
+              "promptCount",
+            ),
+          creditSpent:
+            sql<number>`(SELECT COALESCE(SUM(ABS(amount)), 0) FROM ${creditTransactions} WHERE user_id = ${user.id} AND type = 'spend')`.as(
+              "creditSpent",
+            ),
         })
         .from(user)
         .innerJoin(userExtended, eq(user.id, userExtended.id))
@@ -597,12 +838,6 @@ export const emailRouter = router({
       }
 
       const batchId = randomUUID();
-      const html = getBroadcastEmailHtml({
-        subject: input.subject,
-        content: input.content,
-      });
-
-      // Process in batches of 100
       const batchSize = 100;
       let totalSent = 0;
       let totalFailed = 0;
@@ -610,13 +845,50 @@ export const emailRouter = router({
       for (let i = 0; i < matchingUsers.length; i += batchSize) {
         const batch = matchingUsers.slice(i, i + batchSize);
 
-        const emails = batch.map((u) => ({
-          userId: u.id,
-          to: u.email,
-          subject: input.subject,
-          emailType: input.emailType,
-          html,
-        }));
+        const emails = await Promise.all(
+          batch.map(async (u) => {
+            const emailUser = mapUserToEmailUser(u);
+            const variables = {
+              ...input.variables,
+              subject: input.subject,
+              content: input.content,
+              contentHtml: input.content,
+            };
+
+            let html: string;
+            let text: string;
+
+            if (input.templateId === "custom") {
+              const rendered = await renderEmail({
+                templateId: input.templateId,
+                user: emailUser,
+                variables: { subject: input.subject, contentHtml: input.content },
+              });
+              html = rendered.html;
+              text = rendered.text;
+            } else {
+              const rendered = await renderEmail({
+                templateId: input.templateId,
+                user: emailUser,
+                variables,
+              });
+              html = rendered.html;
+              text = rendered.text;
+            }
+
+            return {
+              userId: u.id,
+              to: u.email,
+              subject: input.subject,
+              emailType: input.emailType,
+              html,
+              text,
+              templateId: input.templateId,
+              user: emailUser,
+              templateVariables: variables,
+            };
+          }),
+        );
 
         const result = await sendBatchEmails(emails, `${batchId}-${i}`);
 
@@ -624,7 +896,6 @@ export const emailRouter = router({
         totalFailed += result.results.filter((r) => !r.success).length;
       }
 
-      // Log admin action
       await db.insert(adminActions).values({
         adminId: ctx.user.id,
         actionType: "send_email_broadcast",
@@ -649,11 +920,6 @@ export const emailRouter = router({
       };
     }),
 
-  /**
-   * Get email logs
-   *
-   * Returns paginated email logs with optional filtering by type, status, user, and date range.
-   */
   getLogs: adminProcedure
     .input(
       z.object({
@@ -729,11 +995,6 @@ export const emailRouter = router({
       };
     }),
 
-  /**
-   * Get email statistics
-   *
-   * Returns aggregated email statistics grouped by status and type.
-   */
   getStats: adminProcedure
     .input(
       z.object({

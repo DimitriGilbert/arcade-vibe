@@ -412,7 +412,7 @@ export default function AdminTierCostsPage() {
         open={!!editingTierCost}
         onOpenChange={(open) => !open && setEditingTierCost(null)}
       >
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Tier Cost</DialogTitle>
             <DialogDescription>
@@ -427,7 +427,7 @@ export default function AdminTierCostsPage() {
 
       {/* Add Tier Cost Dialog */}
       <Dialog open={addingTierCost} onOpenChange={setAddingTierCost}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Tier Cost</DialogTitle>
             <DialogDescription>

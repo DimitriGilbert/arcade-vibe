@@ -116,7 +116,7 @@ export function AddToCollectionDialog({
 
   return (
     <ArcadeDialog open={open} onOpenChange={onOpenChange}>
-      <ArcadeDialogContent className="max-w-2xl">
+      <ArcadeDialogContent className=" min-w-7xl">
         <ArcadeDialogHeader>
           <ArcadeDialogTitle>Save to Collection</ArcadeDialogTitle>
           <ArcadeDialogDescription>

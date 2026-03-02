@@ -396,7 +396,7 @@ export default function AdminGamesPage() {
           !open && setHideDialog({ open: false, game: null })
         }
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] min-w-7xl">
           <DialogHeader>
             <DialogTitle>Hide Game</DialogTitle>
             <DialogDescription>

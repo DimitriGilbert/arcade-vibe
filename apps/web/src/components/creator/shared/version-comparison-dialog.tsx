@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { GitBranch, ArrowRight, FileText } from "lucide-react";
 import { diffWords, type Change } from "diff";
 import type { PromptVersion } from "@/lib/trpc-types";
@@ -60,22 +61,26 @@ function VersionDiff({
   const rightDiff = diff.filter((d) => !d.removed);
 
   return (
-    <div className="grid grid-cols-2 gap-4 bg-[var(--muted)]/40 rounded-lg overflow-hidden">
-      <div className="border-r border-[var(--border)]">
-        <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)]">
+    <div className="grid grid-cols-2 gap-0 bg-[var(--muted)]/40 rounded-lg overflow-hidden border border-[var(--border)] min-h-[60vh]">
+      <div className="border-r border-[var(--border)] flex flex-col">
+        <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)] shrink-0">
           Original
         </div>
-        <div className="p-3 whitespace-pre-wrap text-sm font-mono max-h-[400px] overflow-auto">
-          {renderDiff(leftDiff)}
-        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-3 whitespace-pre-wrap text-sm font-mono">
+            {renderDiff(leftDiff)}
+          </div>
+        </ScrollArea>
       </div>
-      <div>
-        <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)]">
+      <div className="flex flex-col">
+        <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)] shrink-0">
           New
         </div>
-        <div className="p-3 whitespace-pre-wrap text-sm font-mono max-h-[400px] overflow-auto">
-          {renderDiff(rightDiff)}
-        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-3 whitespace-pre-wrap text-sm font-mono">
+            {renderDiff(rightDiff)}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
@@ -118,7 +123,7 @@ export function VersionComparisonDialog<T extends BaseVersion>({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[700px] max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="h-4 w-4" />
@@ -163,7 +168,7 @@ export function VersionComparisonDialog<T extends BaseVersion>({
           </select>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="flex-1 min-h-0">
           {leftVersion && rightVersion ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">

@@ -2,10 +2,12 @@ export {
   sendEmail,
   sendBatchEmails,
   sendWelcomeEmail,
+  renderEmail,
+  getAvailableTemplates,
 } from "@arcade-vibe/email";
-export type { SendEmailOptions, SendEmailResult } from "@arcade-vibe/email";
-export {
-  getWelcomeEmailHtml,
-  getWelcomeEmailText,
-  getBroadcastEmailHtml,
+export type {
+  SendEmailOptions,
+  SendEmailResult,
+  EmailTemplateId,
+  TemplateDefinition,
 } from "@arcade-vibe/email";

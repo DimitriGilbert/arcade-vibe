@@ -664,7 +664,7 @@ export default function AdminThemesPage() {
         open={!!editingTheme}
         onOpenChange={(open) => !open && setEditingTheme(null)}
       >
-        <DialogContent className="sm:max-w-[896px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[896px] max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingTheme?.id ? "Edit Theme" : "Create Theme"}

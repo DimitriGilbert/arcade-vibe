@@ -111,7 +111,7 @@ export function DiscoveryDialog({ open, onOpenChange, excludeGameIds = [] }: Dis
 
   return (
     <ArcadeDialog open={open} onOpenChange={onOpenChange}>
-      <ArcadeDialogContent size="lg" className="max-w-2xl" showClose={true}>
+      <ArcadeDialogContent size="lg" className=" min-w-7xl" showClose={true}>
         <ArcadeDialogHeader>
           <ArcadeDialogTitle className="text-xl">
             While you wait...

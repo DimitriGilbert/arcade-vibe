@@ -73,7 +73,7 @@ export function VersionHistory({
             History ({versions.length})
           </ArcadeButton>
         </DialogTrigger>
-        <DialogContent className="w-[500px] sm:w-[600px] max-h-[90vh]">
+        <DialogContent className=" min-w-7xl sm:w-[600px] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Version History</DialogTitle>
             <DialogDescription>

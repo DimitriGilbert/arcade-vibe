@@ -329,7 +329,7 @@ export default function AdminModerationPage() {
         open={!!selectedReport}
         onOpenChange={(open) => !open && setSelectedReport(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-7xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report Details</DialogTitle>
             <DialogDescription>
