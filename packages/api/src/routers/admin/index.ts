@@ -6,6 +6,7 @@ import { libraryPatternsRouter } from "./library-patterns";
 import { tierCostsRouter } from "./tier-costs";
 import { statsRouter } from "./stats";
 import { emailRouter } from "./email";
+import { backupRouter } from "./backup";
 
 /**
  * Admin Router
@@ -18,6 +19,7 @@ import { emailRouter } from "./email";
  * - tierCosts: Tier credit cost management (get, update, reset to defaults)
  * - stats: Platform statistics and audit log (getStats, getActions)
  * - email: Email management (getFilteredUsers, sendToUsers, sendToFiltered, getLogs, getStats)
+ * - backup: Database backup and restore (backup, restore, getBackupInfo, listTableCounts)
  */
 export const adminRouter = router({
   models: modelConfigRouter,
@@ -27,4 +29,5 @@ export const adminRouter = router({
   tierCosts: tierCostsRouter,
   stats: statsRouter,
   email: emailRouter,
+  backup: backupRouter,
 });

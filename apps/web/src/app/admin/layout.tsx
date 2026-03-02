@@ -23,6 +23,7 @@ import {
   Gamepad2,
   MessageSquare,
   Mail,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -45,6 +46,7 @@ const navigationItems = [
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Feedback", href: "/admin/feedback", icon: MessageSquare },
   { name: "Email", href: "/admin/email", icon: Mail },
+  { name: "Backup", href: "/admin/backup", icon: Database },
   { name: "Audit Log", href: "/admin/audit", icon: History },
 ];
 

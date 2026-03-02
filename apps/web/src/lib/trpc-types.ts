@@ -509,6 +509,8 @@ export type AdminAction = AdminStatsGetActionsOutput["actions"][number];
 
 export type GameAdminView = AdminDirectGetGamesOutput[number];
 
+export type BackupData = AdminOutput["backup"]["backup"]["data"];
+
 // --- Feedback Entity Types ---
 
 /**
