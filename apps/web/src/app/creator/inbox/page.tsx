@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
-import { Loader2, Play, Save, Copy, ExternalLink, Pencil, Check, X } from "lucide-react";
+import { Loader2, Play, Save, Copy, ExternalLink, X } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
@@ -23,7 +23,7 @@ import {
   toModelConfig,
   MAX_MODELS,
 } from "@/components/creator/inbox";
-import { DiscoveryDialog, useDiscoveryDialog } from "@/components/creator/shared";
+import { DiscoveryDialog, useDiscoveryDialog, EditableTitle } from "@/components/creator/shared";
 import {
   useGenerationsStore,
   useGenerationGameId,
@@ -105,10 +105,10 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [gameName, setGameName] = useState("");
-  const [isEditingGameName, setIsEditingGameName] = useState(false);
   const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<Game | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
+  const [titleEditTrigger, setTitleEditTrigger] = useState(0);
 
   // Generations store hooks
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -689,6 +689,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     setActiveOutputTab(null);
     setSelectedGameFromHistory(null);
     setRightSidebarCollapsed(true);
+    // Trigger title editing mode
+    setTitleEditTrigger((prev) => prev + 1);
   }, [clearGenerations]);
 
   const handleSelectVersion = useCallback(
@@ -735,8 +737,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       {/* Header */}
       <header className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--card)]">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold">Inbox</h1>
-          {/* Action buttons moved to header */}
+          <EditableTitle
+            value={promptTitle}
+            onChange={setPromptTitle}
+            placeholder="Prompt title..."
+            disabled={isGenerating}
+            startEditingTrigger={titleEditTrigger}
+          />
           <ArcadeButton
             variant="outline"
             size="sm"
@@ -842,7 +849,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           promptsLoading={promptsLoading}
           selectedPromptId={selectedPromptId}
           onSelectPrompt={handleSelectPrompt}
-          onNewPrompt={handleNewPrompt}
           onDeletePrompt={handleDeletePrompt}
           onTogglePromptVisibility={handleTogglePromptVisibility}
           deletingPromptId={deletingPromptId}
@@ -908,95 +914,15 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
             {/* Left: Prompt Editor */}
             <div className="flex-1 min-h-[200px] lg:min-h-0 flex flex-col border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--card)]">
-              {/* Title Input Row */}
-              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)]">
-                <input
-                  type="text"
-                  value={promptTitle}
-                  onChange={(e) => setPromptTitle(e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm font-medium bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)] placeholder:text-[var(--muted-foreground)]"
-                  placeholder="Prompt title (required, min 3 characters)"
-                  maxLength={100}
-                />
-              </div>
-              {/* Header Row with Game Name and Actions */}
-              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center justify-between">
-                {/* Game Name - Editable */}
-                <div className="flex items-center gap-2">
-                  {isEditingGameName ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={gameName}
-                        onChange={(e) => setGameName(e.target.value)}
-                        className="px-2 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-                        placeholder="Game name"
-                        maxLength={100}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingGameName(false)}
-                        className="p-1 hover:bg-[var(--muted)] rounded"
-                      >
-                        <Check className="h-3 w-3 text-green-500" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsEditingGameName(false);
-                          setGameName("");
-                        }}
-                        className="p-1 hover:bg-[var(--muted)] rounded"
-                      >
-                        <X className="h-3 w-3 text-[var(--destructive)]" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingGameName(true)}
-                      className="group flex items-center gap-1.5 text-xs font-medium hover:text-[var(--primary)] transition-colors"
-                    >
-                      <span>{gameName || "Prompt"}</span>
-                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  )}
-                  {/* Version Badge */}
-                  {selectedPromptId && (
-                    <ArcadeBadge
-                      text={isViewingOldVersion ? `v${versions?.find((v) => v.id === selectedVersionId)?.version ?? "?"} (old)` : `v${existingPrompt?.version ?? versions?.find((v) => v.id === selectedPromptId)?.version ?? 1}`}
-                      variant={isViewingOldVersion ? "pixel" : "neon"}
-                    />
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <ArcadeButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditingGameName(true)}
-                    disabled={isEditingGameName}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </ArcadeButton>
-                  <ArcadeButton
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={
-                      !promptTitle.trim() ||
-                      promptTitle.trim().length < 3 ||
-                      !promptContent.trim() ||
-                      createPromptMutation.isPending ||
-                      updatePromptMutation.isPending
-                    }
-                  >
-                    {createPromptMutation.isPending || updatePromptMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Save className="h-3 w-3" />
-                    )}
-                  </ArcadeButton>
-                </div>
+              {/* Simple Header with Prompt label and version badge */}
+              <div className="shrink-0 px-3 py-2 border-b border-[var(--border)] flex items-center gap-2">
+                <span className="text-xs font-medium text-[var(--muted-foreground)]">Prompt</span>
+                {selectedPromptId && (
+                  <ArcadeBadge
+                    text={isViewingOldVersion ? `v${versions?.find((v) => v.id === selectedVersionId)?.version ?? "?"} (old)` : `v${existingPrompt?.version ?? versions?.find((v) => v.id === selectedPromptId)?.version ?? 1}`}
+                    variant={isViewingOldVersion ? "pixel" : "neon"}
+                  />
+                )}
               </div>
               <div className="flex-1 min-h-0 [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4">
                 <Editor

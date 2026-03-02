@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -25,18 +24,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Check, X, Loader2, Save, Play, ExternalLink, ChevronDown, FileText, Plus, GitBranch, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pencil,
+  Check,
+  X,
+  Loader2,
+  Save,
+  Play,
+  ExternalLink,
+  ChevronDown,
+  Plus,
+  GitBranch,
+  Trash2,
+  FileText,
+  Palette,
+} from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
-import type { CreditBalanceInfo, ThemeList, Visibility, PromptVersion } from "@/lib/trpc-types";
+import type { CreditBalanceInfo, ThemeList, Visibility, PromptVersion, PromptListMineOutput } from "@/lib/trpc-types";
 import type { ModelSelection } from "./types";
+import { cn } from "@/lib/utils";
 
-interface PromptListItem {
+interface PromptWithTheme {
   id: string;
   title: string | null;
   content: string;
   version: number;
   updatedAt: string;
   visibility?: Visibility;
+  themeId: string;
+  themeTitle: string;
 }
 
 interface WorkbenchHeaderProps {
@@ -44,7 +73,7 @@ interface WorkbenchHeaderProps {
   onPromptTitleChange: (title: string) => void;
   credits: CreditBalanceInfo | null | undefined;
   isLoading?: boolean;
-  // Theme selection
+  // Theme data (for selector grouping)
   themes: ThemeList[] | undefined;
   themesLoading: boolean;
   selectedTheme: string;
@@ -60,7 +89,6 @@ interface WorkbenchHeaderProps {
   currentVersion: number | null;
   selectedVersionId: string | null;
   onSelectVersion: (versionId: string) => void;
-  onNewVersion: () => void;
   // Action buttons
   selectedModels: ModelSelection[];
   promptContent: string;
@@ -71,6 +99,9 @@ interface WorkbenchHeaderProps {
   onGenerate: () => void;
   onSave: () => void;
   onPlayGame: () => void;
+  // Optional game name override
+  gameName?: string;
+  onGameNameChange?: (name: string) => void;
 }
 
 export function WorkbenchHeader({
@@ -78,24 +109,19 @@ export function WorkbenchHeader({
   onPromptTitleChange,
   credits,
   isLoading,
-  // Theme
   themes,
   themesLoading,
   selectedTheme,
   onSelectTheme,
-  // Prompt
   selectedPromptId,
   onSelectPrompt,
   onNewPrompt,
   onDeletePrompt,
   deletingPromptId,
-  // Version
   versions,
   currentVersion,
   selectedVersionId,
   onSelectVersion,
-  onNewVersion,
-  // Actions
   selectedModels,
   promptContent,
   isGenerating,
@@ -105,54 +131,162 @@ export function WorkbenchHeader({
   onGenerate,
   onSave,
   onPlayGame,
+  gameName = "",
+  onGameNameChange,
 }: WorkbenchHeaderProps) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editValue, setEditValue] = useState(promptTitle);
+  // State for prompt selector popover
+  const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // State for inline title editing
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState(promptTitle);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
 
-  // Fetch prompts list for the selected theme
-  const { data: prompts, isLoading: promptsLoading } = useQuery({
-    queryKey: ["prompts-for-selector", selectedTheme],
-    queryFn: async (): Promise<PromptListItem[]> => {
-      if (selectedTheme) {
-        return await trpcClient.prompts.listMineByTheme.query({
-          themeId: selectedTheme,
-        });
-      }
-      return await trpcClient.prompts.listMine.query();
+  // Fetch ALL prompts with theme info for the unified selector
+  const { data: allPrompts, isLoading: promptsLoading } = useQuery({
+    queryKey: ["all-prompts-for-selector"],
+    queryFn: async (): Promise<PromptWithTheme[]> => {
+      const prompts = await trpcClient.prompts.listMine.query();
+      // Join with themes client-side
+      return prompts.map((p: PromptListMineOutput[number]) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        version: p.version,
+        updatedAt: p.updatedAt,
+        visibility: p.visibility,
+        themeId: p.themeId,
+        themeTitle: themes?.find(t => t.id === p.themeId)?.title ?? "Unknown",
+      }));
     },
+    enabled: !!themes,
   });
 
-  const handleStartEdit = useCallback(() => {
-    setEditValue(promptTitle);
-    setIsEditingName(true);
-  }, [promptTitle]);
+  // Group prompts by theme
+  const promptsByTheme = useMemo(() => {
+    if (!allPrompts || !themes) return new Map<string, PromptWithTheme[]>();
+    
+    const grouped = new Map<string, PromptWithTheme[]>();
+    
+    // Initialize all themes (even empty ones)
+    for (const theme of themes) {
+      grouped.set(theme.id, []);
+    }
+    
+    // Group prompts by theme
+    for (const prompt of allPrompts) {
+      const existing = grouped.get(prompt.themeId) ?? [];
+      existing.push(prompt);
+      grouped.set(prompt.themeId, existing);
+    }
+    
+    return grouped;
+  }, [allPrompts, themes]);
 
-  const handleSaveEdit = useCallback(() => {
-    onPromptTitleChange(editValue.trim());
-    setIsEditingName(false);
-  }, [editValue, onPromptTitleChange]);
-
-  const handleCancelEdit = useCallback(() => {
-    setEditValue(promptTitle);
-    setIsEditingName(false);
-  }, [promptTitle]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        handleSaveEdit();
-      } else if (e.key === "Escape") {
-        handleCancelEdit();
+  // Filter prompts by search
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return promptsByTheme;
+    
+    const filtered = new Map<string, PromptWithTheme[]>();
+    
+    for (const [themeId, prompts] of promptsByTheme) {
+      const matching = prompts.filter(p => 
+        (p.title?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        p.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (matching.length > 0) {
+        filtered.set(themeId, matching);
       }
-    },
-    [handleSaveEdit, handleCancelEdit]
+    }
+    
+    return filtered;
+  }, [promptsByTheme, searchQuery]);
+
+  // Get current theme info
+  const currentTheme = useMemo(() =>
+    themes?.find(t => t.id === selectedTheme),
+    [themes, selectedTheme]
   );
 
+  // Sort versions
+  const sortedVersions = useMemo(() => {
+    if (!versions) return [];
+    return [...versions].sort((a, b) => b.version - a.version); // Newest first
+  }, [versions]);
+
+  const selectedVersion = sortedVersions.find(v => v.id === selectedVersionId);
+
+  // Calculate credits
+  const totalCredits = useMemo(
+    () => selectedModels.reduce((sum, m) => sum + m.creditCost, 0),
+    [selectedModels]
+  );
+  const hasByok = selectedModels.some((m) => m.isByok);
+
+  // Title editing handlers
+  useEffect(() => {
+    setEditTitleValue(promptTitle);
+  }, [promptTitle]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
+  const handleStartEditTitle = useCallback(() => {
+    if (isGenerating) return;
+    setEditTitleValue(promptTitle);
+    setIsEditingTitle(true);
+  }, [promptTitle, isGenerating]);
+
+  const handleSaveTitle = useCallback(() => {
+    onPromptTitleChange(editTitleValue.trim());
+    setIsEditingTitle(false);
+  }, [editTitleValue, onPromptTitleChange]);
+
+  const handleCancelEditTitle = useCallback(() => {
+    setEditTitleValue(promptTitle);
+    setIsEditingTitle(false);
+  }, [promptTitle]);
+
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveTitle();
+    } else if (e.key === "Escape") {
+      handleCancelEditTitle();
+    }
+  }, [handleSaveTitle, handleCancelEditTitle]);
+
+  // Prompt selection handler
+  const handleSelectPrompt = useCallback((promptId: string) => {
+    onSelectPrompt(promptId);
+    setPromptSelectorOpen(false);
+    setSearchQuery("");
+  }, [onSelectPrompt]);
+
+  // New prompt handler
+  const handleNewPrompt = useCallback(() => {
+    onNewPrompt();
+    setPromptSelectorOpen(false);
+    setSearchQuery("");
+    // Open title editing mode immediately
+    setIsEditingTitle(true);
+    setEditTitleValue("");
+  }, [onNewPrompt]);
+
+  // Delete handlers
   const handleDeleteClick = useCallback((promptId: string) => {
     setPromptToDelete(promptId);
     setDeleteDialogOpen(true);
+    setPromptSelectorOpen(false);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
@@ -163,279 +297,320 @@ export function WorkbenchHeader({
     setPromptToDelete(null);
   }, [promptToDelete, onDeletePrompt]);
 
+  // Generate handler
   const handleGenerateClick = useCallback(() => {
-    // Commit any in-progress title edit before generating
-    if (isEditingName) {
-      onPromptTitleChange(editValue.trim());
-      setIsEditingName(false);
+    if (isEditingTitle) {
+      onPromptTitleChange(editTitleValue.trim());
+      setIsEditingTitle(false);
     }
     onGenerate();
-  }, [isEditingName, editValue, onPromptTitleChange, onGenerate]);
-
-  const totalCredits = useMemo(
-    () => selectedModels.reduce((sum, m) => sum + m.creditCost, 0),
-    [selectedModels]
-  );
-  const hasByok = selectedModels.some((m) => m.isByok);
-
-  const selectedPrompt = prompts?.find((p) => p.id === selectedPromptId);
-  const selectedThemeOption = themes?.find((t) => t.id === selectedTheme);
-
-  // Sort versions by version number
-  const sortedVersions = useMemo(() => {
-    if (!versions) return [];
-    return [...versions].sort((a, b) => a.version - b.version);
-  }, [versions]);
-
-  const selectedVersion = sortedVersions.find((v) => v.id === selectedVersionId);
-
-  // Determine badge variant for version
-  const getVersionVariant = (v: PromptVersion): "neon" | "pixel" | "default" => {
-    if (v.version === currentVersion) return "neon";
-    if (v.id === selectedVersionId) return "pixel";
-    return "default";
-  };
+  }, [isEditingTitle, editTitleValue, onPromptTitleChange, onGenerate]);
 
   return (
-    <header className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--card)] shrink-0">
-      {/* 1. Theme Selector */}
+    <header className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--card)] shrink-0">
+      {/* ===== 1. THEME SELECTOR (ALWAYS VISIBLE) ===== */}
       <Select
         value={selectedTheme}
-        onValueChange={(value) => {
-          if (value !== null) {
-            onSelectTheme(value);
-          }
-        }}
-        disabled={themesLoading}
+        onValueChange={(value) => { if (value) onSelectTheme(value); }}
+        disabled={themesLoading || isGenerating}
       >
-        <SelectTrigger className="w-[120px] h-8 text-xs">
-          <SelectValue placeholder="Theme">
-            {themesLoading ? (
-              <span className="flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading...
-              </span>
-            ) : (
-              selectedThemeOption?.title || "Select theme"
-            )}
+        <SelectTrigger size="sm" className="w-[140px]">
+          <Palette className="h-3.5 w-3.5 mr-1.5 text-[var(--muted-foreground)]" />
+          <SelectValue placeholder="Select theme">
+            {themesLoading ? "Loading..." : currentTheme?.title || "Select theme"}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
-          {themesLoading ? (
-            <div className="flex items-center justify-center py-2">
-              <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />
-            </div>
-          ) : themes && themes.length > 0 ? (
-            themes.map((theme) => (
-              <SelectItem key={theme.id} value={theme.id}>
-                {theme.title}
-              </SelectItem>
-            ))
-          ) : (
-            <div className="px-2 py-2 text-xs text-center text-[var(--muted-foreground)]">
-              No themes
-            </div>
-          )}
+        <SelectContent align="start">
+          {themes?.map((theme) => (
+            <SelectItem key={theme.id} value={theme.id}>
+              {theme.title}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
-      {/* 2. Prompt Selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 py-1.5 text-sm rounded border border-[var(--border)] hover:bg-[var(--muted)]/50 transition-colors min-w-[100px] max-w-[160px] cursor-pointer outline-none data-[open]:bg-[var(--muted)]/50">
-          <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
-          <span className="truncate flex-1 text-left">
-            {promptsLoading ? "Loading..." : selectedPrompt ? `v${selectedPrompt.version}` : "New"}
-          </span>
-          <ChevronDown className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[200px] max-w-[300px]">
-          <DropdownMenuItem onClick={onNewPrompt}>
-            <Plus className="h-3.5 w-3.5 mr-2" />
-            New Prompt
-          </DropdownMenuItem>
-          {prompts && prompts.length > 0 && <DropdownMenuSeparator />}
-          {prompts?.map((prompt) => (
-            <DropdownMenuItem
-              key={prompt.id}
-              onClick={() => onSelectPrompt(prompt.id)}
-              className={prompt.id === selectedPromptId ? "bg-[var(--muted)]/50" : ""}
-            >
-              <span className="truncate">
-                v{prompt.version}: {prompt.title || prompt.content.slice(0, 40)}
-              </span>
-            </DropdownMenuItem>
-          ))}
-          {selectedPromptId && prompts && prompts.length > 0 && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteClick(selectedPromptId);
-                }}
-                disabled={deletingPromptId === selectedPromptId}
-                variant="destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-2" />
-                {deletingPromptId === selectedPromptId ? "Deleting..." : "Delete Prompt"}
-              </DropdownMenuItem>
-            </>
+      {/* ===== 2. PROMPT SELECTOR ===== */}
+      
+      <Popover open={promptSelectorOpen} onOpenChange={setPromptSelectorOpen}>
+        <PopoverTrigger
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)]/50 transition-colors min-w-[160px] max-w-[240px] cursor-pointer text-left group"
+          disabled={isGenerating}
+        >
+          {/* Prompt Icon */}
+          <FileText className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
+          
+          {/* Title Area */}
+          <div className="flex-1 min-w-0">
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full bg-transparent border-none outline-none text-sm font-medium"
+                placeholder="Untitled"
+                maxLength={100}
+              />
+            ) : (
+              <div className="truncate text-sm font-medium">
+                {promptTitle || "New Prompt"}
+              </div>
+            )}
+          </div>
+          
+          {/* Version badge (if versions exist) */}
+          {sortedVersions.length > 0 && (
+            <ArcadeBadge
+              text={`v${selectedVersion?.version ?? currentVersion ?? 1}`}
+              variant={isEditingTitle ? "default" : "neon"}
+              className="shrink-0"
+            />
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+          
+          {/* Dropdown arrow */}
+          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--muted-foreground)] opacity-50 group-hover:opacity-100 transition-opacity" />
+        </PopoverTrigger>
+        
+        <PopoverContent 
+          className="w-[320px] p-0" 
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput 
+              placeholder="Search prompts..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList className="max-h-[300px]">
+              {promptsLoading || themesLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty>No prompts found.</CommandEmpty>
+                  
+                  {/* New Prompt Option */}
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={handleNewPrompt}
+                      className="cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4 mr-2 text-[var(--primary)]" />
+                      <span className="text-[var(--primary)]">New Prompt</span>
+                    </CommandItem>
+                  </CommandGroup>
+                  
+                  {/* Prompt groups by theme */}
+                  {Array.from(filteredGroups.entries()).map(([themeId, prompts]) => {
+                    const theme = themes?.find(t => t.id === themeId);
+                    if (!theme || prompts.length === 0) return null;
+                    
+                    return (
+                      <CommandGroup key={themeId} heading={theme.title}>
+                        {prompts.map((prompt) => {
+                          const isSelected = prompt.id === selectedPromptId;
+                          return (
+                            <CommandItem
+                              key={prompt.id}
+                              value={`${themeId}-${prompt.id}`}
+                              onSelect={() => handleSelectPrompt(prompt.id)}
+                              className={cn(
+                                "cursor-pointer flex items-center justify-between",
+                                isSelected && "bg-[var(--muted)]"
+                              )}
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {isSelected && (
+                                  <span className="text-[var(--primary)]">●</span>
+                                )}
+                                <span className="truncate">
+                                  {prompt.title || "Untitled"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <ArcadeBadge text={`v${prompt.version}`} variant="pixel" />
+                                {isSelected && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick(prompt.id);
+                                    }}
+                                    disabled={deletingPromptId === prompt.id}
+                                    className="p-1 hover:bg-[var(--destructive)]/20 rounded text-[var(--muted-foreground)] hover:text-[var(--destructive)]"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    );
+                  })}
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
-      {/* 3. Version Selector with + button (only show if there are versions) */}
-      {sortedVersions.length > 0 && (
+      {/* Quick Edit Title Button (when not editing) */}
+      {!isEditingTitle && (
+        <button
+          type="button"
+          onClick={handleStartEditTitle}
+          disabled={isGenerating}
+          className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+          title="Edit title"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* Title Edit Actions (when editing) */}
+      {isEditingTitle && (
         <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 py-1.5 text-sm rounded border border-[var(--border)] hover:bg-[var(--muted)]/50 transition-colors min-w-[70px] cursor-pointer outline-none data-[open]:bg-[var(--muted)]/50">
-              <GitBranch className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
-              <span className="truncate flex-1 text-left">
-                v{selectedVersion?.version ?? sortedVersions[sortedVersions.length - 1]?.version}
-              </span>
-              <ChevronDown className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[120px]">
-              {sortedVersions.map((v) => (
-                <DropdownMenuItem
-                  key={v.id}
-                  onClick={() => onSelectVersion(v.id)}
-                  className={v.id === selectedVersionId ? "bg-[var(--muted)]/50" : ""}
-                >
-                  <div className="flex items-center gap-2">
-                    <ArcadeBadge text={`v${v.version}`} variant={getVersionVariant(v)} className="text-[10px]" />
-                    {v.version === currentVersion && (
-                      <span className="text-[10px] text-[var(--muted-foreground)]">(latest)</span>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ArcadeButton
-            variant="outline"
-            size="sm"
-            onClick={onNewVersion}
-            className="h-7 w-7 p-0"
+          <button
+            type="button"
+            onClick={handleSaveTitle}
+            className="p-1.5 rounded hover:bg-[var(--muted)] text-green-500"
           >
-            <Plus className="h-3 w-3" />
-          </ArcadeButton>
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleCancelEditTitle}
+            className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--muted-foreground)]"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
-      {/* Prompt Name (Editable) */}
-      <div className="min-w-0 flex-1 max-w-[180px]">
-        {isEditingName ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1 px-2 py-1 text-sm bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              placeholder="Prompt name..."
-              maxLength={100}
-            />
-            <button
-              type="button"
-              onClick={handleSaveEdit}
-              className="p-1 rounded hover:bg-[var(--muted)] text-green-500"
-              aria-label="Save name"
-            >
-              <Check className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="p-1 rounded hover:bg-[var(--muted)] text-[var(--muted-foreground)]"
-              aria-label="Cancel edit"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleStartEdit}
-            className="flex items-center gap-1.5 text-sm font-medium hover:text-[var(--primary)] transition-colors truncate w-full"
+      {/* Version Dropdown (separate from prompt selector) */}
+      {sortedVersions.length > 1 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-[var(--border)] hover:bg-[var(--muted)]/50 transition-colors cursor-pointer"
+            disabled={isGenerating}
           >
-            <span className="truncate">{promptTitle || "Untitled Prompt"}</span>
-            <Pencil className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
-          </button>
-        )}
-      </div>
+            <GitBranch className="h-3 w-3 text-[var(--muted-foreground)]" />
+            <span>v{selectedVersion?.version ?? currentVersion ?? 1}</span>
+            <ChevronDown className="h-3 w-3 text-[var(--muted-foreground)]" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[140px]">
+            {sortedVersions.map((v) => (
+              <DropdownMenuItem
+                key={v.id}
+                onClick={() => onSelectVersion(v.id)}
+                className={v.id === selectedVersionId ? "bg-[var(--muted)]/50" : ""}
+              >
+                <div className="flex items-center gap-2">
+                  <ArcadeBadge 
+                    text={`v${v.version}`} 
+                    variant={v.version === currentVersion ? "neon" : "default"} 
+                  />
+                  {v.version === currentVersion && (
+                    <span className="text-xs text-[var(--muted-foreground)]">(latest)</span>
+                  )}
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        {/* Save Button */}
-        <ArcadeButton
-          variant="outline"
-          size="sm"
-          onClick={onSave}
-          disabled={!promptContent.trim() || isSaving}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-3 w-3 mr-1" />
-              Save
-            </>
-          )}
-        </ArcadeButton>
+      {/* ===== RIGHT: GAME NAME + ACTIONS ===== */}
+      
+      {/* Game Name - defaults to prompt title */}
+      {onGameNameChange && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[var(--muted-foreground)]">Game:</span>
+          <input
+            type="text"
+            value={gameName}
+            onChange={(e) => onGameNameChange(e.target.value)}
+            placeholder={promptTitle || "Game name"}
+            maxLength={100}
+            className="w-28 px-2 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+            disabled={isGenerating}
+          />
+        </div>
+      )}
 
-        {/* Generate Button */}
-        <ArcadeButton
-          size="sm"
-          onClick={handleGenerateClick}
-          disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              {selectedModels.length > 1 ? `${completedCount}/${selectedModels.length}` : "Gen..."}
-            </>
-          ) : (
-            <>
-              <Play className="h-3 w-3 mr-1" />
-              Generate
-              {selectedModels.length > 0 && (
-                <span className="ml-0.5 opacity-70">({selectedModels.length})</span>
-              )}
-            </>
-          )}
-        </ArcadeButton>
+      {/* Save Button */}
+      <ArcadeButton
+        variant="outline"
+        size="sm"
+        onClick={onSave}
+        disabled={!promptContent.trim() || isSaving}
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Save className="h-3 w-3 mr-1" />
+            Save
+          </>
+        )}
+      </ArcadeButton>
 
-        {/* Credits Display */}
-        {selectedModels.length > 0 && (
-          <div className="flex items-center gap-1">
-            {hasByok && (
-              <span className="text-[9px] text-[var(--muted-foreground)]">+BYOK</span>
+      {/* Generate Button */}
+      <ArcadeButton
+        size="sm"
+        onClick={handleGenerateClick}
+        disabled={isGenerating || !promptContent.trim() || selectedModels.length === 0}
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            {selectedModels.length > 1 ? `${completedCount}/${selectedModels.length}` : "Gen..."}
+          </>
+        ) : (
+          <>
+            <Play className="h-3 w-3 mr-1" />
+            Generate
+            {selectedModels.length > 0 && (
+              <span className="ml-0.5 opacity-70">({selectedModels.length})</span>
             )}
-            <ArcadeBadge text={`${totalCredits}cr`} variant="neon" className="text-[10px]" />
-          </div>
+          </>
         )}
+      </ArcadeButton>
 
-        {/* Play Game Button */}
-        {activeGameId && !isGenerating && (
-          <ArcadeButton
-            variant="glow"
-            size="sm"
-            onClick={onPlayGame}
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            Play
-          </ArcadeButton>
-        )}
-      </div>
+      {/* Credits for generation */}
+      {selectedModels.length > 0 && (
+        <div className="flex items-center gap-1">
+          {hasByok && (
+            <span className="text-[9px] text-[var(--muted-foreground)]">+BYOK</span>
+          )}
+          <ArcadeBadge text={`${totalCredits}cr`} variant="neon" className="text-[10px]" />
+        </div>
+      )}
 
-      {/* Credits Badge */}
+      {/* Play Game Button */}
+      {activeGameId && !isGenerating && (
+        <ArcadeButton
+          variant="glow"
+          size="sm"
+          onClick={onPlayGame}
+        >
+          <ExternalLink className="h-3 w-3 mr-1" />
+          Play
+        </ArcadeButton>
+      )}
+
+      {/* User Credits */}
       <div className="flex items-center shrink-0 border-l border-[var(--border)] pl-3">
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />

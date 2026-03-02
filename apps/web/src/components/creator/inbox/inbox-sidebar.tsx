@@ -25,7 +25,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, MoreHorizontal, Trash2, Globe, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, Trash2, Globe, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Visibility } from "@/lib/trpc-types";
 
 interface InboxPrompt {
@@ -42,7 +42,6 @@ interface InboxSidebarProps {
   promptsLoading: boolean;
   selectedPromptId: string | null;
   onSelectPrompt: (promptId: string) => void;
-  onNewPrompt: () => void;
   onDeletePrompt: (promptId: string) => void;
   onTogglePromptVisibility: (promptId: string, visibility: Visibility) => void;
   deletingPromptId: string | null;
@@ -80,7 +79,6 @@ export function InboxSidebar({
   promptsLoading,
   selectedPromptId,
   onSelectPrompt,
-  onNewPrompt,
   onDeletePrompt,
   onTogglePromptVisibility,
   deletingPromptId,
@@ -138,21 +136,16 @@ export function InboxSidebar({
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
           Prompts
         </span>
-        <div className="flex items-center gap-1">
-          <ArcadeButton variant="outline" size="sm" onClick={onNewPrompt}>
-            <Plus className="h-3 w-3" />
-          </ArcadeButton>
-          {onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
-            </button>
-          )}
-        </div>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="p-1 rounded hover:bg-[var(--muted)]/50 transition-colors"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="h-4 w-4 text-[var(--muted-foreground)]" />
+          </button>
+        )}
       </div>
 
       {/* Theme Selector */}

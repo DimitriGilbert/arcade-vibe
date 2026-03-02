@@ -80,6 +80,7 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
     submittingGameId,
     unpublishingGameId,
     deletingGameId,
+    titleEditTrigger,
   } = state;
 
   // Update URL when prompt is selected
@@ -186,6 +187,7 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
         onGenerate={handleGenerate}
         onPlayGame={handlePlayGame}
         onHome={handleHome}
+        titleEditTrigger={titleEditTrigger}
       />
 
       {/* Fork Banner */}

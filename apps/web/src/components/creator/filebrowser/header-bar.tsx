@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader2, Save, Play, Plus, ExternalLink, Home, ChevronRight } from "lucide-react";
+import { Loader2, Save, Play, Plus, ExternalLink, ChevronRight } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
-import { Input } from "@/components/ui/input";
+import { EditableTitle } from "@/components/creator/shared";
 import type { ThemeNode, PromptNode, RunNode, FilebrowserSelection } from "./types";
 
 interface HeaderBarProps {
@@ -24,6 +24,7 @@ interface HeaderBarProps {
   onGenerate: () => void;
   onPlayGame: () => void;
   onHome: () => void;
+  titleEditTrigger?: number;
 }
 
 export function HeaderBar({
@@ -45,6 +46,7 @@ export function HeaderBar({
   onGenerate,
   onPlayGame,
   onHome,
+  titleEditTrigger = 0,
 }: HeaderBarProps) {
   const theme = themes?.find((t) => t.id === selection.themeId);
   const prompt = prompts?.find((p) => p.id === selection.promptId);
@@ -76,6 +78,8 @@ export function HeaderBar({
 
   const breadcrumbs = getBreadcrumbs();
 
+  const isEditingPrompt = selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt";
+
   return (
     <header className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--card)] shrink-0">
       {/* Breadcrumbs */}
@@ -101,74 +105,77 @@ export function HeaderBar({
         })}
       </div>
 
-      {/* Title Input */}
-      {(selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt") && (
-        <div className="flex items-center gap-2 mx-4 min-w-0 max-w-xs">
-          <Input
-            type="text"
-            placeholder="Prompt title (required)"
-            value={promptTitle}
-            onChange={(e) => onPromptTitleChange(e.target.value)}
-            maxLength={100}
-            className="h-8 text-sm bg-[var(--background)]"
-            disabled={isGenerating}
-          />
-        </div>
-      )}
-
-      {/* Actions */}
+      {/* Actions - Order: Credits → Title → New → Save → Generate → Play */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Credits - FIRST */}
         {credits && (
           <span className="text-xs text-[var(--muted-foreground)] mr-2">
             {credits.balance} credits
           </span>
         )}
 
-        {(selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt") && (
-          <>
-            <ArcadeButton
-              variant="outline"
-              size="sm"
-              onClick={onNewPrompt}
-            >
-              <Plus className="h-3 w-3" />
-              New
-            </ArcadeButton>
-
-            <ArcadeButton
-              variant="outline"
-              size="sm"
-              onClick={onSave}
-              disabled={!canSave || isGenerating}
-            >
-              {isGenerating ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Save className="h-3 w-3" />
-              )}
-              Save
-            </ArcadeButton>
-
-            <ArcadeButton
-              size="sm"
-              onClick={onGenerate}
-              disabled={!canGenerate || isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {totalModels > 1 ? ` ${completedCount}/${totalModels}` : "..."}
-                </>
-              ) : (
-                <>
-                  <Play className="h-3 w-3" />
-                  Generate{totalModels > 0 ? ` (${totalModels})` : ""}
-                </>
-              )}
-            </ArcadeButton>
-          </>
+        {/* Title (EditableTitle) - only when editing prompt */}
+        {isEditingPrompt && (
+          <EditableTitle
+            value={promptTitle}
+            onChange={onPromptTitleChange}
+            placeholder="Prompt title"
+            disabled={isGenerating}
+            startEditingTrigger={titleEditTrigger}
+          />
         )}
 
+        {/* New button - only when editing prompt */}
+        {isEditingPrompt && (
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={onNewPrompt}
+          >
+            <Plus className="h-3 w-3" />
+            New
+          </ArcadeButton>
+        )}
+
+        {/* Save button - only when editing prompt */}
+        {isEditingPrompt && (
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={onSave}
+            disabled={!canSave || isGenerating}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3" />
+            )}
+            Save
+          </ArcadeButton>
+        )}
+
+        {/* Generate button - only when editing prompt */}
+        {isEditingPrompt && (
+          <ArcadeButton
+            size="sm"
+            onClick={onGenerate}
+            disabled={!canGenerate || isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {totalModels > 1 ? ` ${completedCount}/${totalModels}` : "..."}
+              </>
+            ) : (
+              <>
+                <Play className="h-3 w-3" />
+                Generate{totalModels > 0 ? ` (${totalModels})` : ""}
+              </>
+            )}
+          </ArcadeButton>
+        )}
+
+        {/* Play Game button - only for run selection */}
         {selection.type === "run" && hasActiveGame && (
           <ArcadeButton
             variant="glow"

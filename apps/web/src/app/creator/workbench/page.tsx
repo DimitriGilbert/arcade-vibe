@@ -108,6 +108,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
+  const [gameName, setGameName] = useState("");
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("models");
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
 
@@ -612,10 +613,6 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     [versions, selectedPromptId]
   );
 
-  const handleNewVersion = useCallback(() => {
-    setActiveRightTab("models");
-  }, []);
-
   const handleVisibilityChange = useCallback((newVisibility: Visibility) => {
     setVisibility(newVisibility);
     if (selectedPromptId) {
@@ -704,7 +701,6 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         currentVersion={currentPrompt?.version ?? null}
         selectedVersionId={selectedVersionId}
         onSelectVersion={handleSelectVersion}
-        onNewVersion={handleNewVersion}
         selectedModels={selectedModels}
         promptContent={promptContent}
         isGenerating={isGenerating}
@@ -714,6 +710,8 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         onGenerate={handleGenerate}
         onSave={handleSave}
         onPlayGame={handlePlayGame}
+        gameName={gameName}
+        onGameNameChange={setGameName}
       />
 
       {/* Fork Button (if forking) */}

@@ -27,6 +27,7 @@ import { EditorSidebar } from "../../components/editor/editor-sidebar";
 import { VersionSelector } from "../../components/editor/version-selector";
 import { EditorTabs } from "../../components/editor/editor-tabs";
 import { SelectedModelsList } from "../../components/editor/selected-models-list";
+import { EditableTitle } from "@/components/creator/shared";
 import type { GameMedia } from "@/lib/trpc-types";
 import type {
   ModelSelection,
@@ -53,7 +54,6 @@ const GENERATION_CONCURRENCY_LIMIT = 2;
 interface PersistedEditorState {
   promptContent: string;
   promptTitle: string;
-  gameName: string;
   selectedTheme: string;
   selectedModels: ModelSelection[];
   timestamp: number;
@@ -103,7 +103,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   const [mounted, setMounted] = useState(false);
   const [promptContent, setPromptContent] = useState("");
   const [promptTitle, setPromptTitle] = useState("");
-  const [gameName, setGameName] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedModels, setSelectedModels] = useState<ModelSelection[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -143,7 +142,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     if (persistedState) {
       setPromptContent(persistedState.promptContent);
       setPromptTitle(persistedState.promptTitle);
-      setGameName(persistedState.gameName);
       setSelectedTheme(persistedState.selectedTheme);
       setSelectedModels(persistedState.selectedModels);
     }
@@ -261,14 +259,12 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
     persistState({
       promptContent,
       promptTitle,
-      gameName,
       selectedTheme,
       selectedModels,
     });
   }, [
     promptContent,
     promptTitle,
-    gameName,
     selectedTheme,
     selectedModels,
     resolvedSearchParams?.promptId,
@@ -532,7 +528,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             promptId,
             modelKey: model.modelKey,
             apiKeyId: model.apiKeyId ?? undefined,
-            name: gameName.trim() || undefined,
+            name: undefined,
             mediaUrls: gameMedia.mediaUrls ?? undefined,
             reasoningEnabled: model.reasoningEnabled,
             reasoningMaxTokens: model.reasoningMaxTokens,
@@ -607,7 +603,6 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
   }, [
     promptTitle,
     promptContent,
-    gameName,
     existingPrompt,
     selectedTheme,
     selectedModels,
@@ -822,9 +817,10 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
 
         {/* Main Content */}
         <main className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden">
-          {/* Header with credits and fork button */}
+          {/* Header with title, credits and fork button */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-            <div className="flex items-center gap-2">
+            {/* Left: Fork button + Progress text */}
+            <div className="flex items-center gap-2 min-w-0">
               {isForking && (
                 <ArcadeButton
                   variant="outline"
@@ -841,8 +837,24 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
                 </span>
               )}
             </div>
+            {/* Center: EditableTitle + Version badge */}
+            <div className="flex items-center gap-2 justify-center flex-1 px-4">
+              <EditableTitle
+                value={promptTitle}
+                onChange={setPromptTitle}
+                placeholder="Untitled Prompt"
+                disabled={isGenerating}
+                maxWidth="max-w-[240px]"
+              />
+              {isEditing && currentPrompt && (
+                <span className="text-xs text-[var(--muted-foreground)] bg-[var(--muted)] px-2 py-0.5 rounded">
+                  v{currentPrompt.version}
+                </span>
+              )}
+            </div>
+            {/* Right: Credits badge */}
             {credits && (
-              <span className="text-xs text-[var(--muted-foreground)]">
+              <span className="text-xs text-[var(--muted-foreground)] shrink-0">
                 {credits.balance} credits
               </span>
             )}
@@ -883,25 +895,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
           </div>
 
           {/* Action Bar */}
-          <div className="p-4 border-t border-[var(--border)] space-y-3 shrink-0">
-            {/* Prompt Title Input */}
-            <input
-              type="text"
-              placeholder="Prompt title (required, 3-100 chars)"
-              value={promptTitle}
-              onChange={(e) => setPromptTitle(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent placeholder:text-[var(--muted-foreground)]"
-              maxLength={100}
-            />
-            {/* Game Name Input */}
-            <input
-              type="text"
-              placeholder="Game name (optional)"
-              value={gameName}
-              onChange={(e) => setGameName(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent placeholder:text-[var(--muted-foreground)]"
-              maxLength={100}
-            />
+          <div className="p-4 border-t border-[var(--border)] shrink-0">
             <div className="flex gap-2">
               <ArcadeButton
                 onClick={handleSave}

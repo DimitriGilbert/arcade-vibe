@@ -84,6 +84,7 @@ export interface UseFilebrowserStateReturn {
   expandedPrompts: string[];
   activeOutputTab: string | null;
   setActiveOutputTab: (id: string | null) => void;
+  titleEditTrigger: number;
 
   // Queries
   themes: ThemeNode[] | undefined;
@@ -159,6 +160,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
   const [deletingPromptId, setDeletingPromptId] = useState<string | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
+  const [titleEditTrigger, setTitleEditTrigger] = useState(0);
 
   // Game action states
   const [submittingGameId, setSubmittingGameId] = useState<string | null>(null);
@@ -210,6 +212,9 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
 
   // Initialize prompt content when existing prompt loads
   useEffect(() => {
+    // Don't auto-load when user explicitly wants a new prompt
+    if (selection.type === "new-prompt") return;
+
     if (existingPrompt && !selectedPromptId) {
       setPromptContent(existingPrompt.content);
       setPromptTitle(existingPrompt.title ?? "");
@@ -234,7 +239,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
         return prev;
       });
     }
-  }, [existingPrompt, selectedPromptId]);
+  }, [existingPrompt, selectedPromptId, selection.type]);
 
   // Fetch themes
   const { data: themesData, isLoading: themesLoading } = useQuery({
@@ -779,6 +784,8 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     setSelectedModels([]);
     clearGenerations();
     setActiveOutputTab(null);
+    // Trigger title editing mode
+    setTitleEditTrigger((prev) => prev + 1);
   }, [clearGenerations]);
 
   // Select prompt handler
@@ -898,6 +905,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     expandedPrompts,
     activeOutputTab,
     setActiveOutputTab,
+    titleEditTrigger,
 
     // Queries
     themes,
