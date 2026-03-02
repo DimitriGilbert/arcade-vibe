@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { GitBranch, ArrowRight, FileText } from "lucide-react";
 import { diffWords, type Change } from "diff";
-import type { PromptVersion } from "@/lib/trpc-types";
+// import type { PromptVersion } from "@/lib/trpc-types";
 
 interface BaseVersion {
   id: string;
@@ -61,22 +61,22 @@ function VersionDiff({
   const rightDiff = diff.filter((d) => !d.removed);
 
   return (
-    <div className="grid grid-cols-2 gap-0 bg-[var(--muted)]/40 rounded-lg overflow-hidden border border-[var(--border)] min-h-[60vh]">
-      <div className="border-r border-[var(--border)] flex flex-col">
+    <div className="grid grid-cols-2 gap-0 bg-[var(--muted)]/40 rounded-lg overflow-hidden border border-[var(--border)] h-[60vh]">
+      <div className="border-r border-[var(--border)] flex flex-col overflow-hidden">
         <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)] shrink-0">
           Original
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="h-full">
           <div className="p-3 whitespace-pre-wrap text-sm font-mono">
             {renderDiff(leftDiff)}
           </div>
         </ScrollArea>
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col overflow-hidden">
         <div className="p-2 border-b border-[var(--border)] bg-[var(--muted)]/50 text-xs font-medium text-[var(--muted-foreground)] shrink-0">
           New
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="h-full">
           <div className="p-3 whitespace-pre-wrap text-sm font-mono">
             {renderDiff(rightDiff)}
           </div>
@@ -123,7 +123,7 @@ export function VersionComparisonDialog<T extends BaseVersion>({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="!w-full !max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GitBranch className="h-4 w-4" />
@@ -196,7 +196,7 @@ export function VersionComparisonDialog<T extends BaseVersion>({
                   rightContent={rightContent}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center h-[200px] bg-[var(--muted)]/20 rounded-lg border border-[var(--border)]">
+                <div className="flex flex-col items-center justify-center h-[60vh] bg-[var(--muted)]/20 rounded-lg border border-[var(--border)]">
                   <FileText className="h-8 w-8 text-[var(--muted-foreground)] mb-2" />
                   <p className="text-sm text-[var(--muted-foreground)]">
                     Version content not available for comparison
@@ -208,7 +208,7 @@ export function VersionComparisonDialog<T extends BaseVersion>({
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[200px] text-[var(--muted-foreground)]">
+            <div className="flex items-center justify-center h-[60vh] text-[var(--muted-foreground)]">
               Select two versions to compare
             </div>
           )}
