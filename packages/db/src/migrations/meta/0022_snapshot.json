@@ -1,6 +1,6 @@
 {
-  "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
-  "prevId": "c2d3e4f5-6789-0abc-def0-3456789012de",
+  "id": "c2d3e4f5-6789-0abc-def0-3456789012de",
+  "prevId": "b1c2d3e4-5678-90ab-cdef-2345678901bc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2753,12 +2753,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "title": {
-          "name": "title",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "content": {
           "name": "content",
           "type": "text",
@@ -2934,21 +2928,6 @@
             },
             {
               "expression": "theme_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "prompts_title_idx": {
-          "name": "prompts_title_idx",
-          "columns": [
-            {
-              "expression": "title",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
