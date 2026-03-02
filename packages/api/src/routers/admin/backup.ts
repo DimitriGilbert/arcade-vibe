@@ -34,7 +34,6 @@ const DATABASE_TABLES = [
   "themes",
   "allowed_library_patterns",
   "theme_allowed_patterns",
-  "library_patterns",
   "model_config",
   "model_providers",
   "moderation_reports",
