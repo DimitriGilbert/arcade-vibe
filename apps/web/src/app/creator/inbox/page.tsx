@@ -706,17 +706,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     [versions, selectedPromptId]
   );
 
-  const handleNewVersion = useCallback(async () => {
-    setIsViewingOldVersion(false);
-    if (selectedPromptId) {
-      const currentPrompt = await trpcClient.prompts.getById.query({ id: selectedPromptId });
-      if (currentPrompt) {
-        setPromptContent(currentPrompt.content);
-        setSelectedVersionId(selectedPromptId);
-      }
-    }
-  }, [selectedPromptId]);
-
   // Handler for selecting a game from history - must be defined before any conditional code
   const handleSelectGameFromHistory = useCallback((game: GameListItem) => {
     setSelectedGameFromHistory(game);
@@ -869,7 +858,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             currentVersion={existingPrompt?.version ?? null}
             selectedVersionId={selectedVersionId}
             onSelectVersion={handleSelectVersion}
-            onNewVersion={handleNewVersion}
           />
         )}
 

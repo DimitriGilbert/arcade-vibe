@@ -1,1 +1,0 @@
-ALTER TABLE "model_config" ALTER COLUMN "model_created_at" SET DEFAULT now();

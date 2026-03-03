@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Plus, Scale } from "lucide-react";
+import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Scale } from "lucide-react";
 import { toast } from "sonner";
 import type { GameListItem, GameStatus, PromptVersion } from "@/lib/trpc-types";
 import { GameActionsDropdown, VersionComparisonDialog } from "@/components/creator/shared";
@@ -27,7 +27,6 @@ interface InboxGenerationHistoryProps {
   currentVersion?: number | null;
   selectedVersionId?: string | null;
   onSelectVersion?: (versionId: string) => void;
-  onNewVersion?: () => void;
 }
 
 function formatDate(date: Date | string): string {
@@ -80,7 +79,6 @@ export function InboxGenerationHistory({
   currentVersion,
   selectedVersionId,
   onSelectVersion,
-  onNewVersion,
 }: InboxGenerationHistoryProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -301,16 +299,6 @@ export function InboxGenerationHistory({
               </button>
             );
           })}
-          {onNewVersion && (
-            <ArcadeButton
-              variant="outline"
-              size="sm"
-              onClick={onNewVersion}
-              className="h-5 w-5 p-0 shrink-0"
-            >
-              <Plus className="h-3 w-3" />
-            </ArcadeButton>
-          )}
           {sortedVersions.length > 1 && (
             <ArcadeButton
               variant="outline"

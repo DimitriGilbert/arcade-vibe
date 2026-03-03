@@ -1,2 +1,0 @@
-ALTER TABLE "subscription_plans" ADD COLUMN "is_one_time" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE "subscription_plans" ADD COLUMN "is_popular" boolean DEFAULT false NOT NULL;
