@@ -14,12 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { Play, Send, Loader2, Check, AlertCircle, Sparkles, ChevronLeft, ChevronRight, EyeOff, Globe, GitBranch, Plus, Scale } from "lucide-react";
 import { toast } from "sonner";
-import type { Game, GameStatus, PromptVersion } from "@/lib/trpc-types";
+import type { GameListItem, GameStatus, PromptVersion } from "@/lib/trpc-types";
 import { GameActionsDropdown, VersionComparisonDialog } from "@/components/creator/shared";
 
 interface InboxGenerationHistoryProps {
   promptId: string | null;
-  onSelectGame?: (game: Game) => void;
+  onSelectGame?: (game: GameListItem) => void;
   selectedGameId?: string | null;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -84,7 +84,7 @@ export function InboxGenerationHistory({
 }: InboxGenerationHistoryProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<GameListItem | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [unpublishingGameId, setUnpublishingGameId] = useState<string | null>(null);
   const [compareDialogOpen, setCompareDialogOpen] = useState(false);
@@ -149,7 +149,7 @@ export function InboxGenerationHistory({
     },
   });
 
-  const handleDeleteClick = (game: Game) => {
+  const handleDeleteClick = (game: GameListItem) => {
     setGameToDelete(game);
     setDeleteDialogOpen(true);
   };
@@ -340,7 +340,7 @@ export function InboxGenerationHistory({
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <ul className="divide-y divide-[var(--border)]">
-          {[...games].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((game: Game) => {
+          {[...games].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((game: GameListItem) => {
             const canSubmit = game.status === "completed" && !game.isSubmitted;
             const isSubmitting = submitMutation.isPending && submitMutation.variables === game.id;
             const isUnpublishing = unpublishingGameId === game.id;

@@ -28,6 +28,33 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const ABANDONED_GAME_THRESHOLD_DAYS = 7;
 
+const GAME_LIST_COLUMNS = {
+  id: true,
+  name: true,
+  promptId: true,
+  themeId: true,
+  status: true,
+  modelProvider: true,
+  modelName: true,
+  tierCostId: true,
+  tokenUsage: true,
+  inputTokens: true,
+  outputTokens: true,
+  reasoningTokens: true,
+  cachedInputTokens: true,
+  requestCostUsd: true,
+  generatedAt: true,
+  isHidden: true,
+  hiddenReason: true,
+  hiddenAt: true,
+  isSubmitted: true,
+  submittedAt: true,
+  sanitizationApplied: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 /**
  * @security SDK_TEMPLATE - Sandboxed iframe HTML template
  *
@@ -374,6 +401,7 @@ export const gamesRouter = router({
           eq(games.promptId, input.promptId),
           eq(games.isHidden, false),
         ),
+        columns: GAME_LIST_COLUMNS,
         orderBy: [desc(games.createdAt)],
         limit: input.limit,
         offset: input.offset,
@@ -451,6 +479,7 @@ export const gamesRouter = router({
       // Fetch one extra to determine if there are more results
       const result = await gamesQuery.findMany({
         where: and(...whereConditions),
+        columns: GAME_LIST_COLUMNS,
         orderBy: [desc(games.createdAt)],
         limit: input.limit + 1,
         with: {
@@ -549,6 +578,7 @@ export const gamesRouter = router({
 
       const result = await gamesQuery.findMany({
         where: and(...whereConditions),
+        columns: GAME_LIST_COLUMNS,
         orderBy: [desc(games.createdAt)],
         limit: input.limit + 1,
         with: {
@@ -618,6 +648,7 @@ export const gamesRouter = router({
 
       const items = await db.query.games.findMany({
         where: conditions,
+        columns: GAME_LIST_COLUMNS,
         orderBy: [desc(games.createdAt)],
         limit: input.pageSize,
         offset,

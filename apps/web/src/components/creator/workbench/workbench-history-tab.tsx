@@ -22,7 +22,7 @@ import {
 import { Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe, ArrowDown, Brain, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
-import type { Game, GameStatus } from "@/lib/trpc-types";
+import type { GameListItem, GameStatus } from "@/lib/trpc-types";
 import type { GenerationStatus, ModelSelection } from "./types";
 import {
   useGenerationById,
@@ -50,7 +50,7 @@ interface RunningGenerationItem {
 interface CompletedGameItem {
   type: "completed";
   id: string;
-  game: Game;
+  game: GameListItem;
 }
 
 type HistoryItem = RunningGenerationItem | CompletedGameItem;
@@ -71,7 +71,7 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
 }
 
 interface CompletedGameOutputProps {
-  game: Game;
+  game: GameListItem;
 }
 
 function CompletedGameOutput({ game }: CompletedGameOutputProps) {
@@ -124,7 +124,7 @@ export function WorkbenchHistoryTab({
 }: WorkbenchHistoryTabProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<GameListItem | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [unpublishingGameId, setUnpublishingGameId] = useState<string | null>(null);
 
@@ -246,7 +246,7 @@ export function WorkbenchHistoryTab({
     },
   });
 
-  const handleDeleteClick = (game: Game) => {
+  const handleDeleteClick = (game: GameListItem) => {
     setGameToDelete(game);
     setDeleteDialogOpen(true);
   };

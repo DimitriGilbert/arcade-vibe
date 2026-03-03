@@ -7,7 +7,7 @@ import { ArcadeButton } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection } from "./inbox-types";
-import type { Game } from "@/lib/trpc-types";
+import type { GameListItem } from "@/lib/trpc-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
 import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
@@ -33,7 +33,7 @@ export interface InboxOutputPanelProps {
   activeOutputTab: string | null | undefined;
   selectedModels: ModelSelection[];
   onOutputTabChange?: (id: string) => void;
-  selectedGameFromHistory?: Game | null;
+  selectedGameFromHistory?: GameListItem | null;
 }
 
 export function InboxOutputPanel({

@@ -8,7 +8,7 @@ import { Loader2, Play, Save, Copy, ExternalLink, X, Pencil, Check } from "lucid
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { FeedbackButton } from "@/components/feedback";
 import { trpcClient } from "@/utils/trpc";
-import type { Visibility, Game, PromptVersion } from "@/lib/trpc-types";
+import type { Visibility, GameListItem, PromptVersion } from "@/lib/trpc-types";
 import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 import {
   InboxSidebar,
@@ -106,7 +106,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [gameName, setGameName] = useState("");
   const [isEditingGameName, setIsEditingGameName] = useState(false);
-  const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<Game | null>(null);
+  const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<GameListItem | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
   const [titleEditTrigger, setTitleEditTrigger] = useState(0);
@@ -718,7 +718,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   }, [selectedPromptId]);
 
   // Handler for selecting a game from history - must be defined before any conditional code
-  const handleSelectGameFromHistory = useCallback((game: Game) => {
+  const handleSelectGameFromHistory = useCallback((game: GameListItem) => {
     setSelectedGameFromHistory(game);
   }, []);
 

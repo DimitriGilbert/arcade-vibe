@@ -4,7 +4,7 @@ import { trpcClient } from "@/utils/trpc";
 import type {
   User,
   UserExtended,
-  Game,
+  GameListItem,
   GameWithRanking,
   Prompt,
   Rating,
@@ -85,7 +85,7 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
 
   const { data: allGames, isLoading: gamesLoading } = useQuery({
     queryKey: ["games-by-user", user?.id],
-    queryFn: async (): Promise<Game[]> => {
+    queryFn: async (): Promise<GameListItem[]> => {
       if (!user?.id) return [];
       
       try {
@@ -150,7 +150,7 @@ export function useProfileData(username: string, isOwnProfile: boolean) {
 
   const { data: promptRunsHistory, isLoading: promptRunsLoading } = useQuery({
     queryKey: ["prompt-runs-history", user?.id],
-    queryFn: async (): Promise<Game[]> => {
+    queryFn: async (): Promise<GameListItem[]> => {
       if (!user?.id) return [];
 
       try {

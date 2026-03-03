@@ -162,6 +162,7 @@ export type GameByIdOutput = GamesOutput["getById"];
 export type GamePublicByIdOutput = GamesOutput["getPublicById"];
 export type GameListByPromptOutput = GamesOutput["listByPrompt"];
 export type GameListByThemeOutput = GamesOutput["listByTheme"];
+export type GameListByUserOutput = GamesOutput["listByUser"];
 export type GameListPublicPaginatedOutput = GamesOutput["listPublicPaginated"];
 export type GameSubmitOutput = GamesOutput["submit"];
 export type GameHideOutput = GamesOutput["hide"];
@@ -293,6 +294,13 @@ export type CollectionsAddGameOutput = CollectionsOutput["addGame"];
 export type Game = GameByIdOutput;
 
 /**
+ * Game list item without heavy fields (gameData, strudelCode, mediaUrls, etc.)
+ * Use this for list views that don't need full game content
+ * @source RouterOutput["games"]["listByPrompt"][number]
+ */
+export type GameListItem = NonNullable<GameListByPromptOutput>[number];
+
+/**
  * Game entity as returned from listByTheme (array item)
  * @source RouterOutput["games"]["listByTheme"]["games"][number]
  */
@@ -303,7 +311,7 @@ export type PublicGameListItem =
 /**
  * Game with ranking information for leaderboard display
  */
-export type GameWithRanking = Game & {
+export type GameWithRanking = GameListItem & {
   ranking: number | null;
   tierCost?: { slug: string } | null;
   modelName?: string;

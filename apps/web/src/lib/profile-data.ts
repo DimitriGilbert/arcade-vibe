@@ -104,15 +104,19 @@ function serializeGameWithRanking(raw: {
   tierCostId: string;
   themeId: string | null;
   promptId: string;
+  tokenUsage: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  reasoningTokens: number | null;
+  cachedInputTokens: number | null;
+  requestCostUsd: string | null;
+  generatedAt: Date | null;
   isSubmitted: boolean;
   submittedAt: Date | null;
   isHidden: boolean;
-  imageUrl: string | null;
-  gameData: string | null;
-  strudelCode: string | null;
-  mediaUrls: Record<string, string> | null;
-  hiddenAt: Date | null;
   hiddenReason: string | null;
+  hiddenAt: Date | null;
+  sanitizationApplied: boolean;
   deletedAt: Date | null;
   prompt: {
     id: string;
@@ -205,15 +209,19 @@ export async function getUserGames(userId: string): Promise<{
   tierCostId: string;
   themeId: string | null;
   promptId: string;
+  tokenUsage: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  reasoningTokens: number | null;
+  cachedInputTokens: number | null;
+  requestCostUsd: string | null;
+  generatedAt: Date | null;
   isSubmitted: boolean;
   submittedAt: Date | null;
   isHidden: boolean;
-  imageUrl: string | null;
-  gameData: string | null;
-  strudelCode: string | null;
-  mediaUrls: Record<string, string> | null;
-  hiddenAt: Date | null;
   hiddenReason: string | null;
+  hiddenAt: Date | null;
+  sanitizationApplied: boolean;
   deletedAt: Date | null;
   prompt: {
     id: string;
@@ -256,6 +264,32 @@ export async function getUserGames(userId: string): Promise<{
       isNull(games.deletedAt),
       eq(games.isSubmitted, true)
     ),
+    columns: {
+      id: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true,
+      status: true,
+      modelName: true,
+      modelProvider: true,
+      tierCostId: true,
+      themeId: true,
+      promptId: true,
+      tokenUsage: true,
+      inputTokens: true,
+      outputTokens: true,
+      reasoningTokens: true,
+      cachedInputTokens: true,
+      requestCostUsd: true,
+      generatedAt: true,
+      isSubmitted: true,
+      submittedAt: true,
+      isHidden: true,
+      hiddenReason: true,
+      hiddenAt: true,
+      sanitizationApplied: true,
+      deletedAt: true,
+    },
     orderBy: [desc(games.createdAt)],
     limit: 100,
     with: {
@@ -293,15 +327,19 @@ export async function getUserGames(userId: string): Promise<{
     tierCostId: string;
     themeId: string | null;
     promptId: string;
+    tokenUsage: number | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    reasoningTokens: number | null;
+    cachedInputTokens: number | null;
+    requestCostUsd: string | null;
+    generatedAt: Date | null;
     isSubmitted: boolean;
     submittedAt: Date | null;
     isHidden: boolean;
-    imageUrl: string | null;
-    gameData: string | null;
-    strudelCode: string | null;
-    mediaUrls: Record<string, string> | null;
-    hiddenAt: Date | null;
     hiddenReason: string | null;
+    hiddenAt: Date | null;
+    sanitizationApplied: boolean;
     deletedAt: Date | null;
     prompt: {
       id: string;

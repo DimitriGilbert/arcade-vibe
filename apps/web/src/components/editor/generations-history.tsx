@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { History, Play, Send, Loader2, MoreHorizontal, Trash2, EyeOff, Globe } from "lucide-react";
 import { toast } from "sonner";
-import type { Game, GameStatus } from "@/lib/trpc-types";
+import type { GameListItem, GameStatus } from "@/lib/trpc-types";
 
 interface GenerationsHistoryProps {
   promptId: string | null;
@@ -45,7 +45,7 @@ function getStatusVariant(status: GameStatus): "default" | "neon" {
 export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<GameListItem | null>(null);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [unpublishingGameId, setUnpublishingGameId] = useState<string | null>(null);
 
@@ -114,7 +114,7 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
     },
   });
 
-  const handleDeleteClick = (game: Game) => {
+  const handleDeleteClick = (game: GameListItem) => {
     setGameToDelete(game);
     setDeleteDialogOpen(true);
   };
@@ -171,7 +171,7 @@ export function GenerationsHistory({ promptId }: GenerationsHistoryProps) {
     <>
       <div className="h-full min-h-0 border border-[var(--border)] rounded-md overflow-y-auto bg-[var(--muted)]/10">
         <ul className="divide-y divide-[var(--border)]">
-          {games.map((game: Game) => {
+          {games.map((game: GameListItem) => {
             const canSubmit = game.status === "completed" && !game.isSubmitted;
             const isSubmitting =
               submitMutation.isPending && submitMutation.variables === game.id;

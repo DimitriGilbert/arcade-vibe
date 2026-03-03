@@ -9,10 +9,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Game } from "@/lib/trpc-types";
+import type { GameListItem } from "@/lib/trpc-types";
 
 interface GameActionsDropdownProps {
-  game: Game;
+  game: GameListItem;
   onSubmit: () => void;
   onUnpublish: () => void;
   onDelete: () => void;
