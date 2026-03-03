@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, use } from "react";
 import { Copy, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { FilebrowserSelection } from "@/components/creator/filebrowser";
 import { FeedbackButton } from "@/components/feedback";
 import {
@@ -221,7 +222,7 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
                 Explorer
               </h2>
             </div>
-            <div className="flex-1 min-h-0">
+            <ScrollArea className="flex-1 min-h-0">
               <FileTree
                 themes={themes}
                 themesLoading={themesLoading}
@@ -242,7 +243,7 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
                 onSelectPrompt={handleSelectPrompt}
                 onSelectRun={handleSelectRun}
               />
-            </div>
+            </ScrollArea>
           </div>
         </aside>
 
