@@ -123,12 +123,15 @@ export function RankedCard({
 				</div>
 
 				<div className="flex-1 min-w-0">
-					<Link
-						href={`/game/${entry.gameId}`}
-						className="block font-semibold text-sm text-[var(--foreground)] hover:text-[var(--primary)] transition-colors truncate"
-					>
-						{entry.gameName || "Untitled Game"}
-					</Link>
+					<div className="flex items-center gap-2 mb-0.5">
+						<Link
+							href={`/game/${entry.gameId}`}
+							className="block font-semibold text-sm text-[var(--foreground)] hover:text-[var(--primary)] transition-colors truncate"
+						>
+							{entry.gameName || "Untitled Game"}
+						</Link>
+						{entry.tier && <ArcadeBadge text={entry.tier.slug} variant="default" />}
+					</div>
 					<div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
 						<Link
 							href={`/profile/${entry.creator.name}`}
@@ -139,6 +142,19 @@ export function RankedCard({
 						<span className="text-[var(--primary)] font-bold">
 							{formatScore(entry.finalScore)}
 						</span>
+					</div>
+					<div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)] mt-0.5">
+						<Link
+							href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+							className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors truncate"
+						>
+							<Cpu className="h-3 w-3" />
+							<span className="truncate max-w-[80px]">{entry.modelName}</span>
+						</Link>
+						<div className="flex items-center gap-1">
+							<Gamepad2 className="h-3 w-3" />
+							<span>{entry.playCount}</span>
+						</div>
 					</div>
 				</div>
 
