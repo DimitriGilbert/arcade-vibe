@@ -215,15 +215,14 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
       {/* Main content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left sidebar - File tree */}
-        <aside className="w-64 lg:w-72 border-r border-[var(--border)] bg-[var(--card)] shrink-0 overflow-hidden">
-          <div className="h-full flex flex-col">
-            <div className="px-3 py-2 border-b border-[var(--border)]">
-              <h2 className="text-sm font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
-                Explorer
-              </h2>
-            </div>
-            <ScrollArea className="flex-1 min-h-0">
-              <FileTree
+        <aside className="w-64 lg:w-72 border-r border-[var(--border)] bg-[var(--card)] shrink-0 flex flex-col">
+          <div className="px-3 py-2 border-b border-[var(--border)] shrink-0">
+            <h2 className="text-sm font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
+              Explorer
+            </h2>
+          </div>
+          <ScrollArea className="flex-1 h-0">
+            <FileTree
                 themes={themes}
                 themesLoading={themesLoading}
                 prompts={prompts}
@@ -244,7 +243,6 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
                 onSelectRun={handleSelectRun}
               />
             </ScrollArea>
-          </div>
         </aside>
 
         {/* Center panel */}
