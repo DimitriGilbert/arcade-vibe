@@ -559,7 +559,7 @@ export function FileTree({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="py-1">
       {themes.map((theme) => (
         <ThemeNodeComponent
           key={theme.id}
