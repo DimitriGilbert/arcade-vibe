@@ -213,7 +213,7 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 flex">
         {/* Left sidebar - File tree */}
         <aside className="h-full w-64 lg:w-72 border-r border-[var(--border)] bg-[var(--card)] shrink-0 flex flex-col">
           <div className="px-3 py-2 border-b border-[var(--border)] shrink-0">
