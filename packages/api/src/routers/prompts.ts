@@ -132,6 +132,20 @@ export const promptsRouter = router({
         });
       }
 
+      let rootPromptId: string = originalPrompt.id;
+      if (originalPrompt.parentId) {
+        rootPromptId = originalPrompt.parentId;
+      }
+
+      const allVersions = await promptsQuery.findMany({
+        where: or(
+          eq(prompts.id, rootPromptId),
+          eq(prompts.parentId, rootPromptId),
+        ),
+        columns: { version: true },
+      });
+      const maxVersion = Math.max(...allVersions.map((p) => p.version), 0);
+
       const tokenCount = getTokenCount(input.content, input.tokenizer);
       const contentHash = generateContentHash(input.content);
 
@@ -140,14 +154,14 @@ export const promptsRouter = router({
         .values({
           authorId: originalPrompt.authorId,
           themeId: originalPrompt.themeId,
-          parentId: originalPrompt.id,
+          parentId: rootPromptId,
           content: input.content,
           title: input.title ?? originalPrompt.title,
           contentHash,
           tokenCount,
           tokenizer: input.tokenizer,
           visibility: input.visibility ?? originalPrompt.visibility,
-          version: originalPrompt.version + 1,
+          version: maxVersion + 1,
           relationType: "version",
         })
         .returning();
@@ -155,7 +169,7 @@ export const promptsRouter = router({
       return {
         success: true,
         promptId: newVersion[0]?.id,
-        version: originalPrompt.version + 1,
+        version: maxVersion + 1,
         tokenCount,
       };
     }),
@@ -290,10 +304,12 @@ export const promptsRouter = router({
         });
       }
 
+      const rootPromptId = original.parentId ?? original.id;
+
       const versions = await promptsQuery.findMany({
         where: or(
-          eq(prompts.id, input.promptId),
-          eq(prompts.parentId, input.promptId),
+          eq(prompts.id, rootPromptId),
+          eq(prompts.parentId, rootPromptId),
         ),
         orderBy: [asc(prompts.version)],
       });
@@ -362,14 +378,13 @@ export const promptsRouter = router({
         });
       }
 
-      const myPrompts = await promptsQuery.findMany({
+      const allPrompts = await promptsQuery.findMany({
         where: and(
           eq(prompts.authorId, ctx.user.id),
           eq(prompts.themeId, input.themeId),
-          isNull(prompts.parentId),
           isNull(prompts.hiddenAt),
         ),
-        orderBy: [desc(prompts.updatedAt)],
+        orderBy: [desc(prompts.version)],
         columns: {
           id: true,
           title: true,
@@ -379,12 +394,34 @@ export const promptsRouter = router({
           status: true,
           createdAt: true,
           updatedAt: true,
+          parentId: true,
         },
       });
 
-      return myPrompts.map((prompt) => ({
-        ...prompt,
+      const latestByChain = new Map<
+        string,
+        (typeof allPrompts)[number]
+      >();
+      for (const prompt of allPrompts) {
+        const chainId = prompt.parentId ?? prompt.id;
+        if (chainId && !latestByChain.has(chainId)) {
+          latestByChain.set(chainId, prompt);
+        }
+      }
+
+      const latestPrompts = Array.from(latestByChain.values()).sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+
+      return latestPrompts.map((prompt) => ({
+        id: prompt.id,
+        title: prompt.title,
         content: prompt.content.slice(0, 100),
+        version: prompt.version,
+        visibility: prompt.visibility,
+        status: prompt.status,
+        createdAt: prompt.createdAt,
+        updatedAt: prompt.updatedAt,
       }));
     }),
 
