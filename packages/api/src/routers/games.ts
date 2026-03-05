@@ -13,14 +13,14 @@ import { gameScores } from "@arcade-vibe/db/schema/games";
 import { scores } from "@arcade-vibe/db/schema/scores";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { user } from "@arcade-vibe/db/schema/auth";
-import { eq, desc, and, lt, isNull, isNotNull, sql, inArray, count, gt } from "drizzle-orm";
+import { eq, desc, and, or, lt, isNull, isNotNull, sql, inArray, count, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { createGameSessionToken } from "../lib/game-session";
 import {
   generatePortableGameHtml,
   generatePortableFilename,
 } from "../lib/game-export";
-import { cacheGet, cacheSet, cacheDeletePattern } from "../lib/redis";
+import { cacheDeletePattern } from "../lib/redis";
 import { redis } from "../lib/redis";
 import z from "zod";
 
@@ -369,7 +369,7 @@ export const gamesRouter = router({
     }),
 
   /**
-   * List all games for a prompt
+   * List all games for a prompt (including all versions in the chain)
    * Only includes non-hidden games
    * Supports pagination
    */
@@ -382,12 +382,6 @@ export const gamesRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const cacheKey = `games:prompt:${input.promptId}:${input.limit}:${input.offset}`;
-      const cached = await cacheGet<typeof result>(cacheKey);
-      if (cached) {
-        return cached;
-      }
-
       const gamesQuery = db.query.games;
       if (!gamesQuery) {
         throw new TRPCError({
@@ -396,9 +390,42 @@ export const gamesRouter = router({
         });
       }
 
+      const promptsQuery = db.query.prompts;
+      if (!promptsQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const targetPrompt = await promptsQuery.findFirst({
+        where: eq(prompts.id, input.promptId),
+        columns: { id: true, parentId: true },
+      });
+
+      if (!targetPrompt) {
+        return [];
+      }
+
+      const rootPromptId = targetPrompt.parentId ?? targetPrompt.id;
+
+      const allVersions = await promptsQuery.findMany({
+        where: or(
+          eq(prompts.id, rootPromptId),
+          eq(prompts.parentId, rootPromptId),
+        ),
+        columns: { id: true },
+      });
+
+      const promptIds = allVersions.map((p) => p.id);
+
+      if (promptIds.length === 0) {
+        return [];
+      }
+
       const result = await gamesQuery.findMany({
         where: and(
-          eq(games.promptId, input.promptId),
+          inArray(games.promptId, promptIds),
           eq(games.isHidden, false),
         ),
         columns: GAME_LIST_COLUMNS,
@@ -421,7 +448,6 @@ export const gamesRouter = router({
         },
       });
 
-      await cacheSet(cacheKey, result, 60); // Cache for 1 minute
       return result;
     }),
 
