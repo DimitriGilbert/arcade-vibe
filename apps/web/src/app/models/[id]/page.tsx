@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 
 // TODO: Refactor to use direct Drizzle queries via a lib file (see @/lib/profile-data.ts pattern)
 // The tRPC server caller approach is over-engineered for simple data fetching.
@@ -16,6 +17,7 @@ import {
 
 import { ArcadeBadge, ArcadeCard } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
+import { getModelDetailRoute, getModelIdFromSegment } from "@/lib/model-routes";
 import { StatRow } from "@/components/models";
 import { getServerCaller } from "@/utils/trpc-server";
 import { GameActionsClient } from "./game-actions-client";
@@ -29,7 +31,8 @@ interface ModelDetailPageProps {
 export async function generateMetadata({
   params,
 }: ModelDetailPageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = getModelIdFromSegment(rawId);
 
   try {
     const caller = await getServerCaller();
@@ -44,6 +47,9 @@ export async function generateMetadata({
     return {
       title: `${model.modelName} - Model Profile`,
       description,
+      alternates: {
+        canonical: getModelDetailRoute(model.modelName, model.id),
+      },
       openGraph: {
         title: `${model.modelName} - Arcade Vibe Model Profile`,
         description,
@@ -55,7 +61,8 @@ export async function generateMetadata({
 }
 
 export default async function ModelDetailPage({ params }: ModelDetailPageProps) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = getModelIdFromSegment(rawId);
 
   let model;
   let games;
@@ -80,6 +87,13 @@ export default async function ModelDetailPage({ params }: ModelDetailPageProps) 
         <EmptyState title="Model not found" message="This model does not exist." />
       </div>
     );
+  }
+
+  const canonicalRoute = getModelDetailRoute(model.modelName, model.id);
+  const canonicalSegment = canonicalRoute.replace("/models/", "");
+
+  if (rawId !== canonicalSegment) {
+    permanentRedirect(canonicalRoute);
   }
 
   const topRatedGame =

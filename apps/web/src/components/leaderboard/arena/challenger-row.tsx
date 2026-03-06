@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatPlayTime } from "@/lib/formatting";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { RankBadge } from "@/components/leaderboard/shared/rank-badge";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
 
@@ -56,7 +57,11 @@ export function ChallengerRow({ entry, rank }: { entry: LeaderboardEntry; rank: 
 						</Link>
 					</div>
 					<Link
-						href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+						href={
+							entry.modelId
+								? getModelDetailRoute(entry.modelName, entry.modelId)
+								: "/models"
+						}
 						className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors"
 					>
 						<Cpu className="h-3 w-3" />

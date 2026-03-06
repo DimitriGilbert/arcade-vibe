@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatDateShort, formatPlayTime } from "@/lib/formatting";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
 
 export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
@@ -73,7 +74,11 @@ export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 
 					<div className="flex items-center justify-center gap-4 text-sm text-[var(--muted-foreground)] mb-3">
 						<Link
-							href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+							href={
+								entry.modelId
+									? getModelDetailRoute(entry.modelName, entry.modelId)
+									: "/models"
+							}
 							className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors"
 						>
 							<Cpu className="h-3 w-3" />

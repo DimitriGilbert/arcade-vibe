@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getModelDetailRoute } from "@/lib/model-routes";
 
 export interface EntrySubtitleProps {
   creator: {
@@ -35,7 +36,7 @@ export function EntrySubtitle({
     ? showLinks
       ? (
         <Link
-          href={`/models/${model.id}`}
+          href={getModelDetailRoute(model.name, model.id)}
           className="hover:text-[var(--primary)] transition-colors"
         >
           {model.name}

@@ -25,6 +25,7 @@ import {
   ArcadeTabsList,
   ArcadeTabsTrigger,
 } from "@/components/arcade";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { InfoCard } from "@/components/reusable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getServerCaller } from "@/utils/trpc-server";
@@ -141,7 +142,7 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
               with{" "}
               {modelPageId ? (
                 <Link
-                  href={`/models/${modelPageId}` as Route}
+                  href={getModelDetailRoute(game.modelName, modelPageId)}
                   className="text-[var(--foreground)] hover:text-[var(--primary)]"
                 >
                   {game.modelName}
@@ -176,7 +177,7 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
               value={
                 modelPageId ? (
                   <Link
-                    href={`/models/${modelPageId}` as Route}
+                    href={getModelDetailRoute(game.modelName, modelPageId)}
                     className="hover:text-[var(--primary)]"
                   >
                     {game.modelName}
@@ -327,7 +328,7 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
                       <span className="text-[var(--muted-foreground)]">Model</span>
                       {modelPageId ? (
                         <Link
-                          href={`/models/${modelPageId}` as Route}
+                          href={getModelDetailRoute(game.modelName, modelPageId)}
                           className="inline-flex items-center gap-1 hover:text-[var(--primary)]"
                         >
                           {game.modelName}

@@ -7,6 +7,7 @@ import { Calendar, Gamepad2, Layers, Play, Star, User } from "lucide-react";
 
 import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { getServerCaller } from "@/utils/trpc-server";
 
 const PAGE_SIZE = 12;
@@ -149,7 +150,7 @@ export default async function GamesLibraryPage({
                         <Star className="h-3.5 w-3.5" />
                         {matchedModel ? (
                           <Link
-                            href={`/models/${matchedModel.id}` as Route}
+                            href={getModelDetailRoute(game.modelName, matchedModel.id)}
                             className="hover:text-[var(--primary)]"
                           >
                             {game.modelName}

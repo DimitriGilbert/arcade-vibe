@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatPlayTime } from "@/lib/formatting";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
 
 const RANK_STYLES: Record<number, {
@@ -90,7 +91,11 @@ export function CoverStoryCard({ entry, rank }: { entry: LeaderboardEntry; rank:
 						<div>
 							<p className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Model</p>
 							<Link
-								href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+								href={
+									entry.modelId
+										? getModelDetailRoute(entry.modelName, entry.modelId)
+										: "/models"
+								}
 								className="text-sm font-medium hover:text-[var(--primary)] transition-colors"
 							>
 								{entry.modelName}

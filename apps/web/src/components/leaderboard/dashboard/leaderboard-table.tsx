@@ -6,6 +6,7 @@ import { Trophy, ChevronDown, Loader2, Play } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatDateShort } from "@/lib/formatting";
 import { getRankStyle } from "@/lib/leaderboard-utils";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
 
@@ -128,7 +129,7 @@ export function LeaderboardTable({
 														<>
 															<span className="text-[var(--border)]">•</span>
 															<Link
-																href={`/models/${entry.modelId}`}
+																href={getModelDetailRoute(entry.modelName, entry.modelId)}
 																className="text-[10px] text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-colors truncate max-w-[80px]"
 															>
 																{entry.modelName}

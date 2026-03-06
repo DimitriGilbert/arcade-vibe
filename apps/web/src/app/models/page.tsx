@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { Route } from "next";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Cpu, Gamepad2, Search, Star } from "lucide-react";
@@ -14,6 +13,7 @@ import {
   ArcadeInput,
 } from "@/components/arcade";
 import { EmptyState, LoadingState } from "@/components/reusable";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { cn } from "@/lib/utils";
 import { trpcClient } from "@/utils/trpc";
 
@@ -182,7 +182,7 @@ export default function ModelsPage() {
               return (
                 <Link
                   key={model.id}
-                  href={`/models/${model.id}` as Route}
+                  href={getModelDetailRoute(model.modelName, model.id)}
                   className="group"
                 >
                   <ArcadeCard className="p-4 transition-all duration-200 group-hover:border-[var(--primary)]/60 group-hover:bg-[var(--muted)]/20">

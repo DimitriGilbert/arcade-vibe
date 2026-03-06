@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatPlayTime } from "@/lib/formatting";
+import { getModelDetailRoute } from "@/lib/model-routes";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
 
 const RANK_COLORS: Record<number, string> = {
@@ -76,7 +77,11 @@ export function RankedCard({
 
 					<div className="flex items-center gap-1 mb-2">
 						<Link
-							href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+							href={
+								entry.modelId
+									? getModelDetailRoute(entry.modelName, entry.modelId)
+									: "/models"
+							}
 							className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-colors"
 						>
 							<Cpu className="h-3 w-3" />
@@ -145,7 +150,11 @@ export function RankedCard({
 					</div>
 					<div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)] mt-0.5">
 						<Link
-							href={entry.modelId ? `/models/${entry.modelId}` : "/models"}
+							href={
+								entry.modelId
+									? getModelDetailRoute(entry.modelName, entry.modelId)
+									: "/models"
+							}
 							className="flex items-center gap-1 hover:text-[var(--primary)] transition-colors truncate"
 						>
 							<Cpu className="h-3 w-3" />
