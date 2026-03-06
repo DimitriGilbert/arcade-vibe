@@ -2,8 +2,7 @@
 
 import type { Route } from "next";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Gamepad2, Star, Zap, Play, ChevronLeft, ChevronRight } from "lucide-react";
-import { ArcadeButton } from "@/components/arcade";
+import { Gamepad2, Star, Zap, Play } from "lucide-react";
 import { MagazineHeader, GamesSection } from "@/components/profile/magazine";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { StatBlock } from "@/components/profile/shared";
@@ -75,35 +74,14 @@ export default function MagazineProfileClient({
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="mb-6 flex items-center justify-between">
-            <ArcadeButton
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(gamesPage - 1)}
-              disabled={gamesPage <= 1}
-              className="gap-1"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </ArcadeButton>
-            <span className="text-sm text-[var(--muted-foreground)]">
-              Page {gamesPage} of {totalPages}
-            </span>
-            <ArcadeButton
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(gamesPage + 1)}
-              disabled={!gamesHasMore}
-              className="gap-1"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </ArcadeButton>
-          </div>
-        )}
-
-        <GamesSection games={gamesWithRankings} page={gamesPage} />
+        <GamesSection
+          games={gamesWithRankings}
+          page={gamesPage}
+          total={gamesTotal}
+          hasMore={gamesHasMore}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
 
         <div className="mb-16">
           <PublicCollectionsCard collections={publicCollections} />

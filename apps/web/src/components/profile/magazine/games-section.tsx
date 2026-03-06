@@ -1,6 +1,7 @@
 "use client";
 
-import { Gamepad2 } from "lucide-react";
+import { Gamepad2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArcadeButton } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
 import type { GameWithRanking } from "@/lib/trpc-types";
 import { FeaturedGameCard } from "./featured-game-card";
@@ -8,9 +9,13 @@ import { FeaturedGameCard } from "./featured-game-card";
 export interface GamesSectionProps {
   games: GameWithRanking[];
   page: number;
+  total: number;
+  hasMore: boolean;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
-export function GamesSection({ games, page }: GamesSectionProps) {
+export function GamesSection({ games, page, total, hasMore, totalPages, onPageChange }: GamesSectionProps) {
   if (games.length === 0) {
     return (
       <section className="mb-16">
@@ -34,6 +39,34 @@ export function GamesSection({ games, page }: GamesSectionProps) {
           Game Collection
         </h2>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mb-6 flex items-center justify-between">
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            className="gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </ArcadeButton>
+          <span className="text-sm text-[var(--muted-foreground)]">
+            Page {page} of {totalPages}
+          </span>
+          <ArcadeButton
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(page + 1)}
+            disabled={!hasMore}
+            className="gap-1"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </ArcadeButton>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 grid-rows-2 gap-4">
         {featured && (

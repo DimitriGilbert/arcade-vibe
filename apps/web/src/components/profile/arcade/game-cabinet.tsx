@@ -7,9 +7,10 @@ import type { GameWithRanking } from "@/lib/trpc-types";
 
 export interface GameCabinetProps {
   game: GameWithRanking;
+  rank?: number;
 }
 
-export function GameCabinet({ game }: GameCabinetProps) {
+export function GameCabinet({ game, rank }: GameCabinetProps) {
   const router = useRouter();
 
   return (
@@ -21,14 +22,14 @@ export function GameCabinet({ game }: GameCabinetProps) {
         <div className="absolute inset-0 bg-[var(--primary)]/5" />
         <Gamepad2 className="w-16 h-16 text-[var(--primary)]/30 group-hover:text-[var(--primary)]/50 transition-colors" />
 
-        {game.ranking && game.ranking <= 3 && (
+        {rank && rank <= 3 && (
           <div className="absolute top-3 left-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${
-              game.ranking === 1 ? 'bg-yellow-500 text-yellow-950' :
-              game.ranking === 2 ? 'bg-slate-300 text-slate-800' :
+              rank === 1 ? 'bg-yellow-500 text-yellow-950' :
+              rank === 2 ? 'bg-slate-400 text-slate-800' :
               'bg-amber-600 text-amber-950'
             }`}>
-              {game.ranking}
+              {rank}
             </div>
           </div>
         )}
@@ -46,8 +47,8 @@ export function GameCabinet({ game }: GameCabinetProps) {
         </h3>
         <div className="flex items-center gap-2 mt-2 text-xs text-[var(--muted-foreground)]">
           {game.modelName && <span className="truncate">{game.modelName}</span>}
-          {game.ranking && game.ranking > 3 && (
-            <ArcadeBadge text={`#${game.ranking}`} variant="default" />
+          {rank && rank > 3 && (
+            <span className="text-[var(--muted-foreground)]">#{rank}</span>
           )}
         </div>
       </div>

@@ -20,17 +20,14 @@ export function GameRow({ game, rank }: GameRowProps) {
       onClick={() => router.push(`/game/${game.id}`)}
     >
       <div className="w-8 text-center">
-        {game.ranking && game.ranking <= 3 ? (
-          <span className={`font-bold ${
-            game.ranking === 1 ? 'text-yellow-500' :
-            game.ranking === 2 ? 'text-slate-300' :
-            'text-amber-600'
-          }`}>
-            #{game.ranking}
-          </span>
-        ) : (
-          <span className="text-xs text-[var(--muted-foreground)]">#{rank}</span>
-        )}
+        <span className={`text-xs font-medium ${
+          rank === 1 ? 'text-yellow-500' :
+          rank === 2 ? 'text-slate-400' :
+          rank === 3 ? 'text-amber-600' :
+          'text-[var(--muted-foreground)]'
+        }`}>
+          #{rank}
+        </span>
       </div>
 
       <div className="w-12 h-12 rounded-lg bg-[var(--muted)] flex items-center justify-center">
@@ -51,7 +48,6 @@ export function GameRow({ game, rank }: GameRowProps) {
         {game.tierCost?.slug && (
           <ArcadeBadge text={game.tierCost.slug} variant="default" />
         )}
-        <ArcadeBadge text={game.ranking ? `#${game.ranking}` : 'NR'} variant={game.ranking && game.ranking <= 3 ? 'neon' : 'default'} />
       </div>
     </button>
   );

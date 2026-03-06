@@ -6,20 +6,32 @@ import { getProfileData } from "@/lib/profile-data";
 import { getServerCaller } from "@/utils/trpc-server";
 import ArcadeProfileClient from "./arcade-profile-client";
 
+const PAGE_SIZE = 20;
+
 interface ProfilePageProps {
   params: Promise<{
     username: string;
   }>;
+  searchParams: Promise<{
+    page?: string;
+  }>;
 }
 
-export default async function ArcadeCabinetProfile({ params }: ProfilePageProps) {
+export default async function ArcadeCabinetProfile({ params, searchParams }: ProfilePageProps) {
   const { username } = await params;
+  const { page: pageParam } = await searchParams;
+  const gamesPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  const profileData = await getProfileData(username, session?.user?.id ?? null);
+  const profileData = await getProfileData(
+    username,
+    session?.user?.id ?? null,
+    gamesPage,
+    PAGE_SIZE
+  );
 
   if (!profileData.user) {
     return (
@@ -35,7 +47,16 @@ export default async function ArcadeCabinetProfile({ params }: ProfilePageProps)
     );
   }
 
-  const { user, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
+  const {
+    user,
+    gamesWithRankings,
+    gamesTotal,
+    gamesPage: currentGamesPage,
+    gamesHasMore,
+    ratings,
+    stats,
+    isOwnProfile,
+  } = profileData;
   const caller = await getServerCaller();
   const rawPublicCollections = await caller.collections.listPublicByUser({
     userId: user.id,
@@ -46,10 +67,16 @@ export default async function ArcadeCabinetProfile({ params }: ProfilePageProps)
     updatedAt: collection.updatedAt.toISOString(),
   }));
 
+  const totalPages = Math.ceil(gamesTotal / PAGE_SIZE);
+
   return (
     <ArcadeProfileClient
       user={user}
       gamesWithRankings={gamesWithRankings}
+      gamesTotal={gamesTotal}
+      gamesPage={currentGamesPage}
+      gamesHasMore={gamesHasMore}
+      gamesTotalPages={totalPages}
       ratings={ratings}
       publicCollections={publicCollections}
       stats={stats}

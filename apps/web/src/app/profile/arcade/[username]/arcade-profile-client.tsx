@@ -1,8 +1,9 @@
 "use client";
 
-import { Trophy, Gamepad2, Target } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Gamepad2, Target } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
-import { ProfileHero, TrophyCase, AllGamesGrid } from "@/components/profile/arcade";
+import { ProfileHero, AllGamesGrid } from "@/components/profile/arcade";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { QuickStats } from "@/components/profile/shared/quick-stats";
 import type {
@@ -16,6 +17,10 @@ import type { ProfileStats } from "@/lib/profile-data";
 interface ArcadeProfileClientProps {
   user: UserProfile;
   gamesWithRankings: GameWithRanking[];
+  gamesTotal: number;
+  gamesPage: number;
+  gamesHasMore: boolean;
+  gamesTotalPages: number;
   ratings: Rating[];
   publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
@@ -25,11 +30,24 @@ interface ArcadeProfileClientProps {
 export default function ArcadeProfileClient({
   user,
   gamesWithRankings,
+  gamesTotal,
+  gamesPage,
+  gamesHasMore,
+  gamesTotalPages,
   ratings,
   publicCollections,
   stats,
   isOwnProfile,
 }: ArcadeProfileClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(page));
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
@@ -45,22 +63,20 @@ export default function ArcadeProfileClient({
           </section>
         )}
 
-        <section className="mb-12">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-[var(--accent)]" />
-            Trophy Case
-            <ArcadeBadge text={`${gamesWithRankings.filter(g => g.ranking).length} ranked`} variant="default" />
-          </h2>
-          <TrophyCase games={gamesWithRankings} />
-        </section>
-
         <section>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Gamepad2 className="w-5 h-5 text-[var(--primary)]" />
-            All Games
-            <ArcadeBadge text={String(gamesWithRankings.length)} variant="default" />
+            Games
+            <ArcadeBadge text={String(gamesTotal)} variant="default" />
           </h2>
-          <AllGamesGrid games={gamesWithRankings} />
+          <AllGamesGrid
+            games={gamesWithRankings}
+            total={gamesTotal}
+            page={gamesPage}
+            hasMore={gamesHasMore}
+            totalPages={gamesTotalPages}
+            onPageChange={handlePageChange}
+          />
         </section>
 
         <section className="mt-12">
