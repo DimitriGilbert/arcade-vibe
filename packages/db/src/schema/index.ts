@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./user-preferences";
 export * from "./todo";
 export * from "./enums";
 export * from "./users";

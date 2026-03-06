@@ -1,7 +1,12 @@
-"use client";
-
 import type { Route } from "next";
+
+import { auth } from "@arcade-vibe/auth";
+import { db } from "@arcade-vibe/db";
+import { userPreferences } from "@arcade-vibe/db/schema/user-preferences";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArcadeCard } from "@/components/arcade/arcade-card";
 import { ArcadeButton } from "@/components/arcade/arcade-button";
 import { ArcadeBadge } from "@/components/arcade/arcade-badge";
@@ -63,7 +68,24 @@ const EDITORS: EditorInfo[] = [
   },
 ];
 
-export default function CreatorPage() {
+export default async function CreatorPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session?.user.id) {
+    const preferences = await db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, session.user.id),
+      columns: {
+        defaultCreatorImplementation: true,
+      },
+    });
+
+    if (preferences?.defaultCreatorImplementation) {
+      redirect(`/creator/${preferences.defaultCreatorImplementation}` as Route);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background py-16 px-4">
       <div className="max-w-5xl mx-auto">

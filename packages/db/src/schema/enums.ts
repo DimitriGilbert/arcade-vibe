@@ -87,3 +87,15 @@ export const promptRelationEnum = pgEnum("prompt_relation", [
   "version",
   "fork",
 ]);
+
+export const leaderboardImplementationEnum = pgEnum("leaderboard_implementation", [
+  "arena",
+  "dashboard",
+  "magazine",
+]);
+
+export const creatorImplementationEnum = pgEnum("creator_implementation", [
+  "workbench",
+  "inbox",
+  "filebrowser",
+]);

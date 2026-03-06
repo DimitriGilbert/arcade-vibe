@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
 
+import { auth } from "@arcade-vibe/auth";
+import { db } from "@arcade-vibe/db";
+import { userPreferences } from "@arcade-vibe/db/schema/user-preferences";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Swords, BarChart3, BookOpen } from "lucide-react";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
@@ -45,7 +51,26 @@ const LEADERBOARD_VIEWS = [
   },
 ] as const;
 
-export default function LeaderboardLandingPage() {
+export default async function LeaderboardLandingPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session?.user.id) {
+    const preferences = await db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, session.user.id),
+      columns: {
+        defaultLeaderboardImplementation: true,
+      },
+    });
+
+    if (preferences?.defaultLeaderboardImplementation) {
+      redirect(
+        `/leaderboard/${preferences.defaultLeaderboardImplementation}` as Route,
+      );
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background py-16 px-4">
       <div className="max-w-5xl mx-auto">

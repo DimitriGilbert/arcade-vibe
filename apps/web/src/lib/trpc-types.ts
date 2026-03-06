@@ -73,6 +73,8 @@ import type {
   Visibility as VisibilityType,
   UserRole as UserRoleType,
   Provider as ProviderType,
+  LeaderboardImplementation as LeaderboardImplementationType,
+  CreatorImplementation as CreatorImplementationType,
 } from "@arcade-vibe/db";
 import type {
   ThemeMediaConfig as ThemeMediaConfigType,
@@ -119,6 +121,18 @@ export type UserRole = UserRoleType;
  * @source packages/db/src/schema/enums-types.ts
  */
 export type Provider = ProviderType;
+
+/**
+ * Leaderboard implementation values: arena, dashboard, magazine
+ * @source packages/db/src/schema/enums-types.ts
+ */
+export type LeaderboardImplementation = LeaderboardImplementationType;
+
+/**
+ * Creator implementation values: workbench, inbox, filebrowser
+ * @source packages/db/src/schema/enums-types.ts
+ */
+export type CreatorImplementation = CreatorImplementationType;
 
 /**
  * Media configuration for themes
@@ -223,7 +237,9 @@ export type UserOutput = RouterOutput["user"];
 export type UserInput = RouterInput["user"];
 
 export type UserGetByNameOutput = UserOutput["getByName"];
+export type UserGetPreferencesOutput = UserOutput["getPreferences"];
 export type UserUpdateProfileOutput = UserOutput["updateProfile"];
+export type UserUpdatePreferencesOutput = UserOutput["updatePreferences"];
 
 // --- Credits Router ---
 

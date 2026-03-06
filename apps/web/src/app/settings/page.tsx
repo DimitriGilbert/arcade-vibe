@@ -1,9 +1,22 @@
 "use client";
 
 import type { Route } from "next";
+import type {
+  CreatorImplementation,
+  LeaderboardImplementation,
+} from "@/lib/trpc-types";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard, ArcadeBadge, ArcadeButton } from "@/components/arcade";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   User,
   Key,
@@ -11,11 +24,14 @@ import {
   ArrowRight,
   Coins,
   TrendingUp,
-  Shield,
   Sparkles,
+  PanelsTopLeft,
+  WandSparkles,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 interface SettingsSectionProps {
   title: string;
@@ -57,9 +73,63 @@ function SettingsSection({
   );
 }
 
+const NO_DEFAULT_VALUE = "manual-choice";
+const LEADERBOARD_IMPLEMENTATIONS: readonly LeaderboardImplementation[] = [
+  "arena",
+  "dashboard",
+  "magazine",
+];
+const CREATOR_IMPLEMENTATIONS: readonly CreatorImplementation[] = [
+  "workbench",
+  "inbox",
+  "filebrowser",
+];
+
+const leaderboardImplementationLabels: Record<
+  LeaderboardImplementation,
+  string
+> = {
+  arena: "Arena",
+  dashboard: "Dashboard",
+  magazine: "Magazine",
+};
+
+const creatorImplementationLabels: Record<CreatorImplementation, string> = {
+  workbench: "Workbench",
+  inbox: "Inbox",
+  filebrowser: "File Browser",
+};
+
+function getSelectValue(value: string | null | undefined): string {
+  return value ?? NO_DEFAULT_VALUE;
+}
+
+function getLeaderboardSelectLabel(
+  value: LeaderboardImplementation | null,
+): string {
+  return value === null ? "Always ask me" : leaderboardImplementationLabels[value];
+}
+
+function getCreatorSelectLabel(value: CreatorImplementation | null): string {
+  return value === null ? "Always ask me" : creatorImplementationLabels[value];
+}
+
+function hasPreferencesChanged(
+  nextLeaderboardImplementation: LeaderboardImplementation | null,
+  nextCreatorImplementation: CreatorImplementation | null,
+  currentLeaderboardImplementation: LeaderboardImplementation | null,
+  currentCreatorImplementation: CreatorImplementation | null,
+): boolean {
+  return (
+    nextLeaderboardImplementation !== currentLeaderboardImplementation ||
+    nextCreatorImplementation !== currentCreatorImplementation
+  );
+}
+
 export default function SettingsPage() {
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
+  const queryClient = useQueryClient();
 
   // Fetch user credits
   const { data: creditsData, isLoading: creditsLoading } = useQuery({
@@ -77,6 +147,27 @@ export default function SettingsPage() {
   const { data: apiKeys } = useQuery({
     queryKey: ["apiKeys", "list"],
     queryFn: () => trpcClient.apiKeys.listKeys.query(),
+  });
+
+  const { data: preferences, isLoading: preferencesLoading } = useQuery({
+    queryKey: ["user", "preferences"],
+    queryFn: () => trpcClient.user.getPreferences.query(),
+  });
+
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (input: {
+      defaultLeaderboardImplementation: LeaderboardImplementation | null;
+      defaultCreatorImplementation: CreatorImplementation | null;
+    }) => trpcClient.user.updatePreferences.mutate(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["user", "preferences"],
+      });
+      toast.success("Routing defaults updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update routing defaults");
+    },
   });
 
   if (creditsLoading || userLoading || isPending) {
@@ -101,6 +192,56 @@ export default function SettingsPage() {
   const credits = creditsData?.balance ?? 0;
   const reputation = userExtended?.reputation ?? 0;
   const apiKeysCount = apiKeys?.length ?? 0;
+  const selectedLeaderboardImplementation =
+    preferences?.defaultLeaderboardImplementation ?? null;
+  const selectedCreatorImplementation =
+    preferences?.defaultCreatorImplementation ?? null;
+
+  const handleLeaderboardPreferenceChange = (value: string | null) => {
+    const nextLeaderboardImplementation =
+      value === null || value === NO_DEFAULT_VALUE
+        ? null
+        : (value as LeaderboardImplementation);
+
+    if (
+      !hasPreferencesChanged(
+        nextLeaderboardImplementation,
+        selectedCreatorImplementation,
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+      )
+    ) {
+      return;
+    }
+
+    updatePreferencesMutation.mutate({
+      defaultLeaderboardImplementation: nextLeaderboardImplementation,
+      defaultCreatorImplementation: selectedCreatorImplementation,
+    });
+  };
+
+  const handleCreatorPreferenceChange = (value: string | null) => {
+    const nextCreatorImplementation =
+      value === null || value === NO_DEFAULT_VALUE
+        ? null
+        : (value as CreatorImplementation);
+
+    if (
+      !hasPreferencesChanged(
+        selectedLeaderboardImplementation,
+        nextCreatorImplementation,
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+      )
+    ) {
+      return;
+    }
+
+    updatePreferencesMutation.mutate({
+      defaultLeaderboardImplementation: selectedLeaderboardImplementation,
+      defaultCreatorImplementation: nextCreatorImplementation,
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -184,8 +325,120 @@ export default function SettingsPage() {
         </ArcadeCard>
       </div>
 
-      {/* Settings Sections - 2 Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 auto-rows-[minmax(220px,auto)]">
+        <ArcadeCard className="relative overflow-hidden lg:row-span-2">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/6 via-transparent to-[var(--accent)]/12" />
+          <div className="absolute right-0 top-0 h-40 w-40 bg-rose-400/10 blur-3xl" />
+          <div className="absolute left-0 bottom-0 h-40 w-40 bg-cyan-400/10 blur-3xl" />
+          <div className="p-6 relative h-full flex flex-col">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[var(--primary)]/15 rounded-lg">
+                    <PanelsTopLeft className="h-5 w-5 text-[var(--primary)]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Landing Preferences</h2>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Choose which implementation opens first when you visit
+                      `/leaderboard` or `/creator`.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <ArcadeBadge
+                text={
+                  selectedLeaderboardImplementation || selectedCreatorImplementation
+                    ? "Active Defaults"
+                    : "Always ask me"
+                }
+                variant="default"
+              />
+            </div>
+
+            <div className="mt-8 space-y-5">
+              <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-rose-400/10 rounded-lg">
+                    <PanelsTopLeft className="h-4 w-4 text-rose-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Leaderboard default</p>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Redirect `/leaderboard` to your preferred view.
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  value={getSelectValue(selectedLeaderboardImplementation)}
+                  onValueChange={handleLeaderboardPreferenceChange}
+                  disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                >
+                  <SelectTrigger className="w-full h-11 px-3 text-sm">
+                    <SelectValue placeholder="Always ask me">
+                      {getLeaderboardSelectLabel(selectedLeaderboardImplementation)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    <SelectItem value={NO_DEFAULT_VALUE}>Always ask me</SelectItem>
+                    {LEADERBOARD_IMPLEMENTATIONS.map((implementation) => (
+                      <SelectItem key={implementation} value={implementation}>
+                        {leaderboardImplementationLabels[implementation]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-cyan-400/10 rounded-lg">
+                    <WandSparkles className="h-4 w-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Creator default</p>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Redirect `/creator` to your preferred editor.
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  value={getSelectValue(selectedCreatorImplementation)}
+                  onValueChange={handleCreatorPreferenceChange}
+                  disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                >
+                  <SelectTrigger className="w-full h-11 px-3 text-sm">
+                    <SelectValue placeholder="Always ask me">
+                      {getCreatorSelectLabel(selectedCreatorImplementation)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    <SelectItem value={NO_DEFAULT_VALUE}>Always ask me</SelectItem>
+                    {CREATOR_IMPLEMENTATIONS.map((implementation) => (
+                      <SelectItem key={implementation} value={implementation}>
+                        {creatorImplementationLabels[implementation]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6">
+              {updatePreferencesMutation.isPending ? (
+                <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Saving routing defaults...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Defaults only apply when you hit the parent route. Direct links still open the specific implementation you asked for.
+                </p>
+              )}
+            </div>
+          </div>
+        </ArcadeCard>
+
         <SettingsSection
           title="Profile"
           description="Update your username and email"
@@ -209,7 +462,6 @@ export default function SettingsPage() {
           badge={`${credits} credits`}
         />
 
-        {/* Quick Actions Card */}
         <ArcadeCard className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/5 via-[var(--accent)]/5 to-transparent" />
           <div className="p-6 relative">

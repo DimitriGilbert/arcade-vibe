@@ -1,6 +1,11 @@
 import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
-import { db } from "@arcade-vibe/db";
+import {
+  CREATOR_IMPLEMENTATIONS,
+  db,
+  LEADERBOARD_IMPLEMENTATIONS,
+} from "@arcade-vibe/db";
 import { user, account, session } from "@arcade-vibe/db/schema/auth";
+import { userPreferences } from "@arcade-vibe/db/schema/user-preferences";
 import { z } from "zod";
 import { eq, and, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -12,6 +17,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
 const scryptAsync = promisify(scrypt);
+const leaderboardImplementationSchema = z.enum(LEADERBOARD_IMPLEMENTATIONS);
+const creatorImplementationSchema = z.enum(CREATOR_IMPLEMENTATIONS);
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -65,6 +72,29 @@ export const userRouter = router({
 
       return result;
     }),
+  getPreferences: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not authenticated",
+      });
+    }
+
+    const preferences = await db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, ctx.user.id),
+      columns: {
+        defaultLeaderboardImplementation: true,
+        defaultCreatorImplementation: true,
+      },
+    });
+
+    return {
+      defaultLeaderboardImplementation:
+        preferences?.defaultLeaderboardImplementation ?? null,
+      defaultCreatorImplementation:
+        preferences?.defaultCreatorImplementation ?? null,
+    };
+  }),
   updateProfile: protectedProcedure
     .use(createRateLimitMiddleware(rateLimits.strict))
     .input(
@@ -104,6 +134,58 @@ export const userRouter = router({
       return {
         success: true,
         user: result[0],
+      };
+    }),
+  updatePreferences: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.strict))
+    .input(
+      z.object({
+        defaultLeaderboardImplementation:
+          leaderboardImplementationSchema.nullable(),
+        defaultCreatorImplementation: creatorImplementationSchema.nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const [preferences] = await db
+        .insert(userPreferences)
+        .values({
+          userId: ctx.user.id,
+          defaultLeaderboardImplementation:
+            input.defaultLeaderboardImplementation,
+          defaultCreatorImplementation: input.defaultCreatorImplementation,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: userPreferences.userId,
+          set: {
+            defaultLeaderboardImplementation:
+              input.defaultLeaderboardImplementation,
+            defaultCreatorImplementation: input.defaultCreatorImplementation,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({
+          defaultLeaderboardImplementation:
+            userPreferences.defaultLeaderboardImplementation,
+          defaultCreatorImplementation:
+            userPreferences.defaultCreatorImplementation,
+        });
+
+      return {
+        success: true,
+        preferences: {
+          defaultLeaderboardImplementation:
+            preferences?.defaultLeaderboardImplementation ?? null,
+          defaultCreatorImplementation:
+            preferences?.defaultCreatorImplementation ?? null,
+        },
       };
     }),
   changePassword: protectedProcedure

@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { user, session, account, verification } from "./auth";
+import { userPreferences } from "./user-preferences";
 import { userExtended } from "./users";
 import {
   creditTransactions,
@@ -27,6 +28,10 @@ import { collections, collectionGames } from "./collections";
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
+  preferences: one(userPreferences, {
+    fields: [user.id],
+    references: [userPreferences.userId],
+  }),
   userExtended: one(userExtended, {
     fields: [user.id],
     references: [userExtended.id],
@@ -67,6 +72,13 @@ export const verificationRelations = relations(verification, () => ({}));
 export const userExtendedRelations = relations(userExtended, ({ one }) => ({
   user: one(user, {
     fields: [userExtended.id],
+    references: [user.id],
+  }),
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(user, {
+    fields: [userPreferences.userId],
     references: [user.id],
   }),
 }));
