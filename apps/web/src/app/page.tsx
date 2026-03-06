@@ -13,6 +13,8 @@ import Link from "next/link";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
 
+export const dynamic = "force-dynamic";
+
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
   const diff = endDate.getTime() - now.getTime();
