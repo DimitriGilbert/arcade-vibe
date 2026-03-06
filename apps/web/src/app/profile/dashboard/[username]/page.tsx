@@ -6,20 +6,36 @@ import { getProfileData } from "@/lib/profile-data";
 import { getServerCaller } from "@/utils/trpc-server";
 import DashboardProfileClient from "./dashboard-profile-client";
 
+const PAGE_SIZE = 20;
+
 interface ProfilePageProps {
   params: Promise<{
     username: string;
   }>;
+  searchParams: Promise<{
+    page?: string;
+    promptsPage?: string;
+  }>;
 }
 
-export default async function DashboardLayoutProfile({ params }: ProfilePageProps) {
+export default async function DashboardLayoutProfile({ params, searchParams }: ProfilePageProps) {
   const { username } = await params;
+  const { page: pageParam, promptsPage: promptsPageParam } = await searchParams;
+  const gamesPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const promptsPage = Math.max(1, parseInt(promptsPageParam ?? "1", 10) || 1);
 
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  const profileData = await getProfileData(username, session?.user?.id ?? null);
+  const profileData = await getProfileData(
+    username,
+    session?.user?.id ?? null,
+    gamesPage,
+    PAGE_SIZE,
+    promptsPage,
+    PAGE_SIZE
+  );
 
   if (!profileData.user) {
     return (
@@ -35,7 +51,20 @@ export default async function DashboardLayoutProfile({ params }: ProfilePageProp
     );
   }
 
-  const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } = profileData;
+  const {
+    user,
+    prompts,
+    promptsTotal,
+    promptsPage: currentPromptsPage,
+    promptsHasMore,
+    gamesWithRankings,
+    gamesTotal,
+    gamesPage: currentGamesPage,
+    gamesHasMore,
+    ratings,
+    stats,
+    isOwnProfile,
+  } = profileData;
   const caller = await getServerCaller();
   const rawPublicCollections = await caller.collections.listPublicByUser({
     userId: user.id,
@@ -46,11 +75,22 @@ export default async function DashboardLayoutProfile({ params }: ProfilePageProp
     updatedAt: collection.updatedAt.toISOString(),
   }));
 
+  const gamesTotalPages = Math.ceil(gamesTotal / PAGE_SIZE);
+  const promptsTotalPages = Math.ceil(promptsTotal / PAGE_SIZE);
+
   return (
     <DashboardProfileClient
       user={user}
       prompts={prompts}
+      promptsTotal={promptsTotal}
+      promptsPage={currentPromptsPage}
+      promptsHasMore={promptsHasMore}
+      promptsTotalPages={promptsTotalPages}
       gamesWithRankings={gamesWithRankings}
+      gamesTotal={gamesTotal}
+      gamesPage={currentGamesPage}
+      gamesHasMore={gamesHasMore}
+      gamesTotalPages={gamesTotalPages}
       ratings={ratings}
       publicCollections={publicCollections}
       stats={stats}

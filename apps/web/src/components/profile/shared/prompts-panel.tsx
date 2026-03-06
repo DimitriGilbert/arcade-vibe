@@ -1,16 +1,21 @@
 "use client";
 
-import { Zap } from "lucide-react";
-import { ArcadeCard, ArcadeBadge } from "@/components/arcade";
+import { Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArcadeCard, ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/reusable";
 import type { Prompt } from "@/lib/trpc-types";
 
 export interface PromptsPanelProps {
   prompts: Prompt[];
+  total: number;
+  page: number;
+  hasMore: boolean;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
-export function PromptsPanel({ prompts }: PromptsPanelProps) {
+export function PromptsPanel({ prompts, total, page, hasMore, totalPages, onPageChange }: PromptsPanelProps) {
   return (
     <ArcadeCard>
       <div className="p-4 border-b border-[var(--border)]">
@@ -19,7 +24,7 @@ export function PromptsPanel({ prompts }: PromptsPanelProps) {
             <Zap className="w-5 h-5 text-[var(--primary)]" />
             Prompts
           </h2>
-          <ArcadeBadge text={String(prompts.length)} variant="default" />
+          <ArcadeBadge text={String(total)} variant="default" />
         </div>
       </div>
 
@@ -29,24 +34,54 @@ export function PromptsPanel({ prompts }: PromptsPanelProps) {
           message="No prompts yet"
         />
       ) : (
-        <ScrollArea className="h-[300px]">
-          <div className="divide-y divide-[var(--border)]">
-            {prompts.slice(0, 6).map(prompt => (
-              <div key={prompt.id} className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <ArcadeBadge text={`v${prompt.version}`} variant="default" />
-                  <ArcadeBadge text={prompt.visibility} variant="default" />
+        <>
+          <ScrollArea className="min-h-[50vh] max-h-[120vh]">
+            <div className="divide-y divide-[var(--border)]">
+              {prompts.map((prompt) => (
+                <div key={prompt.id} className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ArcadeBadge text={`v${prompt.version}`} variant="default" />
+                    <ArcadeBadge text={prompt.visibility} variant="default" />
+                  </div>
+                  <p className="text-xs text-[var(--muted-foreground)] line-clamp-2">
+                    {prompt.title || `${prompt.content.slice(0, 100)}...`}
+                  </p>
+                  <p className="text-xs text-[var(--muted-foreground)]/60 mt-1">
+                    {new Date(prompt.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
-                <p className="text-xs text-[var(--muted-foreground)] line-clamp-2">
-                  {prompt.title || `${prompt.content.slice(0, 100)}...`}
-                </p>
-                <p className="text-xs text-[var(--muted-foreground)]/60 mt-1">
-                  {new Date(prompt.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+              ))}
+            </div>
+          </ScrollArea>
+
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-[var(--border)] flex items-center justify-between">
+              <ArcadeButton
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page <= 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </ArcadeButton>
+              <span className="text-sm text-[var(--muted-foreground)]">
+                Page {page} of {totalPages}
+              </span>
+              <ArcadeButton
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(page + 1)}
+                disabled={!hasMore}
+                className="gap-1"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </ArcadeButton>
+            </div>
+          )}
+        </>
       )}
     </ArcadeCard>
   );

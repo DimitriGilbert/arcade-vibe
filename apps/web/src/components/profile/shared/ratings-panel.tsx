@@ -38,7 +38,7 @@ export function RatingsPanel({ ratings }: RatingsPanelProps) {
           message="No ratings yet"
         />
       ) : (
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[40vh]">
           <div className="divide-y divide-[var(--border)]">
             {ratings.slice(0, 8).map(rating => (
               <div key={rating.id} className="p-3 flex items-center gap-3">

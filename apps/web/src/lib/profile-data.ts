@@ -20,7 +20,13 @@ export interface ProfileStats {
 export interface ProfileData {
   user: UserProfile | null;
   prompts: Prompt[];
+  promptsTotal: number;
+  promptsPage: number;
+  promptsHasMore: boolean;
   gamesWithRankings: GameWithRanking[];
+  gamesTotal: number;
+  gamesPage: number;
+  gamesHasMore: boolean;
   ratings: Rating[];
   stats: ProfileStats | null;
   isOwnProfile: boolean;
@@ -182,141 +188,40 @@ export async function getProfileUser(username: string): Promise<UserProfile | nu
   return result ? serializeUser(result) : null;
 }
 
-export async function getUserPrompts(userId: string, includePrivate: boolean): Promise<Prompt[]> {
+export async function getUserPrompts(userId: string, includePrivate: boolean, page = 1, pageSize = 20): Promise<{
+  prompts: Prompt[];
+  total: number;
+  hasMore: boolean;
+}> {
   const conditions = [eq(prompts.authorId, userId)];
 
   if (!includePrivate) {
     conditions.push(eq(prompts.visibility, "public"));
   }
 
-  const results = await db.query.prompts.findMany({
-    where: and(...conditions),
-    orderBy: [desc(prompts.createdAt)],
-    limit: 100,
-  });
+  const whereClause = and(...conditions);
 
-  return results.map(serializePrompt);
+  const [countResult, results] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(prompts).where(whereClause),
+    db.query.prompts.findMany({
+      where: whereClause,
+      orderBy: [desc(prompts.createdAt)],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    }),
+  ]);
+
+  const total = Number(countResult[0]?.count ?? 0);
+
+  return {
+    prompts: results.map(serializePrompt),
+    total,
+    hasMore: page * pageSize < total,
+  };
 }
 
-export async function getUserGames(userId: string): Promise<{
-  id: string;
-  name: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  status: string;
-  modelName: string;
-  modelProvider: string;
-  tierCostId: string;
-  themeId: string | null;
-  promptId: string;
-  tokenUsage: number | null;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  reasoningTokens: number | null;
-  cachedInputTokens: number | null;
-  requestCostUsd: string | null;
-  generatedAt: Date | null;
-  isSubmitted: boolean;
-  submittedAt: Date | null;
-  isHidden: boolean;
-  hiddenReason: string | null;
-  hiddenAt: Date | null;
-  sanitizationApplied: boolean;
-  deletedAt: Date | null;
-  prompt: {
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    visibility: "private" | "public_on_freeze" | "public";
-    version: number;
-    status: "draft" | "submitted" | "disqualified";
-    authorId: string;
-    themeId: string;
-    content: string;
-    contentHash: string;
-    tokenCount: number;
-    tokenizer: string;
-    parentId: string | null;
-    relationType: string;
-    hiddenAt: Date | null;
-    hiddenBy: string | null;
-    hiddenReason: string | null;
-    user: { id: string; name: string | null; image: string | null };
-  };
-  theme: { id: string; title: string | null } | null;
-  tierCost: { slug: string } | null;
-}[]> {
-  const userPromptsList = await db.query.prompts.findMany({
-    where: eq(prompts.authorId, userId),
-    columns: { id: true },
-  });
-
-  const promptIds = userPromptsList.map((p) => p.id);
-
-  if (promptIds.length === 0) {
-    return [];
-  }
-
-  return db.query.games.findMany({
-    where: and(
-      inArray(games.promptId, promptIds),
-      eq(games.isHidden, false),
-      isNull(games.deletedAt),
-      eq(games.isSubmitted, true)
-    ),
-    columns: {
-      id: true,
-      name: true,
-      createdAt: true,
-      updatedAt: true,
-      status: true,
-      modelName: true,
-      modelProvider: true,
-      tierCostId: true,
-      themeId: true,
-      promptId: true,
-      tokenUsage: true,
-      inputTokens: true,
-      outputTokens: true,
-      reasoningTokens: true,
-      cachedInputTokens: true,
-      requestCostUsd: true,
-      generatedAt: true,
-      isSubmitted: true,
-      submittedAt: true,
-      isHidden: true,
-      hiddenReason: true,
-      hiddenAt: true,
-      sanitizationApplied: true,
-      deletedAt: true,
-    },
-    orderBy: [desc(games.createdAt)],
-    limit: 100,
-    with: {
-      prompt: {
-        with: {
-          user: {
-            columns: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
-      },
-      theme: {
-        columns: {
-          id: true,
-          title: true,
-        },
-      },
-      tierCost: {
-        columns: {
-          slug: true,
-        },
-      },
-    },
-  }) as Promise<{
+export async function getUserGames(userId: string, page = 1, pageSize = 10): Promise<{
+  games: {
     id: string;
     name: string | null;
     createdAt: Date;
@@ -363,7 +268,142 @@ export async function getUserGames(userId: string): Promise<{
     };
     theme: { id: string; title: string | null } | null;
     tierCost: { slug: string } | null;
-  }[]>;
+  }[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const userPromptsList = await db.query.prompts.findMany({
+    where: eq(prompts.authorId, userId),
+    columns: { id: true },
+  });
+
+  const promptIds = userPromptsList.map((p) => p.id);
+
+  if (promptIds.length === 0) {
+    return { games: [], total: 0, hasMore: false };
+  }
+
+  const whereClause = and(
+    inArray(games.promptId, promptIds),
+    eq(games.isHidden, false),
+    isNull(games.deletedAt),
+    eq(games.isSubmitted, true)
+  );
+
+  const [countResult, gamesList] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(games).where(whereClause),
+    db.query.games.findMany({
+      where: whereClause,
+      columns: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        status: true,
+        modelName: true,
+        modelProvider: true,
+        tierCostId: true,
+        themeId: true,
+        promptId: true,
+        tokenUsage: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        cachedInputTokens: true,
+        requestCostUsd: true,
+        generatedAt: true,
+        isSubmitted: true,
+        submittedAt: true,
+        isHidden: true,
+        hiddenReason: true,
+        hiddenAt: true,
+        sanitizationApplied: true,
+        deletedAt: true,
+      },
+      orderBy: [desc(games.createdAt)],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      with: {
+        prompt: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+        theme: {
+          columns: {
+            id: true,
+            title: true,
+          },
+        },
+        tierCost: {
+          columns: {
+            slug: true,
+          },
+        },
+      },
+    }) as Promise<{
+      id: string;
+      name: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      status: string;
+      modelName: string;
+      modelProvider: string;
+      tierCostId: string;
+      themeId: string | null;
+      promptId: string;
+      tokenUsage: number | null;
+      inputTokens: number | null;
+      outputTokens: number | null;
+      reasoningTokens: number | null;
+      cachedInputTokens: number | null;
+      requestCostUsd: string | null;
+      generatedAt: Date | null;
+      isSubmitted: boolean;
+      submittedAt: Date | null;
+      isHidden: boolean;
+      hiddenReason: string | null;
+      hiddenAt: Date | null;
+      sanitizationApplied: boolean;
+      deletedAt: Date | null;
+      prompt: {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        visibility: "private" | "public_on_freeze" | "public";
+        version: number;
+        status: "draft" | "submitted" | "disqualified";
+        authorId: string;
+        themeId: string;
+        content: string;
+        contentHash: string;
+        tokenCount: number;
+        tokenizer: string;
+        parentId: string | null;
+        relationType: string;
+        hiddenAt: Date | null;
+        hiddenBy: string | null;
+        hiddenReason: string | null;
+        user: { id: string; name: string | null; image: string | null };
+      };
+      theme: { id: string; title: string | null } | null;
+      tierCost: { slug: string } | null;
+    }[]>,
+  ]);
+
+  const total = Number(countResult[0]?.count ?? 0);
+
+  return {
+    games: gamesList,
+    total,
+    hasMore: page * pageSize < total,
+  };
 }
 
 export async function getUserRatings(userId: string): Promise<Rating[]> {
@@ -440,7 +480,11 @@ export async function getLeaderboardRankings(): Promise<Map<string, number>> {
 
 export async function getProfileData(
   username: string,
-  currentUserId: string | null
+  currentUserId: string | null,
+  gamesPage = 1,
+  gamesPageSize = 20,
+  promptsPage = 1,
+  promptsPageSize = 20
 ): Promise<ProfileData> {
   const profileUser = await getProfileUser(username);
 
@@ -448,7 +492,13 @@ export async function getProfileData(
     return {
       user: null,
       prompts: [],
+      promptsTotal: 0,
+      promptsPage: 1,
+      promptsHasMore: false,
       gamesWithRankings: [],
+      gamesTotal: 0,
+      gamesPage: 1,
+      gamesHasMore: false,
       ratings: [],
       stats: null,
       isOwnProfile: false,
@@ -457,32 +507,38 @@ export async function getProfileData(
 
   const isOwnProfile = currentUserId === profileUser.id;
 
-  const [userPrompts, userGames, userRatings, userExtendedData, leaderboardRankings] =
+  const [userPromptsResult, userGamesResult, userRatings, userExtendedData, leaderboardRankings] =
     await Promise.all([
-      getUserPrompts(profileUser.id, isOwnProfile),
-      getUserGames(profileUser.id),
+      getUserPrompts(profileUser.id, false, promptsPage, promptsPageSize),
+      getUserGames(profileUser.id, gamesPage, gamesPageSize),
       getUserRatings(profileUser.id),
       isOwnProfile ? getUserExtendedData(profileUser.id) : null,
       getLeaderboardRankings(),
     ]);
 
-  const gamesWithRankings: GameWithRanking[] = userGames.map((game) =>
+  const gamesWithRankings: GameWithRanking[] = userGamesResult.games.map((game) =>
     serializeGameWithRanking(game, leaderboardRankings.get(game.id) ?? null)
   );
 
   const stats: ProfileStats = {
-    gamesCreated: userGames.length,
+    gamesCreated: userGamesResult.total,
     totalRatings: userRatings.length,
     reputation: userExtendedData?.reputation ?? 0,
     credits: userExtendedData?.credits ?? 0,
-    promptsCount: userPrompts.length,
-    promptRuns: userGames.length,
+    promptsCount: userPromptsResult.total,
+    promptRuns: userGamesResult.total,
   };
 
   return {
     user: profileUser,
-    prompts: userPrompts,
+    prompts: userPromptsResult.prompts,
+    promptsTotal: userPromptsResult.total,
+    promptsPage,
+    promptsHasMore: userPromptsResult.hasMore,
     gamesWithRankings,
+    gamesTotal: userGamesResult.total,
+    gamesPage,
+    gamesHasMore: userGamesResult.hasMore,
     ratings: userRatings,
     stats,
     isOwnProfile,

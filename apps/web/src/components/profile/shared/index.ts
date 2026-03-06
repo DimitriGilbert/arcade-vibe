@@ -10,6 +10,7 @@ export { GameRow } from "./game-row";
 export { RatingsPanel } from "./ratings-panel";
 export { PromptsPanel } from "./prompts-panel";
 export { QuickStats } from "./quick-stats";
+export { GamesPanel } from "../dashboard/games-panel";
 
 // Types
 export type { PlayerCardProps } from "./player-card";
@@ -19,3 +20,4 @@ export type { GameRowProps } from "./game-row";
 export type { RatingsPanelProps } from "./ratings-panel";
 export type { PromptsPanelProps } from "./prompts-panel";
 export type { QuickStatsProps } from "./quick-stats";
+export type { GamesPanelProps } from "../dashboard/games-panel";

@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   PlayerCard,
   RatingsPanel,
@@ -19,7 +21,15 @@ import type { ProfileStats } from "@/lib/profile-data";
 interface DashboardProfileClientProps {
   user: UserProfile;
   prompts: Prompt[];
+  promptsTotal: number;
+  promptsPage: number;
+  promptsHasMore: boolean;
+  promptsTotalPages: number;
   gamesWithRankings: GameWithRanking[];
+  gamesTotal: number;
+  gamesPage: number;
+  gamesHasMore: boolean;
+  gamesTotalPages: number;
   ratings: Rating[];
   publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
@@ -29,12 +39,48 @@ interface DashboardProfileClientProps {
 export default function DashboardProfileClient({
   user,
   prompts,
+  promptsTotal,
+  promptsPage,
+  promptsHasMore,
+  promptsTotalPages,
   gamesWithRankings,
+  gamesTotal,
+  gamesPage,
+  gamesHasMore,
+  gamesTotalPages,
   ratings,
   publicCollections,
   stats,
   isOwnProfile,
 }: DashboardProfileClientProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleGamesPageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(newPage));
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${pathname}?${queryString}` : pathname;
+    router.push(url as Route);
+  };
+
+  const handlePromptsPageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage === 1) {
+      params.delete("promptsPage");
+    } else {
+      params.set("promptsPage", String(newPage));
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${pathname}?${queryString}` : pathname;
+    router.push(url as Route);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
@@ -50,13 +96,27 @@ export default function DashboardProfileClient({
           )}
 
           <div className="lg:col-span-8">
-            <GamesPanel games={gamesWithRankings} />
+            <GamesPanel
+              games={gamesWithRankings}
+              total={gamesTotal}
+              page={gamesPage}
+              hasMore={gamesHasMore}
+              totalPages={gamesTotalPages}
+              onPageChange={handleGamesPageChange}
+            />
           </div>
 
           <div className="lg:col-span-4 space-y-6">
             <PublicCollectionsCard collections={publicCollections} />
             <RatingsPanel ratings={ratings} />
-            <PromptsPanel prompts={prompts} />
+            <PromptsPanel
+              prompts={prompts}
+              total={promptsTotal}
+              page={promptsPage}
+              hasMore={promptsHasMore}
+              totalPages={promptsTotalPages}
+              onPageChange={handlePromptsPageChange}
+            />
           </div>
         </div>
       </div>

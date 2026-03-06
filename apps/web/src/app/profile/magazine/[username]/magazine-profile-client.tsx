@@ -1,7 +1,10 @@
 "use client";
 
-import { Gamepad2, Star, Zap, Play } from "lucide-react";
-import { MagazineHeader, GamesSection, ActivityFeed } from "@/components/profile/magazine";
+import type { Route } from "next";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { Gamepad2, Star, Zap, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArcadeButton } from "@/components/arcade";
+import { MagazineHeader, GamesSection } from "@/components/profile/magazine";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { StatBlock } from "@/components/profile/shared";
 import type {
@@ -17,6 +20,10 @@ interface MagazineProfileClientProps {
   user: UserProfile;
   prompts: Prompt[];
   gamesWithRankings: GameWithRanking[];
+  gamesTotal: number;
+  gamesPage: number;
+  gamesHasMore: boolean;
+  totalPages: number;
   ratings: Rating[];
   publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
@@ -27,11 +34,31 @@ export default function MagazineProfileClient({
   user,
   prompts,
   gamesWithRankings,
+  gamesTotal,
+  gamesPage,
+  gamesHasMore,
+  totalPages,
   ratings,
   publicCollections,
   stats,
   isOwnProfile,
 }: MagazineProfileClientProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(newPage));
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${pathname}?${queryString}` : pathname;
+    router.push(url as Route);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-12 px-4">
@@ -48,13 +75,39 @@ export default function MagazineProfileClient({
           </div>
         )}
 
-        <GamesSection games={gamesWithRankings} />
+        {totalPages > 1 && (
+          <div className="mb-6 flex items-center justify-between">
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(gamesPage - 1)}
+              disabled={gamesPage <= 1}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </ArcadeButton>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              Page {gamesPage} of {totalPages}
+            </span>
+            <ArcadeButton
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(gamesPage + 1)}
+              disabled={!gamesHasMore}
+              className="gap-1"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </ArcadeButton>
+          </div>
+        )}
+
+        <GamesSection games={gamesWithRankings} page={gamesPage} />
 
         <div className="mb-16">
           <PublicCollectionsCard collections={publicCollections} />
         </div>
-
-        <ActivityFeed ratings={ratings} prompts={prompts} />
       </div>
     </div>
   );

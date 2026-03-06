@@ -1,11 +1,10 @@
 "use client";
 
-import { Trophy, Zap } from "lucide-react";
-import { ArcadeCard } from "@/components/arcade";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Trophy } from "lucide-react";
 import { StatsCard } from "@/components/profile/stats-card";
-import { PromptList } from "@/components/profile/prompt-list";
 import { ProfileHeader } from "@/components/profile/profile-header";
-import { GamesListCard } from "@/components/profile/games-list-card";
+import { PromptsPanel, GamesPanel } from "@/components/profile/shared";
 import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import type {
@@ -20,7 +19,15 @@ import type { ProfileStats } from "@/lib/profile-data";
 interface ProfilePageClientProps {
   user: UserProfile;
   prompts: Prompt[];
+  promptsTotal: number;
+  promptsPage: number;
+  promptsHasMore: boolean;
+  promptsTotalPages: number;
   gamesWithRankings: GameWithRanking[];
+  gamesTotal: number;
+  gamesPage: number;
+  gamesHasMore: boolean;
+  gamesTotalPages: number;
   ratings: Rating[];
   publicCollections: PublicCollectionListItem[];
   stats: ProfileStats | null;
@@ -30,12 +37,35 @@ interface ProfilePageClientProps {
 export default function ProfilePageClient({
   user,
   prompts,
+  promptsTotal,
+  promptsPage,
+  promptsHasMore,
+  promptsTotalPages,
   gamesWithRankings,
+  gamesTotal,
+  gamesPage,
+  gamesHasMore,
+  gamesTotalPages,
   ratings,
   publicCollections,
   stats,
   isOwnProfile,
 }: ProfilePageClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handlePromptsPageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("promptsPage", String(page));
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleGamesPageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("gamesPage", String(page));
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
@@ -62,32 +92,23 @@ export default function ProfilePageClient({
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <ArcadeCard className="">
-            <div className="p-4 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                <Zap className="h-5 w-5 text-[var(--primary)]" />
-                Prompts Created
-              </h3>
-            </div>
-            <div className="p-4">
-              <PromptList prompts={prompts || []} isLoading={false} />
-            </div>
-          </ArcadeCard>
+          <PromptsPanel
+            prompts={prompts}
+            total={promptsTotal}
+            page={promptsPage}
+            hasMore={promptsHasMore}
+            totalPages={promptsTotalPages}
+            onPageChange={handlePromptsPageChange}
+          />
 
-          <ArcadeCard className="">
-            <div className="p-4 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-[var(--primary)]" />
-                Games & Rankings
-              </h3>
-            </div>
-            <div className="p-4">
-              <GamesListCard
-                games={gamesWithRankings}
-                isLoading={false}
-              />
-            </div>
-          </ArcadeCard>
+          <GamesPanel
+            games={gamesWithRankings}
+            total={gamesTotal}
+            page={gamesPage}
+            hasMore={gamesHasMore}
+            totalPages={gamesTotalPages}
+            onPageChange={handleGamesPageChange}
+          />
         </div>
 
         <div className="mt-8 space-y-6">

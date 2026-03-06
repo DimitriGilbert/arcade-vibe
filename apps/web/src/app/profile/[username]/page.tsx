@@ -13,14 +13,23 @@ import { getProfileData } from "@/lib/profile-data";
 import { getServerCaller } from "@/utils/trpc-server";
 import ProfilePageClient from "./profile-page-client";
 
+const PAGE_SIZE = 20;
+
 interface ProfilePageProps {
   params: Promise<{
     username: string;
   }>;
+  searchParams: Promise<{
+    promptsPage?: string;
+    gamesPage?: string;
+  }>;
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
+export default async function ProfilePage({ params, searchParams }: ProfilePageProps) {
   const { username } = await params;
+  const { promptsPage: promptsPageParam, gamesPage: gamesPageParam } = await searchParams;
+  const promptsPage = Math.max(1, parseInt(promptsPageParam ?? "1", 10) || 1);
+  const gamesPage = Math.max(1, parseInt(gamesPageParam ?? "1", 10) || 1);
 
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -49,7 +58,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     }
   }
 
-  const profileData = await getProfileData(username, session?.user?.id ?? null);
+  const profileData = await getProfileData(
+    username,
+    session?.user?.id ?? null,
+    gamesPage,
+    PAGE_SIZE,
+    promptsPage,
+    PAGE_SIZE
+  );
 
   if (!profileData.user) {
     return (
@@ -75,8 +91,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     );
   }
 
-  const { user, prompts, gamesWithRankings, ratings, stats, isOwnProfile } =
-    profileData;
+  const {
+    user,
+    prompts,
+    promptsTotal,
+    promptsPage: currentPromptsPage,
+    promptsHasMore,
+    gamesWithRankings,
+    gamesTotal,
+    gamesPage: currentGamesPage,
+    gamesHasMore,
+    ratings,
+    stats,
+    isOwnProfile,
+  } = profileData;
   const caller = await getServerCaller();
   const rawPublicCollections = await caller.collections.listPublicByUser({
     userId: user.id,
@@ -87,11 +115,22 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     updatedAt: collection.updatedAt.toISOString(),
   }));
 
+  const promptsTotalPages = Math.ceil(promptsTotal / PAGE_SIZE);
+  const gamesTotalPages = Math.ceil(gamesTotal / PAGE_SIZE);
+
   return (
     <ProfilePageClient
       user={user}
       prompts={prompts}
+      promptsTotal={promptsTotal}
+      promptsPage={currentPromptsPage}
+      promptsHasMore={promptsHasMore}
+      promptsTotalPages={promptsTotalPages}
       gamesWithRankings={gamesWithRankings}
+      gamesTotal={gamesTotal}
+      gamesPage={currentGamesPage}
+      gamesHasMore={gamesHasMore}
+      gamesTotalPages={gamesTotalPages}
       ratings={ratings}
       publicCollections={publicCollections}
       stats={stats}
