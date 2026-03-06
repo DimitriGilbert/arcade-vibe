@@ -4,6 +4,7 @@ import { Crown, Zap } from "lucide-react";
 import { ArcadeCard } from "@/components/arcade";
 import type { UserProfile } from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
+import { ProfileViewSwitcher } from "../profile-view-switcher";
 
 export interface PlayerCardProps {
   user: UserProfile;
@@ -40,6 +41,11 @@ export function PlayerCard({ user, stats, isOwnProfile }: PlayerCardProps) {
                 <Crown className="w-5 h-5 text-[var(--accent)]" />
               )}
             </div>
+            <ProfileViewSwitcher
+              username={user.name}
+              currentView="dashboard"
+              className="mt-2"
+            />
             <p className="text-sm text-[var(--muted-foreground)]">
               Est. {new Date(user.createdAt).getFullYear()}
             </p>

@@ -27,8 +27,6 @@ import {
   themeStatusEnum,
   userRoleEnum,
   visibilityEnum,
-  leaderboardImplementationEnum,
-  creatorImplementationEnum,
 } from "./enums";
 
 // Re-export runtime enum objects for value access
@@ -45,8 +43,6 @@ export {
   themeStatusEnum,
   userRoleEnum,
   visibilityEnum,
-  leaderboardImplementationEnum,
-  creatorImplementationEnum,
 };
 
 // Extract types from pgEnum definitions
@@ -91,14 +87,6 @@ export type LibraryStatus = (typeof libraryStatusEnum.enumValues)[number];
 /** Prompt relation values: version, fork */
 export type PromptRelationType = (typeof promptRelationEnum.enumValues)[number];
 
-/** Leaderboard implementation values: arena, dashboard, magazine */
-export type LeaderboardImplementation =
-  (typeof leaderboardImplementationEnum.enumValues)[number];
-
-/** Creator implementation values: workbench, inbox, filebrowser */
-export type CreatorImplementation =
-  (typeof creatorImplementationEnum.enumValues)[number];
-
 // Array constants for runtime usage (derived from enum values)
 export const THEME_STATUSES = themeStatusEnum.enumValues;
 export const VISIBILITIES = visibilityEnum.enumValues;
@@ -112,5 +100,3 @@ export const MODERATION_TARGET_TYPES = moderationTargetTypeEnum.enumValues;
 export const LIBRARY_CATEGORIES = libraryCategoryEnum.enumValues;
 export const LIBRARY_STATUSES = libraryStatusEnum.enumValues;
 export const PROMPT_RELATION_TYPES = promptRelationEnum.enumValues;
-export const LEADERBOARD_IMPLEMENTATIONS = leaderboardImplementationEnum.enumValues;
-export const CREATOR_IMPLEMENTATIONS = creatorImplementationEnum.enumValues;

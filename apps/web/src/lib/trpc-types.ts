@@ -75,6 +75,7 @@ import type {
   Provider as ProviderType,
   LeaderboardImplementation as LeaderboardImplementationType,
   CreatorImplementation as CreatorImplementationType,
+  ProfileImplementation as ProfileImplementationType,
 } from "@arcade-vibe/db";
 import type {
   ThemeMediaConfig as ThemeMediaConfigType,
@@ -133,6 +134,12 @@ export type LeaderboardImplementation = LeaderboardImplementationType;
  * @source packages/db/src/schema/enums-types.ts
  */
 export type CreatorImplementation = CreatorImplementationType;
+
+/**
+ * Profile implementation values: classic, dashboard, magazine, arcade
+ * @source packages/db/src/schema/enums-types.ts
+ */
+export type ProfileImplementation = ProfileImplementationType;
 
 /**
  * Media configuration for themes

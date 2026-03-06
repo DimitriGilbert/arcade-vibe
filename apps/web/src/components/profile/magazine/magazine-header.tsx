@@ -4,6 +4,7 @@ import { TrendingUp, Zap } from "lucide-react";
 import { ArcadeCard } from "@/components/arcade";
 import type { UserProfile } from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
+import { ProfileViewSwitcher } from "../profile-view-switcher";
 
 export interface MagazineHeaderProps {
   user: UserProfile;
@@ -31,6 +32,11 @@ export function MagazineHeader({ user, stats, isOwnProfile }: MagazineHeaderProp
             <div className="flex-1 pb-2">
               <p className="text-xs uppercase tracking-widest text-[var(--muted-foreground)] mb-1">Prompt Engineer</p>
               <h1 className="text-5xl font-bold tracking-tight">{user.name}</h1>
+              <ProfileViewSwitcher
+                username={user.name}
+                currentView="magazine"
+                className="mt-3"
+              />
               <p className="text-[var(--muted-foreground)] mt-1">Member since {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
             </div>
           </div>

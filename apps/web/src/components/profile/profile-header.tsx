@@ -1,5 +1,6 @@
 import { ArcadeBadge } from "@/components/arcade";
 import type { UserProfile } from "@/lib/trpc-types";
+import { ProfileViewSwitcher } from "./profile-view-switcher";
 
 interface ProfileHeaderProps {
   user: UserProfile;
@@ -31,6 +32,12 @@ export function ProfileHeader({
           <h1 className="text-4xl font-bold text-[var(--foreground)] mb-2">
             {user.name}
           </h1>
+
+          <ProfileViewSwitcher
+            username={user.name}
+            currentView="classic"
+            className="mb-3"
+          />
 
           <div className="flex flex-wrap gap-2">
             <ArcadeBadge

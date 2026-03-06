@@ -4,6 +4,7 @@ import { Crown, Medal } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import type { UserProfile } from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
+import { ProfileViewSwitcher } from "../profile-view-switcher";
 
 export interface ProfileHeroProps {
   user: UserProfile;
@@ -39,9 +40,16 @@ export function ProfileHero({ user, stats, isOwnProfile }: ProfileHeroProps) {
 
         <div className="flex-1 text-center md:text-left">
           <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[var(--foreground)] to-[var(--muted-foreground)] bg-clip-text text-transparent">
-              {user.name}
-            </h1>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[var(--foreground)] to-[var(--muted-foreground)] bg-clip-text text-transparent">
+                {user.name}
+              </h1>
+              <ProfileViewSwitcher
+                username={user.name}
+                currentView="arcade"
+                className="mt-3 justify-center md:justify-start"
+              />
+            </div>
             <div className="flex justify-center md:justify-start gap-2">
               <ArcadeBadge text={`Est. ${new Date(user.createdAt).getFullYear()}`} variant="default" />
               {stats && stats.reputation >= 50 && (

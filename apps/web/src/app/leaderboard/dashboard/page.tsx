@@ -109,7 +109,7 @@ export default function LeaderboardDashboardPage() {
 				topModel={topModel}
 			/>
 
-			<div className="max-w-7xl mx-auto px-4 py-4">
+			<div className="container mx-auto py-4">
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 					<div className="lg:col-span-9">
 						<ArcadeCard className="overflow-hidden">

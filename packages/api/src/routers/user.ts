@@ -3,6 +3,8 @@ import {
   CREATOR_IMPLEMENTATIONS,
   db,
   LEADERBOARD_IMPLEMENTATIONS,
+  PROFILE_IMPLEMENTATIONS,
+  type UserPreferenceName,
 } from "@arcade-vibe/db";
 import { user, account, session } from "@arcade-vibe/db/schema/auth";
 import { userPreferences } from "@arcade-vibe/db/schema/user-preferences";
@@ -19,6 +21,58 @@ import { promisify } from "node:util";
 const scryptAsync = promisify(scrypt);
 const leaderboardImplementationSchema = z.enum(LEADERBOARD_IMPLEMENTATIONS);
 const creatorImplementationSchema = z.enum(CREATOR_IMPLEMENTATIONS);
+const profileImplementationSchema = z.enum(PROFILE_IMPLEMENTATIONS);
+const DEFAULT_LEADERBOARD_IMPLEMENTATION: UserPreferenceName =
+  "defaultLeaderboardImplementation";
+const DEFAULT_CREATOR_IMPLEMENTATION: UserPreferenceName =
+  "defaultCreatorImplementation";
+const DEFAULT_PROFILE_IMPLEMENTATION: UserPreferenceName =
+  "defaultProfileImplementation";
+
+function buildPreferencesRecord(
+  preferences: Array<{ name: string; value: string }>,
+): {
+  defaultLeaderboardImplementation: z.infer<
+    typeof leaderboardImplementationSchema
+  > | null;
+  defaultCreatorImplementation: z.infer<typeof creatorImplementationSchema> | null;
+  defaultProfileImplementation: z.infer<typeof profileImplementationSchema> | null;
+} {
+  const preferencesMap = new Map(
+    preferences.map((preference) => [preference.name, preference.value]),
+  );
+
+  const leaderboardValue = preferencesMap.get(DEFAULT_LEADERBOARD_IMPLEMENTATION);
+  const creatorValue = preferencesMap.get(DEFAULT_CREATOR_IMPLEMENTATION);
+  const profileValue = preferencesMap.get(DEFAULT_PROFILE_IMPLEMENTATION);
+  const parsedLeaderboardValue =
+    leaderboardValue !== undefined
+      ? leaderboardImplementationSchema.safeParse(leaderboardValue)
+      : null;
+  const parsedCreatorValue =
+    creatorValue !== undefined
+      ? creatorImplementationSchema.safeParse(creatorValue)
+      : null;
+  const parsedProfileValue =
+    profileValue !== undefined
+      ? profileImplementationSchema.safeParse(profileValue)
+      : null;
+
+  return {
+    defaultLeaderboardImplementation:
+      parsedLeaderboardValue?.success === true
+        ? parsedLeaderboardValue.data
+        : null,
+    defaultCreatorImplementation:
+      parsedCreatorValue?.success === true
+        ? parsedCreatorValue.data
+        : null,
+    defaultProfileImplementation:
+      parsedProfileValue?.success === true
+        ? parsedProfileValue.data
+        : null,
+  };
+}
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -80,20 +134,15 @@ export const userRouter = router({
       });
     }
 
-    const preferences = await db.query.userPreferences.findFirst({
+    const preferences = await db.query.userPreferences.findMany({
       where: eq(userPreferences.userId, ctx.user.id),
       columns: {
-        defaultLeaderboardImplementation: true,
-        defaultCreatorImplementation: true,
+        name: true,
+        value: true,
       },
     });
 
-    return {
-      defaultLeaderboardImplementation:
-        preferences?.defaultLeaderboardImplementation ?? null,
-      defaultCreatorImplementation:
-        preferences?.defaultCreatorImplementation ?? null,
-    };
+    return buildPreferencesRecord(preferences);
   }),
   updateProfile: protectedProcedure
     .use(createRateLimitMiddleware(rateLimits.strict))
@@ -143,6 +192,7 @@ export const userRouter = router({
         defaultLeaderboardImplementation:
           leaderboardImplementationSchema.nullable(),
         defaultCreatorImplementation: creatorImplementationSchema.nullable(),
+        defaultProfileImplementation: profileImplementationSchema.nullable(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -153,39 +203,62 @@ export const userRouter = router({
         });
       }
 
-      const [preferences] = await db
-        .insert(userPreferences)
-        .values({
-          userId: ctx.user.id,
-          defaultLeaderboardImplementation:
-            input.defaultLeaderboardImplementation,
-          defaultCreatorImplementation: input.defaultCreatorImplementation,
-          updatedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: userPreferences.userId,
-          set: {
-            defaultLeaderboardImplementation:
-              input.defaultLeaderboardImplementation,
-            defaultCreatorImplementation: input.defaultCreatorImplementation,
-            updatedAt: new Date(),
-          },
-        })
-        .returning({
-          defaultLeaderboardImplementation:
-            userPreferences.defaultLeaderboardImplementation,
-          defaultCreatorImplementation:
-            userPreferences.defaultCreatorImplementation,
-        });
+      const preferenceEntries = [
+        {
+          name: DEFAULT_LEADERBOARD_IMPLEMENTATION,
+          value: input.defaultLeaderboardImplementation,
+        },
+        {
+          name: DEFAULT_CREATOR_IMPLEMENTATION,
+          value: input.defaultCreatorImplementation,
+        },
+        {
+          name: DEFAULT_PROFILE_IMPLEMENTATION,
+          value: input.defaultProfileImplementation,
+        },
+      ] as const;
+
+      await db.transaction(async (tx) => {
+        for (const preference of preferenceEntries) {
+          if (preference.value === null) {
+            await tx
+              .delete(userPreferences)
+              .where(
+                and(
+                  eq(userPreferences.userId, ctx.user.id),
+                  eq(userPreferences.name, preference.name),
+                ),
+              );
+            continue;
+          }
+
+          await tx
+            .insert(userPreferences)
+            .values({
+              userId: ctx.user.id,
+              name: preference.name,
+              value: preference.value,
+            })
+            .onConflictDoUpdate({
+              target: [userPreferences.userId, userPreferences.name],
+              set: {
+                value: preference.value,
+              },
+            });
+        }
+      });
+
+      const preferences = await db.query.userPreferences.findMany({
+        where: eq(userPreferences.userId, ctx.user.id),
+        columns: {
+          name: true,
+          value: true,
+        },
+      });
 
       return {
         success: true,
-        preferences: {
-          defaultLeaderboardImplementation:
-            preferences?.defaultLeaderboardImplementation ?? null,
-          defaultCreatorImplementation:
-            preferences?.defaultCreatorImplementation ?? null,
-        },
+        preferences: buildPreferencesRecord(preferences),
       };
     }),
   changePassword: protectedProcedure

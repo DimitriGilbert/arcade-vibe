@@ -4,6 +4,7 @@ import type { Route } from "next";
 import type {
   CreatorImplementation,
   LeaderboardImplementation,
+  ProfileImplementation,
 } from "@/lib/trpc-types";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -84,6 +85,12 @@ const CREATOR_IMPLEMENTATIONS: readonly CreatorImplementation[] = [
   "inbox",
   "filebrowser",
 ];
+const PROFILE_IMPLEMENTATIONS: readonly ProfileImplementation[] = [
+  "classic",
+  "dashboard",
+  "magazine",
+  "arcade",
+];
 
 const leaderboardImplementationLabels: Record<
   LeaderboardImplementation,
@@ -100,6 +107,13 @@ const creatorImplementationLabels: Record<CreatorImplementation, string> = {
   filebrowser: "File Browser",
 };
 
+const profileImplementationLabels: Record<ProfileImplementation, string> = {
+  classic: "Classic",
+  dashboard: "Dashboard",
+  magazine: "Magazine",
+  arcade: "Arcade",
+};
+
 function getSelectValue(value: string | null | undefined): string {
   return value ?? NO_DEFAULT_VALUE;
 }
@@ -114,15 +128,22 @@ function getCreatorSelectLabel(value: CreatorImplementation | null): string {
   return value === null ? "Always ask me" : creatorImplementationLabels[value];
 }
 
+function getProfileSelectLabel(value: ProfileImplementation | null): string {
+  return value === null ? "Always ask me" : profileImplementationLabels[value];
+}
+
 function hasPreferencesChanged(
   nextLeaderboardImplementation: LeaderboardImplementation | null,
   nextCreatorImplementation: CreatorImplementation | null,
+  nextProfileImplementation: ProfileImplementation | null,
   currentLeaderboardImplementation: LeaderboardImplementation | null,
   currentCreatorImplementation: CreatorImplementation | null,
+  currentProfileImplementation: ProfileImplementation | null,
 ): boolean {
   return (
     nextLeaderboardImplementation !== currentLeaderboardImplementation ||
-    nextCreatorImplementation !== currentCreatorImplementation
+    nextCreatorImplementation !== currentCreatorImplementation ||
+    nextProfileImplementation !== currentProfileImplementation
   );
 }
 
@@ -158,6 +179,7 @@ export default function SettingsPage() {
     mutationFn: async (input: {
       defaultLeaderboardImplementation: LeaderboardImplementation | null;
       defaultCreatorImplementation: CreatorImplementation | null;
+      defaultProfileImplementation: ProfileImplementation | null;
     }) => trpcClient.user.updatePreferences.mutate(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -196,6 +218,8 @@ export default function SettingsPage() {
     preferences?.defaultLeaderboardImplementation ?? null;
   const selectedCreatorImplementation =
     preferences?.defaultCreatorImplementation ?? null;
+  const selectedProfileImplementation =
+    preferences?.defaultProfileImplementation ?? null;
 
   const handleLeaderboardPreferenceChange = (value: string | null) => {
     const nextLeaderboardImplementation =
@@ -207,8 +231,10 @@ export default function SettingsPage() {
       !hasPreferencesChanged(
         nextLeaderboardImplementation,
         selectedCreatorImplementation,
+        selectedProfileImplementation,
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
+        selectedProfileImplementation,
       )
     ) {
       return;
@@ -217,6 +243,7 @@ export default function SettingsPage() {
     updatePreferencesMutation.mutate({
       defaultLeaderboardImplementation: nextLeaderboardImplementation,
       defaultCreatorImplementation: selectedCreatorImplementation,
+      defaultProfileImplementation: selectedProfileImplementation,
     });
   };
 
@@ -230,8 +257,10 @@ export default function SettingsPage() {
       !hasPreferencesChanged(
         selectedLeaderboardImplementation,
         nextCreatorImplementation,
+        selectedProfileImplementation,
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
+        selectedProfileImplementation,
       )
     ) {
       return;
@@ -240,6 +269,33 @@ export default function SettingsPage() {
     updatePreferencesMutation.mutate({
       defaultLeaderboardImplementation: selectedLeaderboardImplementation,
       defaultCreatorImplementation: nextCreatorImplementation,
+      defaultProfileImplementation: selectedProfileImplementation,
+    });
+  };
+
+  const handleProfilePreferenceChange = (value: string | null) => {
+    const nextProfileImplementation =
+      value === null || value === NO_DEFAULT_VALUE
+        ? null
+        : (value as ProfileImplementation);
+
+    if (
+      !hasPreferencesChanged(
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+        nextProfileImplementation,
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+        selectedProfileImplementation,
+      )
+    ) {
+      return;
+    }
+
+    updatePreferencesMutation.mutate({
+      defaultLeaderboardImplementation: selectedLeaderboardImplementation,
+      defaultCreatorImplementation: selectedCreatorImplementation,
+      defaultProfileImplementation: nextProfileImplementation,
     });
   };
 
@@ -341,14 +397,16 @@ export default function SettingsPage() {
                     <h2 className="text-xl font-semibold">Landing Preferences</h2>
                     <p className="text-sm text-[var(--muted-foreground)]">
                       Choose which implementation opens first when you visit
-                      `/leaderboard` or `/creator`.
+                      `/leaderboard`, `/creator`, or `/profile/[username]`.
                     </p>
                   </div>
                 </div>
               </div>
               <ArcadeBadge
                 text={
-                  selectedLeaderboardImplementation || selectedCreatorImplementation
+                  selectedLeaderboardImplementation ||
+                  selectedCreatorImplementation ||
+                  selectedProfileImplementation
                     ? "Active Defaults"
                     : "Always ask me"
                 }
@@ -417,6 +475,39 @@ export default function SettingsPage() {
                     {CREATOR_IMPLEMENTATIONS.map((implementation) => (
                       <SelectItem key={implementation} value={implementation}>
                         {creatorImplementationLabels[implementation]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-400/10 rounded-lg">
+                    <User className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Profile default</p>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Redirect `/profile/[username]` to your preferred layout.
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  value={getSelectValue(selectedProfileImplementation)}
+                  onValueChange={handleProfilePreferenceChange}
+                  disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                >
+                  <SelectTrigger className="w-full h-11 px-3 text-sm">
+                    <SelectValue placeholder="Always ask me">
+                      {getProfileSelectLabel(selectedProfileImplementation)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    <SelectItem value={NO_DEFAULT_VALUE}>Always ask me</SelectItem>
+                    {PROFILE_IMPLEMENTATIONS.map((implementation) => (
+                      <SelectItem key={implementation} value={implementation}>
+                        {profileImplementationLabels[implementation]}
                       </SelectItem>
                     ))}
                   </SelectContent>

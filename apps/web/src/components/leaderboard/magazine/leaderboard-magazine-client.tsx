@@ -34,8 +34,8 @@ export default function LeaderboardMagazineClient() {
 
 	if (isLoading) {
 		return (
-			<main className="min-h-screen bg-background py-12 px-4">
-				<div className="max-w-6xl mx-auto">
+			<main className="min-h-screen bg-background py-12">
+				<div className="container mx-auto">
 					<LoadingState size="lg" message="Loading leaderboard" />
 				</div>
 			</main>
@@ -44,8 +44,8 @@ export default function LeaderboardMagazineClient() {
 
 	if (!currentTheme) {
 		return (
-			<main className="min-h-screen bg-background py-12 px-4">
-				<div className="max-w-6xl mx-auto">
+			<main className="min-h-screen bg-background py-12">
+				<div className="container mx-auto">
 					<ArcadeCard className="p-12 text-center">
 						<Calendar className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-6 opacity-50" />
 						<h1 className="text-2xl font-bold mb-4">No Active Theme</h1>
@@ -63,8 +63,8 @@ export default function LeaderboardMagazineClient() {
 	}
 
 	return (
-		<main className="min-h-screen bg-background py-12 px-4">
-			<div className="max-w-6xl mx-auto space-y-12">
+<main className="min-h-screen bg-background py-12">
+				<div className="container mx-auto space-y-12">
 				<div className="flex items-center justify-between">
 					<ThemeHero
 						title={currentTheme.title}

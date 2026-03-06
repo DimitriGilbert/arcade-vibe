@@ -28,10 +28,7 @@ import { collections, collectionGames } from "./collections";
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
-  preferences: one(userPreferences, {
-    fields: [user.id],
-    references: [userPreferences.userId],
-  }),
+  preferences: many(userPreferences),
   userExtended: one(userExtended, {
     fields: [user.id],
     references: [userExtended.id],

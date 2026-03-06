@@ -22,11 +22,9 @@ export type {
   PromptRelationType,
   PromptStatus,
   Provider,
-  CreatorImplementation,
   ThemeStatus,
   UserRole,
   Visibility,
-  LeaderboardImplementation,
 } from "./schema/enums-types";
 
 export {
@@ -36,10 +34,6 @@ export {
   libraryCategoryEnum,
   LIBRARY_STATUSES,
   libraryStatusEnum,
-  CREATOR_IMPLEMENTATIONS,
-  creatorImplementationEnum,
-  LEADERBOARD_IMPLEMENTATIONS,
-  leaderboardImplementationEnum,
   MODERATION_APPEAL_STATUSES,
   moderationAppealStatusEnum,
   MODERATION_REPORT_STATUSES,
@@ -59,3 +53,17 @@ export {
   VISIBILITIES,
   visibilityEnum,
 } from "./schema/enums-types";
+
+export type {
+  CreatorImplementation,
+  LeaderboardImplementation,
+  ProfileImplementation,
+  UserPreferenceName,
+} from "./schema/user-preferences";
+
+export {
+  CREATOR_IMPLEMENTATIONS,
+  LEADERBOARD_IMPLEMENTATIONS,
+  PROFILE_IMPLEMENTATIONS,
+  USER_PREFERENCE_NAMES,
+} from "./schema/user-preferences";

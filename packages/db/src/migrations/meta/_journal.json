@@ -15,6 +15,13 @@
       "when": 1772824613144,
       "tag": "0001_slimy_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772827815941,
+      "tag": "0002_rich_la_nuit",
+      "breakpoints": true
     }
   ]
 }

@@ -2,8 +2,11 @@ import type { Route } from "next";
 
 import { auth } from "@arcade-vibe/auth";
 import { db } from "@arcade-vibe/db";
-import { userPreferences } from "@arcade-vibe/db/schema/user-preferences";
-import { eq } from "drizzle-orm";
+import {
+  DEFAULT_CREATOR_IMPLEMENTATION_PREFERENCE,
+  userPreferences,
+} from "@arcade-vibe/db/schema/user-preferences";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -75,14 +78,17 @@ export default async function CreatorPage() {
 
   if (session?.user.id) {
     const preferences = await db.query.userPreferences.findFirst({
-      where: eq(userPreferences.userId, session.user.id),
+      where: and(
+        eq(userPreferences.userId, session.user.id),
+        eq(userPreferences.name, DEFAULT_CREATOR_IMPLEMENTATION_PREFERENCE),
+      ),
       columns: {
-        defaultCreatorImplementation: true,
+        value: true,
       },
     });
 
-    if (preferences?.defaultCreatorImplementation) {
-      redirect(`/creator/${preferences.defaultCreatorImplementation}` as Route);
+    if (preferences?.value) {
+      redirect(`/creator/${preferences.value}` as Route);
     }
   }
 
