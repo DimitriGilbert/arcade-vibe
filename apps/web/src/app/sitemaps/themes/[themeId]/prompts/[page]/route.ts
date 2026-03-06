@@ -9,6 +9,7 @@ import {
 } from "@/lib/sitemap";
 
 export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 interface ThemePromptSitemapRouteProps {
   params: Promise<{
