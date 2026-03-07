@@ -7,6 +7,7 @@ import {
   RatingsPanel,
   PromptsPanel,
 } from "@/components/profile/shared";
+import { ProfileViewSwitcher } from "@/components/profile/profile-view-switcher";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { GamesPanel, StatsOverview } from "@/components/profile/dashboard";
 import type {
@@ -84,6 +85,10 @@ export default function DashboardProfileClient({
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4">
+        <div className="flex justify-end mb-4">
+          <ProfileViewSwitcher username={user.name} currentView="dashboard" />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-12">
             <PlayerCard user={user} stats={stats} isOwnProfile={isOwnProfile} />
@@ -91,7 +96,11 @@ export default function DashboardProfileClient({
 
           {stats && (
             <div className="lg:col-span-12">
-              <StatsOverview stats={stats} games={gamesWithRankings} ratings={ratings} />
+              <StatsOverview
+                stats={stats}
+                games={gamesWithRankings}
+                ratings={ratings}
+              />
             </div>
           )}
 

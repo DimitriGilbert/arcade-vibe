@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Gamepad2, Star, Zap, Play } from "lucide-react";
 import { MagazineHeader, GamesSection } from "@/components/profile/magazine";
+import { ProfileViewSwitcher } from "@/components/profile/profile-view-switcher";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { StatBlock } from "@/components/profile/shared";
 import type {
@@ -61,14 +62,30 @@ export default function MagazineProfileClient({
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-12 px-4">
+        <div className="flex justify-end mb-4">
+          <ProfileViewSwitcher username={user.name} currentView="magazine" />
+        </div>
+
         <MagazineHeader user={user} stats={stats} isOwnProfile={isOwnProfile} />
 
         {stats && (
           <div className="mb-16">
             <div className="grid grid-cols-4 divide-x divide-[var(--border)] border border-[var(--border)] rounded-lg bg-[var(--card)]">
-              <StatBlock label="Games" value={stats.gamesCreated} icon={Gamepad2} />
-              <StatBlock label="Ratings" value={stats.totalRatings} icon={Star} />
-              <StatBlock label="Prompts" value={stats.promptsCount} icon={Zap} />
+              <StatBlock
+                label="Games"
+                value={stats.gamesCreated}
+                icon={Gamepad2}
+              />
+              <StatBlock
+                label="Ratings"
+                value={stats.totalRatings}
+                icon={Star}
+              />
+              <StatBlock
+                label="Prompts"
+                value={stats.promptsCount}
+                icon={Zap}
+              />
               <StatBlock label="Runs" value={stats.promptRuns} icon={Play} />
             </div>
           </div>

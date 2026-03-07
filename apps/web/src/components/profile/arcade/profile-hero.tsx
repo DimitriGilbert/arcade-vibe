@@ -4,7 +4,6 @@ import { Crown, Medal } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import type { UserProfile } from "@/lib/trpc-types";
 import type { ProfileStats } from "@/lib/profile-data";
-import { ProfileViewSwitcher } from "../profile-view-switcher";
 
 export interface ProfileHeroProps {
   user: UserProfile;
@@ -44,16 +43,18 @@ export function ProfileHero({ user, stats, isOwnProfile }: ProfileHeroProps) {
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[var(--foreground)] to-[var(--muted-foreground)] bg-clip-text text-transparent">
                 {user.name}
               </h1>
-              <ProfileViewSwitcher
-                username={user.name}
-                currentView="arcade"
-                className="mt-3 justify-center md:justify-start"
-              />
             </div>
             <div className="flex justify-center md:justify-start gap-2">
-              <ArcadeBadge text={`Est. ${new Date(user.createdAt).getFullYear()}`} variant="default" />
+              <ArcadeBadge
+                text={`Est. ${new Date(user.createdAt).getFullYear()}`}
+                variant="default"
+              />
               {stats && stats.reputation >= 50 && (
-                <ArcadeBadge text="Veteran" variant="neon" icon={<Medal className="w-3 h-3" />} />
+                <ArcadeBadge
+                  text="Veteran"
+                  variant="neon"
+                  icon={<Medal className="w-3 h-3" />}
+                />
               )}
               {isOwnProfile && stats && (
                 <ArcadeBadge text={`${stats.credits} credits`} variant="neon" />
@@ -64,20 +65,36 @@ export function ProfileHero({ user, stats, isOwnProfile }: ProfileHeroProps) {
           {stats && (
             <div className="flex flex-wrap justify-center md:justify-start gap-6 mt-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-[var(--primary)]">{stats.gamesCreated}</div>
-                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Games</div>
+                <div className="text-3xl font-bold text-[var(--primary)]">
+                  {stats.gamesCreated}
+                </div>
+                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">
+                  Games
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[var(--accent)]">{stats.reputation}</div>
-                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Rep</div>
+                <div className="text-3xl font-bold text-[var(--accent)]">
+                  {stats.reputation}
+                </div>
+                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">
+                  Rep
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[var(--secondary)]">{stats.totalRatings}</div>
-                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Ratings</div>
+                <div className="text-3xl font-bold text-[var(--secondary)]">
+                  {stats.totalRatings}
+                </div>
+                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">
+                  Ratings
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[var(--foreground)]">{stats.promptRuns}</div>
-                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Runs</div>
+                <div className="text-3xl font-bold text-[var(--foreground)]">
+                  {stats.promptRuns}
+                </div>
+                <div className="text-xs text-[var(--muted-foreground)] uppercase tracking-wider">
+                  Runs
+                </div>
               </div>
             </div>
           )}

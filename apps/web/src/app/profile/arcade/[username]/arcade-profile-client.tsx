@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Gamepad2, Target } from "lucide-react";
 import { ArcadeBadge } from "@/components/arcade";
 import { ProfileHero, AllGamesGrid } from "@/components/profile/arcade";
+import { ProfileViewSwitcher } from "@/components/profile/profile-view-switcher";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
 import { QuickStats } from "@/components/profile/shared/quick-stats";
 import type {
@@ -51,6 +52,10 @@ export default function ArcadeProfileClient({
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
+        <div className="flex justify-end mb-4">
+          <ProfileViewSwitcher username={user.name} currentView="arcade" />
+        </div>
+
         <ProfileHero user={user} stats={stats} isOwnProfile={isOwnProfile} />
 
         {stats && (
@@ -59,7 +64,11 @@ export default function ArcadeProfileClient({
               <Target className="w-5 h-5 text-[var(--primary)]" />
               Quick Stats
             </h2>
-            <QuickStats stats={stats} games={gamesWithRankings} ratings={ratings} />
+            <QuickStats
+              stats={stats}
+              games={gamesWithRankings}
+              ratings={ratings}
+            />
           </section>
         )}
 

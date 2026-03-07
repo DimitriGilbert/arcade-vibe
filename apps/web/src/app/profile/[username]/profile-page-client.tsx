@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Trophy } from "lucide-react";
 import { StatsCard } from "@/components/profile/stats-card";
 import { ProfileHeader } from "@/components/profile/profile-header";
+import { ProfileViewSwitcher } from "@/components/profile/profile-view-switcher";
 import { PromptsPanel, GamesPanel } from "@/components/profile/shared";
 import { RatingsHistoryCard } from "@/components/profile/ratings-history-card";
 import { PublicCollectionsCard } from "@/components/profile/public-collections-card";
@@ -69,6 +70,10 @@ export default function ProfilePageClient({
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
+        <div className="flex justify-end mb-4">
+          <ProfileViewSwitcher username={user.name} currentView="classic" />
+        </div>
+
         <ProfileHeader
           user={user}
           credits={stats ? { balance: stats.credits } : null}
@@ -113,10 +118,7 @@ export default function ProfilePageClient({
 
         <div className="mt-8 space-y-6">
           <PublicCollectionsCard collections={publicCollections} />
-          <RatingsHistoryCard
-            ratings={ratings || []}
-            isLoading={false}
-          />
+          <RatingsHistoryCard ratings={ratings || []} isLoading={false} />
         </div>
       </div>
     </div>
