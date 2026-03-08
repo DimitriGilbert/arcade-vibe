@@ -16,6 +16,7 @@ import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatPlayTime } from "@/lib/formatting";
 import { getModelDetailRoute } from "@/lib/model-routes";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 const RANK_COLORS: Record<number, string> = {
 	2: "from-slate-300 to-slate-500",
@@ -113,6 +114,10 @@ export function RankedCard({
 							<Play className="h-3 w-3" />
 							Play
 						</ArcadeButton>
+						<ShareDropdown
+							url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+							title={entry.gameName || "Play this game"}
+						/>
 						<EntryActions entry={entry} variant="compact" showFork={false} />
 					</div>
 				</div>

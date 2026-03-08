@@ -26,7 +26,6 @@ import {
   PanelRightClose,
   Clock,
   Eye,
-  Share2,
   Flag,
   Trophy,
   Medal,
@@ -49,6 +48,7 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { generateEmbedCode } from "@/lib/embed-utils";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 interface GamePlayPageProps {
   gameId: string;
@@ -235,26 +235,6 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     }
   }, [game, gameId]);
 
-  const handleShare = useCallback(async () => {
-    const url = window.location.href;
-    const canSharePrompt = Boolean(game?.prompt?.content.trim());
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title:
-            game?.name ||
-            (canSharePrompt ? game?.prompt?.content : "Play this game"),
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copied to clipboard");
-      }
-    } catch {
-      toast.error("Failed to share game");
-    }
-  }, [game]);
-
   const handleReportSubmit = useCallback(
     async (reason: string, description: string) => {
       await reportMutation.mutateAsync({ reason, description });
@@ -368,14 +348,11 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
               <Eye className="size-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleShare}
-            className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
-            title="Share"
-          >
-            <Share2 className="size-4" />
-          </button>
+          <ShareDropdown
+            url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${gameId}`}
+            title={game?.name || "Play this game"}
+            embedCode={generateEmbedCode({ gameId, gameName: game?.name || undefined })}
+          />
           <button
             type="button"
             onClick={handleCopyEmbed}

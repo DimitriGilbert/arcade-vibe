@@ -6,6 +6,7 @@ import { Play } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { RankBadge } from "@/components/leaderboard/shared/rank-badge";
 import { EntrySubtitle } from "@/components/leaderboard/shared/entry-subtitle";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 export function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
 	const gameName = entry.gameName ?? "Untitled Game";
@@ -38,6 +39,11 @@ export function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry
 				<p className="font-bold">{score.toLocaleString()}</p>
 				<p className="text-xs text-[var(--muted-foreground)]">pts</p>
 			</div>
+
+			<ShareDropdown
+				url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+				title={entry.gameName ?? "Play this game"}
+			/>
 
 			<Link href={`/game/${entry.gameId}`}>
 				<ArcadeButton variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">

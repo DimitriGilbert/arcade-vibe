@@ -7,7 +7,7 @@ import { ratings } from "@arcade-vibe/db/schema/ratings";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { z } from "zod";
-import { eq, desc, asc, or, and, isNull, sql, inArray } from "drizzle-orm";
+import { eq, desc, asc, or, and, isNull, sql, inArray, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   getTokenCount,
@@ -959,5 +959,126 @@ export const promptsRouter = router({
         author: authorMap.get(fork.authorId) ?? null,
         gameCount: gameCountMap.get(fork.id) ?? 0,
       }));
+    }),
+
+  listPublicPaginated: publicProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(25),
+      }),
+    )
+    .query(async ({ input }) => {
+      const conditions = and(
+        eq(prompts.visibility, "public"),
+        isNull(prompts.hiddenAt),
+      );
+
+      const totalResult = await db
+        .select({ total: count() })
+        .from(prompts)
+        .where(conditions);
+
+      const totalItems = totalResult[0]?.total ?? 0;
+      const totalPages = totalItems === 0 ? 0 : Math.ceil(totalItems / input.pageSize);
+      const offset = (input.page - 1) * input.pageSize;
+
+      const items = await db.query.prompts.findMany({
+        where: conditions,
+        columns: {
+          id: true,
+          title: true,
+          content: true,
+          tokenCount: true,
+          version: true,
+          visibility: true,
+          createdAt: true,
+          updatedAt: true,
+          authorId: true,
+          themeId: true,
+        },
+        orderBy: [desc(prompts.createdAt)],
+        limit: input.pageSize,
+        offset,
+        with: {
+          theme: {
+            columns: {
+              id: true,
+              title: true,
+            },
+          },
+          user: {
+            columns: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      });
+
+      const promptIds = items.map((p) => p.id);
+
+      const [gameCounts, forkCounts] = await Promise.all([
+        promptIds.length > 0
+          ? db
+              .select({
+                promptId: games.promptId,
+                count: sql<number>`count(*)`,
+              })
+              .from(games)
+              .where(
+                and(
+                  inArray(games.promptId, promptIds),
+                  eq(games.status, "completed"),
+                  eq(games.isHidden, false),
+                  isNull(games.deletedAt),
+                ),
+              )
+              .groupBy(games.promptId)
+          : [],
+        promptIds.length > 0
+          ? db
+              .select({
+                parentId: prompts.parentId,
+                count: sql<number>`count(*)`,
+              })
+              .from(prompts)
+              .where(
+                and(
+                  inArray(prompts.parentId, promptIds),
+                  eq(prompts.relationType, "fork"),
+                  eq(prompts.visibility, "public"),
+                ),
+              )
+              .groupBy(prompts.parentId)
+          : [],
+      ]);
+
+      const gameCountMap = new Map(gameCounts.map((row) => [row.promptId, Number(row.count)]));
+      const forkCountMap = new Map(forkCounts.map((row) => [row.parentId, Number(row.count)]));
+
+      return {
+        items: items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          tokenCount: item.tokenCount,
+          version: item.version,
+          visibility: item.visibility,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          theme: item.theme,
+          author: item.user,
+          gameCount: gameCountMap.get(item.id) ?? 0,
+          forkCount: forkCountMap.get(item.id) ?? 0,
+        })),
+        total: totalItems,
+        page: input.page,
+        pageSize: input.pageSize,
+        totalPages,
+        hasNextPage: totalPages > 0 && input.page < totalPages,
+        hasPreviousPage: input.page > 1,
+      };
     }),
 });

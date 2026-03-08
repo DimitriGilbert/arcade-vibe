@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
 
 import { trpcClient } from "@/utils/trpc";
-import DocumentEditorClient from "./document-editor-client";
+import DocumentEditorClient from "@/components/prompts/document-editor-client";
 
 interface PromptDetailPageProps {
   params: Promise<{

@@ -9,6 +9,7 @@ import { getRankStyle } from "@/lib/leaderboard-utils";
 import { getModelDetailRoute } from "@/lib/model-routes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 export function LeaderboardTable({
 	entries,
@@ -157,13 +158,19 @@ export function LeaderboardTable({
 										</div>
 									</td>
 									<td className="p-3 text-right">
-										<EntryActions
-											entry={entry}
-											variant="hover"
-											showFork={false}
-											showEmbed={true}
-											showPrompt={true}
-										/>
+										<div className="flex items-center justify-end gap-1">
+											<ShareDropdown
+												url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+												title={entry.gameName || "Play this game"}
+											/>
+											<EntryActions
+												entry={entry}
+												variant="hover"
+												showFork={false}
+												showEmbed={true}
+												showPrompt={true}
+											/>
+										</div>
 									</td>
 								</tr>
 							);

@@ -65,14 +65,12 @@ export default function LeaderboardMagazineClient() {
 	return (
 <main className="min-h-screen bg-background py-12">
 				<div className="container mx-auto space-y-12">
-				<div className="flex items-center justify-between">
-					<ThemeHero
-						title={currentTheme.title}
-						description={currentTheme.description}
-						endDate={currentTheme.endDate}
-						entryCount={entries.length}
-					/>
-				</div>
+				<ThemeHero
+					title={currentTheme.title}
+					description={currentTheme.description}
+					endDate={currentTheme.endDate}
+					entryCount={entries.length}
+				/>
 
 				{allThemes && allThemes.length > 1 && (
 					<div className="flex items-center gap-4">

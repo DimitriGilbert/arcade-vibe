@@ -19,6 +19,7 @@ import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatDateShort, formatPlayTime } from "@/lib/formatting";
 import { getModelDetailRoute } from "@/lib/model-routes";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 	const router = useRouter();
@@ -107,6 +108,10 @@ export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 						<Play className="h-4 w-4" />
 						Play
 					</ArcadeButton>
+					<ShareDropdown
+						url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+						title={entry.gameName || "Play this game"}
+					/>
 					<EntryActions entry={entry} variant="full" showFork={false} />
 				</div>
 			</div>

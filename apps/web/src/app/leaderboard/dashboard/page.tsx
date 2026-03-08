@@ -126,6 +126,7 @@ export default function LeaderboardDashboardPage() {
 										/>
 									)}
 								</div>
+								<div className="flex items-center gap-2">
 								<ArcadeButton
 									variant="outline"
 									size="sm"
@@ -136,6 +137,7 @@ export default function LeaderboardDashboardPage() {
 									<RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
 									Refresh
 								</ArcadeButton>
+							</div>
 							</div>
 							<LeaderboardTable
 								entries={allEntries}

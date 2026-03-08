@@ -207,6 +207,7 @@ export type PromptListPublicOutput = PromptsOutput["listPublic"];
 export type PromptGetPublicByIdOutput = PromptsOutput["getPublicById"];
 export type PromptListGamesByPromptOutput = PromptsOutput["listGamesByPrompt"];
 export type PromptListForksByPromptOutput = PromptsOutput["listForksByPrompt"];
+export type PromptListPublicPaginatedOutput = PromptsOutput["listPublicPaginated"];
 
 // --- Themes Router ---
 
@@ -422,6 +423,8 @@ export type PromptVersion = PromptListVersionsOutput[number];
  * Extract the prompt entity for direct use
  */
 export type PromptEntity = PromptByIdOutput;
+
+export type PublicPromptListItem = NonNullable<PromptListPublicPaginatedOutput>["items"][number];
 
 // --- Theme Entity Types ---
 

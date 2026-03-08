@@ -14,6 +14,7 @@ import { formatScore, formatPlayTime } from "@/lib/formatting";
 import { getModelDetailRoute } from "@/lib/model-routes";
 import { RankBadge } from "@/components/leaderboard/shared/rank-badge";
 import { EntryActions } from "@/components/leaderboard/shared/entry-actions";
+import { ShareDropdown } from "@/components/shared/share-dropdown";
 
 export function ChallengerRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
 	const isPodium = rank <= 3;
@@ -88,6 +89,10 @@ export function ChallengerRow({ entry, rank }: { entry: LeaderboardEntry; rank: 
 			</div>
 
 			<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+				<ShareDropdown
+					url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+					title={entry.gameName || "Play this game"}
+				/>
 				<EntryActions entry={entry} variant="hover" showFork={false} />
 			</div>
 		</div>
