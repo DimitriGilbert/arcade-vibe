@@ -3,9 +3,12 @@ import type { ReactElement, ReactNode } from "react";
 import { WelcomeEmail } from "./welcome-email";
 import { BroadcastEmail } from "./broadcast-email";
 import { CustomEmail } from "./custom-email";
+import { ResetPasswordEmail } from "./reset-password-email";
+import { ForgotPasswordEmail } from "./forgot-password-email";
+import { AccountDeletedEmail } from "./account-deleted-email";
 import type { EmailUser } from "./types";
 
-export type EmailTemplateId = "welcome" | "broadcast" | "custom";
+export type EmailTemplateId = "welcome" | "broadcast" | "custom" | "resetPassword" | "forgotPassword" | "accountDeleted";
 
 export { type EmailUser } from "./types";
 
@@ -71,6 +74,49 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, TemplateDefinition> = {
       contentHtml: props.contentHtml as string,
     }),
   },
+  resetPassword: {
+    id: "resetPassword",
+    name: "Reset Password",
+    description: "Sent when a user requests to reset their password",
+    userVariables: ["name", "email"],
+    templateVariables: [
+      { name: "resetLink", label: "Reset Link", type: "url", required: true },
+      { name: "resetToken", label: "Reset Token", type: "text", required: true },
+    ],
+    component: (props) => ResetPasswordEmail({
+      user: props.user,
+      resetLink: props.resetLink as string,
+      resetToken: props.resetToken as string,
+    }),
+  },
+  forgotPassword: {
+    id: "forgotPassword",
+    name: "Forgot Password",
+    description: "Sent when a user forgets their password and requests a reset link",
+    userVariables: ["name", "email"],
+    templateVariables: [
+      { name: "resetLink", label: "Reset Link", type: "url", required: true },
+      { name: "resetToken", label: "Reset Token", type: "text", required: true },
+    ],
+    component: (props) => ForgotPasswordEmail({
+      user: props.user,
+      resetLink: props.resetLink as string,
+      resetToken: props.resetToken as string,
+    }),
+  },
+  accountDeleted: {
+    id: "accountDeleted",
+    name: "Account Deleted",
+    description: "Sent when a user's account has been permanently deleted",
+    userVariables: ["name", "email"],
+    templateVariables: [
+      { name: "deletedAt", label: "Deletion Date", type: "text", required: true },
+    ],
+    component: (props) => AccountDeletedEmail({
+      user: props.user,
+      deletedAt: props.deletedAt instanceof Date ? props.deletedAt : new Date(props.deletedAt as string),
+    }),
+  },
 } as const;
 
 export function getTemplateDefinition(templateId: EmailTemplateId): TemplateDefinition | undefined {
@@ -105,4 +151,4 @@ export async function renderEmail(options: RenderEmailOptions): Promise<Rendered
   return { html, text };
 }
 
-export { WelcomeEmail, BroadcastEmail, CustomEmail };
+export { WelcomeEmail, BroadcastEmail, CustomEmail, ResetPasswordEmail, ForgotPasswordEmail, AccountDeletedEmail };

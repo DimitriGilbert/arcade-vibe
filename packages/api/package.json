@@ -37,6 +37,7 @@
     "ioredis": "^5.9.2",
     "js-tiktoken": "^1.0.21",
     "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.1",
     "next": "catalog:",
     "pg": "^8.18.0",
     "shiki": "^3.22.0",

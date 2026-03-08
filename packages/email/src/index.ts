@@ -17,6 +17,9 @@ export {
   WelcomeEmail,
   BroadcastEmail,
   CustomEmail,
+  ResetPasswordEmail,
+  ForgotPasswordEmail,
+  AccountDeletedEmail,
 } from "./templates/index";
 export type {
   TemplateVariable,
@@ -25,3 +28,6 @@ export type {
   EmailUser,
 } from "./templates/index";
 export { sendWelcomeEmail } from "./welcome";
+export { sendForgotPasswordEmail } from "./forgot-password";
+export { sendResetPasswordConfirmationEmail } from "./reset-password";
+export { sendAccountDeletedEmail } from "./account-deleted";

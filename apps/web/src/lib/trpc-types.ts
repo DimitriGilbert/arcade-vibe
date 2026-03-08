@@ -248,6 +248,41 @@ export type UserGetPreferencesOutput = UserOutput["getPreferences"];
 export type UserUpdateProfileOutput = UserOutput["updateProfile"];
 export type UserUpdatePreferencesOutput = UserOutput["updatePreferences"];
 
+/**
+ * Output type for forgotPassword procedure
+ * Returns success status for password reset initiation
+ * @source RouterOutput["user"]["forgotPassword"]
+ */
+export type ForgotPasswordOutput = UserOutput["forgotPassword"];
+
+/**
+ * Output type for resetPassword procedure
+ * Returns success status and confirmation message
+ * @source RouterOutput["user"]["resetPassword"]
+ */
+export type ResetPasswordOutput = UserOutput["resetPassword"];
+
+/**
+ * Output type for validateResetToken procedure
+ * Returns validity status of the reset token
+ * @source RouterOutput["user"]["validateResetToken"]
+ */
+export type ValidateResetTokenOutput = UserOutput["validateResetToken"];
+
+/**
+ * Output type for exportData procedure (GDPR compliance)
+ * Returns user data export with filename for download
+ * @source RouterOutput["user"]["exportData"]
+ */
+export type ExportDataOutput = UserOutput["exportData"];
+
+/**
+ * Output type for deleteAccount procedure (GDPR compliance)
+ * Returns success status after account deletion
+ * @source RouterOutput["user"]["deleteAccount"]
+ */
+export type DeleteAccountOutput = UserOutput["deleteAccount"];
+
 // --- Credits Router ---
 
 export type CreditsOutput = RouterOutput["credits"];

@@ -29,10 +29,12 @@ import {
   PanelsTopLeft,
   WandSparkles,
   Loader2,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
+import { AccountManagementCard } from "@/components/settings/account-management-card";
 
 interface SettingsSectionProps {
   title: string;
@@ -50,23 +52,23 @@ function SettingsSection({
   badge,
 }: SettingsSectionProps) {
   return (
-    <Link href={href as Route}>
+    <Link href={href as Route} className="h-full">
       <ArcadeCard className="group hover:shadow-lg transition-all cursor-pointer h-full">
-        <div className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-[var(--muted)]/60 rounded-lg group-hover:scale-110 transition-transform">
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[var(--muted)]/60 rounded-lg group-hover:scale-110 transition-transform">
               {icon}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold">{title}</h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold">{title}</h3>
                 {badge && <ArcadeBadge text={badge} variant="default" />}
               </div>
-              <p className="text-[var(--muted-foreground)] text-sm">
+              <p className="text-[var(--muted-foreground)] text-sm truncate">
                 {description}
               </p>
             </div>
-            <ArrowRight className="h-5 w-5 text-[var(--muted-foreground)] group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all flex-shrink-0" />
           </div>
         </div>
       </ArcadeCard>
@@ -381,8 +383,9 @@ export default function SettingsPage() {
         </ArcadeCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 auto-rows-[minmax(220px,auto)]">
-        <ArcadeCard className="relative overflow-hidden lg:row-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Landing Preferences - spans 3 rows */}
+        <ArcadeCard className="relative overflow-hidden lg:row-span-3 h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/6 via-transparent to-[var(--accent)]/12" />
           <div className="absolute right-0 top-0 h-40 w-40 bg-rose-400/10 blur-3xl" />
           <div className="absolute left-0 bottom-0 h-40 w-40 bg-cyan-400/10 blur-3xl" />
@@ -530,56 +533,66 @@ export default function SettingsPage() {
           </div>
         </ArcadeCard>
 
+        {/* Row 1: Profile + Security */}
         <SettingsSection
           title="Profile"
           description="Update your username and email"
-          icon={<User className="h-6 w-6 text-[var(--primary)]" />}
+          icon={<User className="h-5 w-5 text-[var(--primary)]" />}
           href="/settings/profile"
         />
 
         <SettingsSection
+          title="Security"
+          description="Manage password and security"
+          icon={<Shield className="h-5 w-5 text-[var(--primary)]" />}
+          href="/settings/security"
+        />
+
+        {/* Row 2: API Keys + Subscription */}
+        <SettingsSection
           title="API Keys"
-          description="Manage your BYOK (Bring Your Own Key) API keys"
-          icon={<Key className="h-6 w-6 text-[var(--primary)]" />}
+          description="Manage BYOK API keys"
+          icon={<Key className="h-5 w-5 text-[var(--primary)]" />}
           href="/settings/api-keys"
           badge={apiKeysCount > 0 ? `${apiKeysCount} keys` : undefined}
         />
 
         <SettingsSection
           title="Subscription"
-          description="View your plan and purchase credits"
-          icon={<CreditCard className="h-6 w-6 text-[var(--primary)]" />}
+          description="View plan and purchase credits"
+          icon={<CreditCard className="h-5 w-5 text-[var(--primary)]" />}
           href="/settings/subscription"
           badge={`${credits} credits`}
         />
 
-        <ArcadeCard className="relative overflow-hidden">
+        {/* Row 3: Need More Credits - spans 2 columns */}
+        <ArcadeCard className="relative overflow-hidden lg:col-span-2 h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/5 via-[var(--accent)]/5 to-transparent" />
-          <div className="p-6 relative">
-            <div className="flex items-start gap-4">
+          <div className="p-5 relative">
+            <div className="flex items-center gap-4">
               <div className="p-3 bg-[var(--accent)]/20 rounded-lg">
-                <Sparkles className="h-6 w-6 text-[var(--accent)]" />
+                <Sparkles className="h-5 w-5 text-[var(--accent)]" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1">
-                  Need More Credits?
-                </h3>
-                <p className="text-[var(--muted-foreground)] text-sm mb-4">
-                  Purchase additional credits to continue generating games and
-                  participating in the arcade.
+                <h3 className="font-semibold mb-0.5">Need More Credits?</h3>
+                <p className="text-[var(--muted-foreground)] text-sm">
+                  Purchase additional credits to continue generating games and participating in the arcade.
                 </p>
-                <ArcadeButton
-                  variant="primary"
-                  onClick={() => {
-                    window.location.href = "/settings/subscription";
-                  }}
-                >
-                  Purchase Credits
-                </ArcadeButton>
               </div>
+              <ArcadeButton
+                variant="primary"
+                onClick={() => {
+                  window.location.href = "/settings/subscription";
+                }}
+              >
+                Purchase Credits
+              </ArcadeButton>
             </div>
           </div>
         </ArcadeCard>
+
+        {/* Row 4: Account Management (GDPR) - spans 3 columns (full width) */}
+        <AccountManagementCard />
       </div>
     </div>
   );
