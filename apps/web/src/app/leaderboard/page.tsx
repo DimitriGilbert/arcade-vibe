@@ -11,7 +11,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Swords, BarChart3, BookOpen } from "lucide-react";
+import { Swords, BarChart3, BookOpen, Info } from "lucide-react";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { LeaderboardFeedback } from "@/components/feedback";
@@ -80,7 +80,7 @@ export default async function LeaderboardLandingPage() {
   return (
     <main className="min-h-screen bg-background py-16 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--muted)] text-xs font-medium text-[var(--muted-foreground)] mb-6">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -96,7 +96,22 @@ export default async function LeaderboardLandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="mb-10 opacity-0 animate-fade-in-up animate-delay-200" style={{ animationFillMode: "forwards" }}>
+          <ArcadeCard 
+            variant="default" 
+            className="border-[var(--primary)]/30 bg-[var(--primary)]/5"
+            icon={<Info className="h-5 w-5" />}
+            title="Same Data, Different Perspectives"
+          >
+            <p className="text-sm text-[var(--foreground)] leading-relaxed">
+              All three views show the <strong>same leaderboard data</strong>—they're just different ways to explore it. 
+              Whether you want head-to-head battles in Arena, detailed stats in Dashboard, or curated stories in Magazine, 
+              you're seeing the same rankings. Pick what fits your mood, and switch anytime.
+            </p>
+          </ArcadeCard>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 opacity-0 animate-fade-in-up animate-delay-500" style={{ animationFillMode: "forwards" }}>
           {LEADERBOARD_VIEWS.map((view) => {
             const IconComponent = view.icon;
             return (

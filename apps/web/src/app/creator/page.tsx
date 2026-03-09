@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 import { ArcadeCard } from "@/components/arcade/arcade-card";
 import { ArcadeButton } from "@/components/arcade/arcade-button";
 import { ArcadeBadge } from "@/components/arcade/arcade-badge";
-import { Layers, Inbox, FolderTree, type LucideIcon } from "lucide-react";
+import { Layers, Inbox, FolderTree, Info, type LucideIcon } from "lucide-react";
 import { CreatorFeedbackButton } from "@/components/feedback/CreatorFeedbackButton";
 
 interface EditorInfo {
@@ -91,7 +91,7 @@ export default async function CreatorPage() {
   return (
     <main className="min-h-screen bg-background py-16 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--muted)] text-xs font-medium text-[var(--muted-foreground)] mb-6">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
@@ -107,7 +107,22 @@ export default async function CreatorPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="mb-10 opacity-0 animate-fade-in-up animate-delay-200" style={{ animationFillMode: "forwards" }}>
+          <ArcadeCard 
+            variant="default" 
+            className="border-[var(--primary)]/30 bg-[var(--primary)]/5"
+            icon={<Info className="h-5 w-5" />}
+            title="Same Power, Different Vibes"
+          >
+            <p className="text-sm text-[var(--foreground)] leading-relaxed">
+              All three editors have <strong>identical functionality</strong>—they're just different interfaces for the same tools. 
+              Whether you draft a prompt in Inbox, organize in File Browser, or use the full Workbench, you get the same results. 
+              Pick what feels right for you, and switch anytime.
+            </p>
+          </ArcadeCard>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 opacity-0 animate-fade-in-up animate-delay-500" style={{ animationFillMode: "forwards" }}>
           {EDITORS.map((editor) => {
             const Icon = editor.icon;
             return (
@@ -142,10 +157,7 @@ export default async function CreatorPage() {
           })}
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-6">
-          <p className="text-sm text-[var(--muted-foreground)] text-center max-w-md">
-            Can't pick a favorite? Neither can we! Your feedback shapes which editor gets the most love.
-          </p>
+        <div className="mt-12 flex flex-col items-center gap-4">
           <CreatorFeedbackButton />
         </div>
       </div>
