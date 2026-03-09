@@ -13,12 +13,8 @@ import { redirect } from "next/navigation";
 import { ArcadeCard } from "@/components/arcade/arcade-card";
 import { ArcadeButton } from "@/components/arcade/arcade-button";
 import { ArcadeBadge } from "@/components/arcade/arcade-badge";
-import { FeedbackButton } from "@/components/feedback";
 import { Layers, Inbox, FolderTree, type LucideIcon } from "lucide-react";
-import {
-  creatorPageFeedbackSchema,
-  creatorPageFeedbackFields,
-} from "@/lib/feedback-schemas";
+import { CreatorFeedbackButton } from "@/components/feedback/CreatorFeedbackButton";
 
 interface EditorInfo {
   id: string;
@@ -150,14 +146,7 @@ export default async function CreatorPage() {
           <p className="text-sm text-[var(--muted-foreground)] text-center max-w-md">
             Can't pick a favorite? Neither can we! Your feedback shapes which editor gets the most love.
           </p>
-          <FeedbackButton
-            schema={creatorPageFeedbackSchema}
-            fields={creatorPageFeedbackFields}
-            subject="Creator Page Feedback"
-            label="Help Us Decide"
-            variant="outline"
-            description="Your input drives what gets built. Tell us which editor feels right and what would make it better."
-          />
+          <CreatorFeedbackButton />
         </div>
       </div>
     </main>
