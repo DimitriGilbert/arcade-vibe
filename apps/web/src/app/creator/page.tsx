@@ -30,18 +30,6 @@ interface EditorInfo {
 
 const EDITORS: EditorInfo[] = [
   {
-    id: "workbench",
-    name: "Workbench",
-    description:
-      "Full-powered editor with split panels. Pick models, tweak settings, and watch games come to life side-by-side.",
-    icon: Layers,
-    href: "/creator/workbench" as Route,
-    badge: "Full Featured",
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-400/10",
-    borderColor: "hover:border-cyan-400/50",
-  },
-  {
     id: "inbox",
     name: "Inbox",
     description:
@@ -64,6 +52,18 @@ const EDITORS: EditorInfo[] = [
     color: "text-orange-400",
     bgColor: "bg-orange-400/10",
     borderColor: "hover:border-orange-400/50",
+  },
+  {
+    id: "workbench",
+    name: "Workbench",
+    description:
+      "Full-powered editor with split panels. Pick models, tweak settings, and watch games come to life side-by-side.",
+    icon: Layers,
+    href: "/creator/workbench" as Route,
+    badge: "Full Featured",
+    color: "text-cyan-400",
+    bgColor: "bg-cyan-400/10",
+    borderColor: "hover:border-cyan-400/50",
   },
 ];
 
