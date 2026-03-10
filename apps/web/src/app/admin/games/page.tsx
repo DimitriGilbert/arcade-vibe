@@ -11,6 +11,9 @@ import {
   EyeOff,
   ExternalLink,
   Filter,
+  Settings,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   ArcadeCard,
@@ -49,6 +52,14 @@ export default function AdminGamesPage() {
     open: false,
     game: null,
   });
+  const [settingsDialog, setSettingsDialog] = useState<{
+    open: boolean;
+    game: GameAdminView | null;
+  }>({
+    open: false,
+    game: null,
+  });
+  const [promptCopied, setPromptCopied] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const queryClient = useQueryClient();
@@ -92,6 +103,30 @@ export default function AdminGamesPage() {
       toast.error(error.message || "Failed to unhide game");
     },
   });
+
+  const updateGameStatusMutation = useMutation({
+    mutationFn: async (input: { gameId: string; status: GameStatus }) => {
+      return await trpcClient.admin.direct.updateGameStatus.mutate(input);
+    },
+    onSuccess: () => {
+      toast.success("Game status updated successfully!");
+      setSettingsDialog({ open: false, game: null });
+      queryClient.invalidateQueries({ queryKey: ["admin-games"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update game status");
+    },
+  });
+
+  const copyPromptToClipboard = async () => {
+    const promptContent = settingsDialog.game?.prompt?.content;
+    if (promptContent) {
+      await navigator.clipboard.writeText(promptContent);
+      setPromptCopied(true);
+      toast.success("Prompt copied to clipboard!");
+      setTimeout(() => setPromptCopied(false), 2000);
+    }
+  };
 
   const filteredGames = (games || []).filter((game) => {
     if (!searchQuery.trim()) return true;
@@ -250,6 +285,9 @@ export default function AdminGamesPage() {
                     Theme
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
+                    Model
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-[var(--muted-foreground)]">
@@ -268,7 +306,7 @@ export default function AdminGamesPage() {
                   <tr>
                     <EmptyState
                       variant="table"
-                      colSpan={7}
+                      colSpan={8}
                       message="No games found"
                     />
                   </tr>
@@ -314,6 +352,11 @@ export default function AdminGamesPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm">
+                          {game.modelProvider}/{game.modelName}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">{getStatusBadge(game.status)}</td>
                       <td className="px-4 py-3">
                         {game.isSubmitted ? (
@@ -337,6 +380,16 @@ export default function AdminGamesPage() {
                               <ExternalLink className="h-4 w-4" />
                             </ArcadeButton>
                           </Link>
+                          <ArcadeButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setPromptCopied(false);
+                              setSettingsDialog({ open: true, game });
+                            }}
+                          >
+                            <Settings className="h-4 w-4" />
+                          </ArcadeButton>
                           {game.isHidden ? (
                             <ArcadeButton
                               variant="outline"
@@ -427,6 +480,104 @@ export default function AdminGamesPage() {
                   <EyeOff className="h-4 w-4" />
                   Hide Game
                 </>
+              )}
+            </ArcadeButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={settingsDialog.open}
+        onOpenChange={(open) =>
+          !open && setSettingsDialog({ open: false, game: null })
+        }
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Game Settings</DialogTitle>
+            <DialogDescription>
+              Manage &quot;{settingsDialog.game?.name || "Untitled"}&quot;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium text-[var(--foreground)]">
+                Status
+              </div>
+              <select
+                value={settingsDialog.game?.status || "generating"}
+                onChange={(e) => {
+                  const newStatus = e.target.value as GameStatus;
+                  setSettingsDialog((prev) => ({
+                    ...prev,
+                    game: prev.game
+                      ? { ...prev.game, status: newStatus }
+                      : null,
+                  }));
+                }}
+                className="w-full mt-1 px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm"
+              >
+                <option value="generating">Generating</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-[var(--foreground)]">
+                  Prompt
+                </div>
+                <ArcadeButton
+                  variant="outline"
+                  size="sm"
+                  onClick={copyPromptToClipboard}
+                  disabled={!settingsDialog.game?.prompt?.content}
+                >
+                  {promptCopied ? (
+                    <>
+                      <Check className="h-3 w-3" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      Copy
+                    </>
+                  )}
+                </ArcadeButton>
+              </div>
+              <div className="mt-1 p-3 bg-[var(--muted)] rounded-lg text-sm text-[var(--muted-foreground)] max-h-[200px] overflow-y-auto whitespace-pre-wrap">
+                {settingsDialog.game?.prompt?.content || "No prompt content"}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <ArcadeButton
+              variant="outline"
+              onClick={() => setSettingsDialog({ open: false, game: null })}
+            >
+              Cancel
+            </ArcadeButton>
+            <ArcadeButton
+              variant="primary"
+              onClick={() => {
+                if (settingsDialog.game) {
+                  updateGameStatusMutation.mutate({
+                    gameId: settingsDialog.game.id,
+                    status: settingsDialog.game.status,
+                  });
+                }
+              }}
+              disabled={updateGameStatusMutation.isPending}
+            >
+              {updateGameStatusMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
               )}
             </ArcadeButton>
           </DialogFooter>

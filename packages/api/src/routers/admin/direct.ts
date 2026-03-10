@@ -326,6 +326,57 @@ export const directActionsRouter = router({
     }),
 
   /**
+   * Update Game Status
+   *
+   * Admin directly updates a game's status.
+   * - Allows manual status change for any valid status
+   * - Logs action to adminActions
+   */
+  updateGameStatus: adminProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        status: z.enum(["generating", "completed", "failed", "hidden"]),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const game = await db.query.games.findFirst({
+        where: eq(games.id, input.gameId),
+      });
+
+      if (!game) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      await db
+        .update(games)
+        .set({
+          status: input.status,
+        })
+        .where(eq(games.id, input.gameId));
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "update_game_status",
+        targetType: "game",
+        targetId: input.gameId,
+        reason: `Status changed from ${game.status} to ${input.status}`,
+      });
+
+      if (game.themeId) {
+        await redis.del(`lb:${game.themeId}`);
+      }
+
+      return {
+        success: true,
+        gameId: input.gameId,
+      };
+    }),
+
+  /**
    * Get Games
    *
    * List all games for admin management with filtering and pagination.
@@ -401,6 +452,8 @@ export const directActionsRouter = router({
         isSubmitted: game.isSubmitted,
         submittedAt: game.submittedAt,
         createdAt: game.createdAt,
+        modelProvider: game.modelProvider,
+        modelName: game.modelName,
         prompt: game.prompt
           ? {
               id: game.prompt.id,
