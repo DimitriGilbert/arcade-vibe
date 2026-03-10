@@ -6,6 +6,7 @@ import { Orbitron, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "../index.css";
 import Header from "@/components/header";
 import Providers from "@/components/providers";
+import { Footer } from "@/components/footer";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -74,7 +75,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${orbitron.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${orbitron.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-[var(--background)]`}
       >
         <a
           href="#main-content"
@@ -83,11 +84,12 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
-          <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-svh">
+          <div className="grid grid-rows-[auto_minmax(0,1fr)_auto] min-h-svh">
             <Header />
             <main id="main-content" className="min-h-0 overflow-y-auto">
               {children}
             </main>
+            <Footer />
           </div>
         </Providers>
         <Script
