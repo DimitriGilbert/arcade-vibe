@@ -1,16 +1,14 @@
-import { headers } from "next/headers";
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-export async function Footer() {
-  const headersList = await headers();
-  const pathname = headersList.get("x-matched-path") ?? "";
-
-  if (/^\/games\/[^/]+$/.test(pathname)) {
-    return null;
-  }
+export function Footer() {
+  const pathname = usePathname();
+  const isHidden = /^\/games\/[^/]+$/.test(pathname);
 
   return (
-    <footer className="border-t border-[var(--border)]/50 py-4 px-4">
+    <footer className={`border-t border-[var(--border)]/50 py-4 px-4 ${isHidden ? "hidden" : ""}`}>
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[var(--muted-foreground)]/60">
         <span className="opacity-50">© {new Date().getFullYear()} dbuild.dev</span>
         <span className="opacity-30">·</span>
