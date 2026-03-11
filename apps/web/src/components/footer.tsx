@@ -1,6 +1,14 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
-export function Footer() {
+export async function Footer() {
+  const headersList = await headers();
+  const pathname = headersList.get("x-matched-path") ?? "";
+
+  if (/^\/games\/[^/]+$/.test(pathname)) {
+    return null;
+  }
+
   return (
     <footer className="border-t border-[var(--border)]/50 py-4 px-4">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[var(--muted-foreground)]/60">
