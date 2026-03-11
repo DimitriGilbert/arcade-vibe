@@ -43,13 +43,14 @@ function shareToLinkedIn(url: string): void {
 
 export function ShareDropdown({ url, title, embedCode, trigger }: ShareDropdownProps) {
 	const defaultTrigger = (
-		<button
-			type="button"
+		<span
+			role="button"
+			tabIndex={0}
 			className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] outline-none cursor-pointer"
 			aria-label="Share"
 		>
 			<Share2 className="size-4" />
-		</button>
+		</span>
 	);
 
 	return (

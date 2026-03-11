@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 export function Footer() {
   const pathname = usePathname();
-  const isHidden = /^\/games\/[^/]+$/.test(pathname);
+  const isHidden = /^\/game\/[^/]+$/.test(pathname);
 
   return (
-    <footer className={`border-t border-[var(--border)]/50 py-4 px-4 ${isHidden ? "hidden" : ""}`}>
+    <footer className="border-t border-[var(--border)]/50 py-4 px-4" style={isHidden ? { display: "none" } : undefined}>
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[var(--muted-foreground)]/60">
         <span className="opacity-50">© {new Date().getFullYear()} dbuild.dev</span>
         <span className="opacity-30">·</span>
