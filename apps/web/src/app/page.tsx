@@ -27,7 +27,7 @@ function formatTimeRemaining(endDate: Date): string {
 
 async function Masthead() {
   return (
-    <header className="home-hero relative py-20 md:py-32">
+    <header className="home-hero relative py-12 md:py-20">
       <div className="home-hero-grid">
         <div className="home-hero-grid-lines" />
         <div className="home-hero-horizon" />
@@ -226,9 +226,9 @@ async function FeaturedArticle() {
     : null;
 
   return (
-    <article className="py-16">
+    <article className="py-10">
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-6">
           <span className="px-3 py-1 bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-bold uppercase tracking-wider">
             This Month
           </span>
@@ -375,9 +375,9 @@ async function FeatureSplit() {
   const { tiersWithModels } = await getHomepageData();
 
   return (
-    <section className="py-20">
+    <section className="py-12">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <ArcadeCard className="p-8 md:p-10">
             <div>
               <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
@@ -456,9 +456,9 @@ async function FeatureSplit() {
 
 function LearnBento() {
   return (
-    <section className="py-10 bg-[var(--card)]/10">
+    <section className="py-6 bg-[var(--card)]/10">
       <div className="container mx-auto px-4">
-        <div className="mb-12">
+        <div className="mb-6">
           <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
             More Than Just Games
           </span>
@@ -468,9 +468,9 @@ function LearnBento() {
         </div>
 
         <div className="grid grid-cols-12 gap-4 md:gap-5 auto-rows-[minmax(100px,auto)]">
-          <ArcadeCard className="col-span-12 md:col-span-6 row-span-2 p-8 flex flex-col">
+          <ArcadeCard className="col-span-12 md:col-span-6 row-span-2 p-6 flex flex-col">
             <div className="flex-1">
-              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-6">
+              <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-4">
                 <span className="text-[var(--primary)] text-2xl">🎓</span>
               </div>
               <h3 className="text-2xl md:text-3xl font-bold mb-4">
@@ -485,7 +485,7 @@ function LearnBento() {
                 it, learn from it.
               </p>
             </div>
-            <div className="mt-8 pt-6 border-t border-[var(--border)]">
+            <div className="mt-6 pt-4 border-t border-[var(--border)]">
               <div className="flex items-center gap-6 text-sm">
                 <div>
                   <span className="text-2xl font-bold text-[var(--primary)]">
@@ -506,7 +506,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-6 p-6">
+          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-6 p-5">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center shrink-0">
                 <span className="text-[var(--accent)] text-xl">⚖️</span>
@@ -523,7 +523,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 p-5 flex flex-col justify-between">
+          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 p-4 flex flex-col justify-between">
             <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center">
               <span className="text-[var(--primary)]">👥</span>
             </div>
@@ -535,7 +535,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 row-span-3 p-6 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5 flex flex-col justify-center">
+          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 row-span-3 p-5 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5 flex flex-col justify-center">
             <div className="text-center">
               <p className="text-6xl font-black text-[var(--primary)] mb-2">
                 1
@@ -549,7 +549,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-7 md:col-span-7 p-5">
+          <ArcadeCard className="col-span-12 sm:col-span-7 md:col-span-7 p-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
                 <span className="text-yellow-500">📊</span>
@@ -578,7 +578,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-9 md:col-span-9 p-5">
+          <ArcadeCard className="col-span-12 sm:col-span-9 md:col-span-9 p-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
                 <span className="text-pink-500">❤️</span>
@@ -600,9 +600,9 @@ function LearnBento() {
 
 function CreatorCards() {
   return (
-    <section className="py-16 border-t border-[var(--border)]">
+    <section className="py-10 border-t border-[var(--border)] synthwave-dark-text">
       <div className="container mx-auto px-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)] text-center mb-8">
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)] text-center mb-8 synthwave-dark-text">
           More from me
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
@@ -673,7 +673,7 @@ function CreatorCards() {
 
 function Outro() {
   return (
-    <footer className="py-24 relative synthwave-dark-text">
+    <footer className="py-16 relative synthwave-dark-text">
       <div className="absolute inset-0 opacity-20 home-cta-glow" />
       <div className="max-w-3xl mx-auto px-4 text-center relative">
         <h2 className="text-3xl md:text-4xl font-bold mb-6">Wanna try it?</h2>
@@ -692,7 +692,7 @@ function Outro() {
             </ArcadeButton>
           </Link>
         </div>
-        <p className="mt-12 text-sm text-[var(--muted-foreground)] synthwave-dark-text">
+        <p className="mt-8 text-sm text-[var(--muted-foreground)] synthwave-dark-text">
           Come hang out at{" "}
           <span className="font-bold text-[var(--primary)]">Arcade Vibe</span>.
         </p>
