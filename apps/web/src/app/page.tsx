@@ -378,48 +378,50 @@ async function FeatureSplit() {
     <section className="py-20">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-              How It Works
-            </span>
-            <h2 className="text-4xl md:text-5xl font-black mt-4 mb-6">
-              Pretty simple, actually
-            </h2>
-            <p className="text-lg text-[var(--muted-foreground)] leading-relaxed mb-8">
-              Write a prompt that makes an AI build a game. One message, no
-              do-overs. Pick your model difficulty and see where you land.
-            </p>
-            <div className="space-y-4">
-              {[
-                {
-                  title: "WRITE",
-                  desc: "Write a prompt that makes an AI build a game. One message, no do-overs.",
-                },
-                {
-                  title: "PICK",
-                  desc: "Pick your model. Easy mode with big AIs, or go hard with smaller ones.",
-                },
-                {
-                  title: "PLAY",
-                  desc: "People play your game, rate it. See where you land on the board.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-4 group">
-                  <div className="w-12 h-12 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
-                    <span className="text-[var(--primary)] font-bold text-sm">
-                      {item.title[0]}
-                    </span>
+          <ArcadeCard className="p-8 md:p-10">
+            <div>
+              <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                How It Works
+              </span>
+              <h2 className="text-4xl md:text-5xl font-black mt-4 mb-6">
+                Pretty simple, actually
+              </h2>
+              <p className="text-lg text-[var(--muted-foreground)] leading-relaxed mb-8">
+                Write a prompt that makes an AI build a game. One message, no
+                do-overs. Pick your model difficulty and see where you land.
+              </p>
+              <div className="space-y-4">
+                {[
+                  {
+                    title: "WRITE",
+                    desc: "Write a prompt that makes an AI build a game. One message, no do-overs.",
+                  },
+                  {
+                    title: "PICK",
+                    desc: "Pick your model. Easy mode with big AIs, or go hard with smaller ones.",
+                  },
+                  {
+                    title: "PLAY",
+                    desc: "People play your game, rate it. See where you land on the board.",
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-4 group">
+                    <div className="w-12 h-12 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
+                      <span className="text-[var(--primary)] font-bold text-sm">
+                        {item.title[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-bold">{item.title}</h3>
+                      <p className="text-sm text-[var(--muted-foreground)]">
+                        {item.desc}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold">{item.title}</h3>
-                    <p className="text-sm text-[var(--muted-foreground)]">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </ArcadeCard>
 
           <div className="grid grid-cols-2 gap-4">
             {tiersWithModels.map((tier, idx) => {
@@ -454,7 +456,7 @@ async function FeatureSplit() {
 
 function LearnBento() {
   return (
-    <section className="py-20 bg-[var(--card)]/10">
+    <section className="py-10 bg-[var(--card)]/10">
       <div className="container mx-auto px-4">
         <div className="mb-12">
           <span className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
@@ -671,11 +673,11 @@ function CreatorCards() {
 
 function Outro() {
   return (
-    <footer className="py-24 relative">
+    <footer className="py-24 relative synthwave-dark-text">
       <div className="absolute inset-0 opacity-20 home-cta-glow" />
       <div className="max-w-3xl mx-auto px-4 text-center relative">
         <h2 className="text-3xl md:text-4xl font-bold mb-6">Wanna try it?</h2>
-        <p className="text-lg text-[var(--muted-foreground)] mb-8">
+        <p className="text-lg text-[var(--muted-foreground)] mb-8 synthwave-dark-text">
           Write prompts. Make games. See what happens.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -690,7 +692,7 @@ function Outro() {
             </ArcadeButton>
           </Link>
         </div>
-        <p className="mt-12 text-sm text-[var(--muted-foreground)]">
+        <p className="mt-12 text-sm text-[var(--muted-foreground)] synthwave-dark-text">
           Come hang out at{" "}
           <span className="font-bold text-[var(--primary)]">Arcade Vibe</span>.
         </p>
