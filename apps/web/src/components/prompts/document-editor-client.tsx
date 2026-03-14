@@ -295,7 +295,7 @@ export default function DocumentEditorClient({ promptId }: DocumentEditorClientP
       <div className="container mx-auto py-8 px-4">
         {/* Navigation */}
         <Link
-          href={"/prompts/document" as Route}
+          href={"/prompts" as Route}
           className="group mb-8 inline-flex items-center gap-2 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] animate-fade-in"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -422,7 +422,7 @@ export default function DocumentEditorClient({ promptId }: DocumentEditorClientP
             Copy
           </ArcadeButton>
           <ShareDropdown
-            url={`${process.env.NEXT_PUBLIC_APP_URL}/prompts/document/${promptId}`}
+            url={`${process.env.NEXT_PUBLIC_APP_URL}/prompts/${promptId}`}
             title={shareTitle}
             trigger={
               <ArcadeButton variant="outline" size="lg">

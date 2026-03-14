@@ -144,17 +144,6 @@ export function getGeneralSitemapEntries(): SitemapUrlEntry[] {
     { loc: toAbsoluteUrl("/games" as Route), changefreq: "hourly", priority: 0.9 },
     { loc: toAbsoluteUrl("/models" as Route), changefreq: "weekly", priority: 0.8 },
     { loc: toAbsoluteUrl("/prompts" as Route), changefreq: "daily", priority: 0.8 },
-    { loc: toAbsoluteUrl("/prompts/gallery" as Route), changefreq: "daily", priority: 0.8 },
-    {
-      loc: toAbsoluteUrl("/prompts/dashboard" as Route),
-      changefreq: "daily",
-      priority: 0.7,
-    },
-    {
-      loc: toAbsoluteUrl("/prompts/document" as Route),
-      changefreq: "daily",
-      priority: 0.7,
-    },
     { loc: toAbsoluteUrl("/leaderboard" as Route), changefreq: "daily", priority: 0.8 },
     {
       loc: toAbsoluteUrl("/leaderboard/arena" as Route),
@@ -345,7 +334,7 @@ export async function getThemePromptEntries(
   });
 
   return rows.map((row) => ({
-    loc: toAbsoluteUrl(`/prompts/gallery/${row.id}` as Route),
+    loc: toAbsoluteUrl(`/prompts/${row.id}` as Route),
     lastmod: toIsoString(row.updatedAt),
     changefreq: "weekly",
     priority: 0.7,

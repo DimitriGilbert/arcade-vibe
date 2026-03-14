@@ -20,7 +20,7 @@ export function ForksList({ forks }: ForksListProps) {
       {forks.map((fork) => (
         <Link
           key={fork.id}
-          href={`/prompts/dashboard/${fork.id}`}
+          href={`/prompts/${fork.id}`}
           className="flex items-center gap-3 p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--muted)]/20 transition-colors"
         >
           <div className="w-8 h-8 flex items-center justify-center bg-[var(--primary)]/10 rounded-lg">

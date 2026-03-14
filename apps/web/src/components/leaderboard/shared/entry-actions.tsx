@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+
 import Link from "next/link";
 import { Code, FileText } from "lucide-react";
 // GitFork import kept for future re-enablement of fork functionality
@@ -92,7 +94,7 @@ export function EntryActions({
       )}
 
       {showPrompt && isPromptVisible && (
-        <Link href={`/prompts/document/${entry.promptId}`}>
+        <Link href={`/prompts/${entry.promptId}` as Route}>
           <ArcadeButton
             variant="outline"
             size={buttonSize}

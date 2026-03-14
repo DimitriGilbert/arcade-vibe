@@ -91,9 +91,9 @@ function formatRelativeTime(date: Date | string): string {
 
 function getPageHref(page: number): Route {
   if (page <= 1) {
-    return "/prompts/document" as Route;
+    return "/prompts" as Route;
   }
-  return `/prompts/document?page=${page}` as Route;
+  return `/prompts?page=${page}` as Route;
 }
 
 interface PromptCardProps {
@@ -114,7 +114,7 @@ function PromptCard({ prompt, index }: PromptCardProps) {
 
   return (
     <Link
-      href={`/prompts/document/${prompt.id}` as Route}
+      href={`/prompts/${prompt.id}` as Route}
       className="group block"
       style={{ animationDelay }}
     >
@@ -313,13 +313,7 @@ export function DocumentPromptsList({
     <main className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         <header className="mb-12 animate-fade-in md:mb-16">
-          <Link
-            href={"/prompts" as Route}
-            className="group mb-6 inline-flex items-center gap-2 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-          >
-            <FileText className="h-4 w-4" />
-            <span>Back to Hub</span>
-          </Link>
+
 
           <div className="relative">
             <h1 className="text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">
