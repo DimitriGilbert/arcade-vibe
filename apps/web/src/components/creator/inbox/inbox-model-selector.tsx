@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useRef } from "react";
 import { useFormedible } from "@/hooks/use-formedible";
-import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
+import { ArcadeBadge } from "@/components/arcade";
 import { ChevronDown, ChevronRight, Filter, Key } from "lucide-react";
 import { z } from "zod";
 import type { ModelSelection, ModelMetadata, ApiKey } from "./inbox-types";
-import { MAX_MODELS, generateModelSelectionId } from "./inbox-types";
+import { MAX_MODELS } from "./inbox-types";
 
 export interface InboxModelSelectorProps {
   modelMetadata: ModelMetadata;
@@ -97,11 +97,13 @@ export function InboxModelSelector({
 
   const { Form, form } = useFormedible<ModelSelectionValues>({
     schema: modelSelectionSchema,
+    layout: { type: "grid", columns: 2, gap: "4" },
     fields: [
       {
         name: "tierFilter",
         type: "multiSelect",
         label: "Filter by Tier",
+        section: { title: "" },
         options: tierOptions,
         conditional: () => showFilters,
         multiSelectConfig: {
@@ -113,6 +115,7 @@ export function InboxModelSelector({
         name: "providerFilter",
         type: "multiSelect",
         label: "Filter by Provider",
+        section: { title: "" },
         options: providerOptions,
         conditional: () => showFilters,
         multiSelectConfig: {
@@ -124,6 +127,7 @@ export function InboxModelSelector({
         name: "selectedModel",
         type: "combobox",
         label: "Model",
+        section: { title: "" },
         options: (values) => getFilteredModels(values as ModelSelectionValues),
         comboboxConfig: {
           searchable: true,
@@ -137,6 +141,7 @@ export function InboxModelSelector({
         name: "selectedApiKeyId",
         type: "select",
         label: "API Key (BYOK)",
+        section: { title: "" },
         options: apiKeyOptions,
         selectConfig: {
           placeholder: "Use platform credits",
@@ -146,18 +151,22 @@ export function InboxModelSelector({
         name: "reasoningEnabled",
         type: "switch",
         label: "Reasoning",
+        section: { title: "" },
         description: "Enable reasoning/thinking for supported models",
       },
       {
         name: "reasoningMaxTokens",
         type: "number",
         label: "Max Reasoning Tokens",
+        section: { title: "" },
         conditional: (values) => values.reasoningEnabled === true,
         min: 500,
         max: 10000,
         description: "Maximum tokens for reasoning (500-10000)",
       },
     ],
+    submitLabel: "Add Model",
+    disabled,
     formOptions: {
       defaultValues: {
         tierFilter: [],
@@ -229,7 +238,7 @@ export function InboxModelSelector({
         <span>Filters</span>
       </button>
 
-      <Form key={formKey} className="space-y-3" />
+      <Form key={formKey} />
 
       {apiKeys.length === 0 && (
         <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">

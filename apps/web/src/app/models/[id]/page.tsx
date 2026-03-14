@@ -132,7 +132,7 @@ export default async function ModelDetailPage({ params }: ModelDetailPageProps) 
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="p-4 space-y-3">
+          <ArcadeCard className="p-4 space-y-4">
             <StatRow label="Published games" value={model.gameCount.toLocaleString()} icon={<Gamepad2 className="h-4 w-4" />} />
             <StatRow
               label="Average rating"

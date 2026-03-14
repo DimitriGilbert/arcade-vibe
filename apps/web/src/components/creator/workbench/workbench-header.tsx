@@ -611,7 +611,7 @@ export function WorkbenchHeader({
       )}
 
       {/* User Credits */}
-      <div className="flex items-center shrink-0 border-l border-[var(--border)] pl-3">
+      <div className="flex items-center shrink-0 border-l border-[var(--border)] pl-3 py-1">
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-[var(--muted-foreground)]" />
         ) : credits ? (

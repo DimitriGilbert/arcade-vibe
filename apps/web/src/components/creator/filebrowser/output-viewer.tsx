@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, Loader2, Send, EyeOff, Trash2, Globe } from "lucide-react";
+import { ArrowDown, Loader2, Send, EyeOff, Trash2, Globe, Play } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
@@ -239,6 +239,7 @@ export function OutputViewer({
                   }
                 }}
               >
+                <Play className="h-3 w-3 mr-1.5" />
                 Play Game
               </ArcadeButton>
               {canSubmit && onSubmitGame && (

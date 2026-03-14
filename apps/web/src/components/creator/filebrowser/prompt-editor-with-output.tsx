@@ -172,11 +172,13 @@ export function PromptEditorWithOutput({
 
   const { Form, form } = useFormedible<ModelSelectionValues>({
     schema: modelSelectionSchema,
+    layout: { type: "grid", columns: 2, gap: "4" },
     fields: [
       {
         name: "tierFilter",
         type: "multiSelect",
         label: "Tier",
+        section: { title: "" },
         options: tierOptions,
         conditional: () => showFilters,
         multiSelectConfig: { placeholder: "All tiers", searchable: false },
@@ -185,6 +187,7 @@ export function PromptEditorWithOutput({
         name: "providerFilter",
         type: "multiSelect",
         label: "Provider",
+        section: { title: "" },
         options: providerOptions,
         conditional: () => showFilters,
         multiSelectConfig: { placeholder: "All providers", searchable: true },
@@ -193,6 +196,7 @@ export function PromptEditorWithOutput({
         name: "selectedModel",
         type: "combobox",
         label: "Model",
+        section: { title: "" },
         options: (values) => getFilteredModels(values as ModelSelectionValues),
         comboboxConfig: {
           searchable: true,
@@ -206,6 +210,7 @@ export function PromptEditorWithOutput({
         name: "selectedApiKeyId",
         type: "select",
         label: "API Key",
+        section: { title: "" },
         options: apiKeyOptions,
         selectConfig: { placeholder: "Platform credits" },
       },
@@ -213,12 +218,14 @@ export function PromptEditorWithOutput({
         name: "reasoningEnabled",
         type: "switch",
         label: "Reasoning",
+        section: { title: "" },
         description: "Enable thinking for supported models",
       },
       {
         name: "reasoningMaxTokens",
         type: "number",
         label: "Max Thinking Tokens",
+        section: { title: "" },
         conditional: (values) => values.reasoningEnabled === true,
         min: 500,
         max: 10000,

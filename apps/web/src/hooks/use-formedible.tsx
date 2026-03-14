@@ -1921,8 +1921,8 @@ export function useFormedible<TFormValues extends Record<string, unknown>>(
 
               // Group fields by section and group
               const groupedFields = visibleFields.reduce((acc, field) => {
-                const sectionKey = field.section?.title || "default";
-                const groupKey = field.group || "default";
+                const sectionKey = field.section?.title ?? "default";
+                const groupKey = field.group ?? "default";
 
                 if (!acc[sectionKey]) {
                   acc[sectionKey] = {
@@ -2026,8 +2026,8 @@ export function useFormedible<TFormValues extends Record<string, unknown>>(
 
             // Group fields by section and group
             const groupedFields = visibleFields.reduce((acc, field) => {
-              const sectionKey = field.section?.title || "default";
-              const groupKey = field.group || "default";
+              const sectionKey = field.section?.title ?? "default";
+              const groupKey = field.group ?? "default";
 
               if (!acc[sectionKey]) {
                 acc[sectionKey] = {
@@ -2043,6 +2043,7 @@ export function useFormedible<TFormValues extends Record<string, unknown>>(
               acc[sectionKey].groups[groupKey].push(field);
               return acc;
             }, {} as Record<string, { section?: { title?: string; description?: string; collapsible?: boolean; defaultExpanded?: boolean }; groups: Record<string, FieldConfig[]> }>);
+
 
             const renderSection = (
               sectionKey: string,

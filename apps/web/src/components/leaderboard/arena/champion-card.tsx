@@ -30,7 +30,7 @@ export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 
 	return (
 		<ArcadeCard variant="glow" className="overflow-hidden h-full">
-			<div className="p-6 h-full flex flex-col">
+			<div className="p-4 h-full flex flex-col">
 				<div className="text-center mb-4">
 					<div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 rounded-full border border-amber-500/30 mb-4">
 						<Crown className="h-4 w-4 text-amber-500" />
@@ -63,6 +63,18 @@ export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 						{entry.tier && (
 							<ArcadeBadge text={entry.tier.slug} variant="default" className="ml-2" />
 						)}
+					</div>
+
+					<div className="flex flex-wrap gap-2 justify-center mb-4">
+						<ArcadeButton variant="primary" size="sm" className="gap-1" onClick={handlePlay}>
+							<Play className="h-4 w-4" />
+							Play
+						</ArcadeButton>
+						<ShareDropdown
+							url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
+							title={entry.gameName || "Play this game"}
+						/>
+						<EntryActions entry={entry} variant="full" showFork={false} />
 					</div>
 
 					<div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--primary)]/10 rounded-xl mb-3 mx-auto">
@@ -101,20 +113,8 @@ export function ChampionCard({ entry }: { entry: LeaderboardEntry }) {
 							<span>{formatPlayTime(entry.totalPlayTimeSeconds)}</span>
 						</div>
 					</div>
-				</div>
-
-				<div className="flex flex-wrap gap-2 justify-center mt-auto">
-					<ArcadeButton variant="primary" size="sm" className="gap-1" onClick={handlePlay}>
-						<Play className="h-4 w-4" />
-						Play
-					</ArcadeButton>
-					<ShareDropdown
-						url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
-						title={entry.gameName || "Play this game"}
-					/>
-					<EntryActions entry={entry} variant="full" showFork={false} />
-				</div>
 			</div>
-		</ArcadeCard>
+		</div>
+	</ArcadeCard>
 	);
 }

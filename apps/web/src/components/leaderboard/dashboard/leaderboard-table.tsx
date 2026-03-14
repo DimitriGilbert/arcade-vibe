@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArcadeCard, ArcadeButton } from "@/components/arcade";
+import { ArcadeButton } from "@/components/arcade";
 import { Trophy, ChevronDown, Loader2, Play } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/trpc-types";
 import { formatScore, formatDateShort } from "@/lib/formatting";
@@ -106,12 +106,6 @@ export function LeaderboardTable({
 													>
 														{entry.gameName || "Untitled"}
 													</Link>
-													<Link
-														href={`/game/${entry.gameId}`}
-														className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-													>
-														<Play className="h-3.5 w-3.5 text-[var(--primary)]" />
-													</Link>
 												</div>
 												<div className="flex items-center gap-3 mt-0.5">
 													{playerSlug ? (
@@ -159,13 +153,19 @@ export function LeaderboardTable({
 									</td>
 									<td className="p-3 text-right">
 										<div className="flex items-center justify-end gap-1">
+											<Link href={`/game/${entry.gameId}`}>
+												<ArcadeButton variant="primary" size="sm" className="gap-1">
+													<Play className="h-3.5 w-3.5" />
+													Play
+												</ArcadeButton>
+											</Link>
 											<ShareDropdown
 												url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
 												title={entry.gameName || "Play this game"}
 											/>
 											<EntryActions
 												entry={entry}
-												variant="hover"
+												variant="full"
 												showFork={false}
 												showEmbed={true}
 												showPrompt={true}

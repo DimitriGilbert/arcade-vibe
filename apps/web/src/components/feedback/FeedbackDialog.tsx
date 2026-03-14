@@ -100,7 +100,7 @@ export function FeedbackDialog({
           <ArcadeDialogTitle>{subject}</ArcadeDialogTitle>
           <ArcadeDialogDescription>{description}</ArcadeDialogDescription>
         </ArcadeDialogHeader>
-        <Form className="space-y-4" />
+        <Form className="grid grid-cols-2 gap-x-4 gap-y-3" />
         <div className="flex justify-end gap-2 mt-4">
           <ArcadeButton
             variant="outline"

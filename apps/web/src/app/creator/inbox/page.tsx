@@ -876,12 +876,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                 activeModelId={activeOutputTab}
                 onModelClick={setActiveOutputTab}
                 disabled={isGenerating}
+                isExpanded={showModelSelector}
               />
             </div>
 
             {/* Model Selector Dropdown */}
             {showModelSelector && (
-              <div className="border border-[var(--border)] rounded-lg p-3 bg-[var(--card)]">
+              <div className="relative z-50 border border-[var(--border)] rounded-lg p-3 bg-[var(--card)]">
                 {modelsLoading ? (
                   <div className="flex items-center justify-center h-20">
                     <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />

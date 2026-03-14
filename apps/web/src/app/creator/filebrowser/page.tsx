@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, use } from "react";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { FilebrowserSelection } from "@/components/creator/filebrowser";
 import { FeedbackButton } from "@/components/feedback";
@@ -217,9 +217,20 @@ export default function FilebrowserPage({ searchParams }: FilebrowserPageProps) 
         {/* Left sidebar - File tree */}
         <aside className="h-full w-64 lg:w-72 border-r border-[var(--border)] bg-[var(--card)] shrink-0 flex flex-col">
           <div className="px-3 py-2 border-b border-[var(--border)] shrink-0">
-            <h2 className="text-sm font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
-              Explorer
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">
+                Explorer
+              </h2>
+              <button
+                type="button"
+                title="New Prompt"
+                onClick={handleNewPromptWithUrl}
+                className="inline-flex items-center gap-1.5 h-6 px-2 rounded-md text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            </div>
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <FileTree

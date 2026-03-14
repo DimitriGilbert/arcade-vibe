@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Code, Link, Linkedin, Share2, Twitter } from "lucide-react";
@@ -42,6 +43,37 @@ function shareToLinkedIn(url: string): void {
 }
 
 export function ShareDropdown({ url, title, embedCode, trigger }: ShareDropdownProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const clearPendingTimeout = useCallback(() => {
+		if (timeoutRef.current !== null) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			clearPendingTimeout();
+		};
+	}, [clearPendingTimeout]);
+
+	const handleMouseEnter = () => {
+		if (!window.matchMedia("(hover: hover)").matches) return;
+		clearPendingTimeout();
+		timeoutRef.current = setTimeout(() => {
+			setIsOpen(true);
+		}, 150);
+	};
+
+	const handleMouseLeave = () => {
+		clearPendingTimeout();
+		timeoutRef.current = setTimeout(() => {
+			setIsOpen(false);
+		}, 200);
+	};
+
 	const defaultTrigger = (
 		<span
 			role="button"
@@ -54,23 +86,20 @@ export function ShareDropdown({ url, title, embedCode, trigger }: ShareDropdownP
 	);
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
 			<DropdownMenuTrigger
 				className="outline-none"
-				onPointerEnter={(e) => {
-					// Only trigger on hover for devices that support it (not touch)
-					if (window.matchMedia("(hover: hover)").matches) {
-						const trigger = e.currentTarget;
-						// Small delay to prevent accidental triggers
-						setTimeout(() => {
-							trigger.click();
-						}, 100);
-					}
-				}}
+				onPointerEnter={handleMouseEnter}
+				onPointerLeave={handleMouseLeave}
 			>
 				{trigger ?? defaultTrigger}
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" sideOffset={8}>
+			<DropdownMenuContent
+				align="end"
+				sideOffset={8}
+				onPointerEnter={clearPendingTimeout}
+				onPointerLeave={handleMouseLeave}
+			>
 				<DropdownMenuItem onClick={() => copyToClipboard(url, "Link copied to clipboard")}>
 					<Link className="size-4" />
 					<span>Copy Link</span>

@@ -56,7 +56,7 @@ export function WorkbenchRightPanel({
       onValueChange={(v) => onTabChange(v as RightPanelTab)}
       className="h-full min-h-0 flex flex-col overflow-hidden"
     >
-      <ArcadeTabsList variant="line" className="shrink-0">
+      <ArcadeTabsList variant="line" className="shrink-0 pr-3">
         <ArcadeTabsTrigger variant="line" value="models">
           <Cpu className="h-3.5 w-3.5" />
           Models

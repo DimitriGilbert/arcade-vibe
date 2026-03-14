@@ -63,7 +63,7 @@ export default function LeaderboardMagazineClient() {
 	}
 
 	return (
-<main className="min-h-screen bg-background py-12">
+<main className="min-h-screen bg-background py-12 px-4 md:px-6">
 				<div className="container mx-auto space-y-12">
 				<ThemeHero
 					title={currentTheme.title}

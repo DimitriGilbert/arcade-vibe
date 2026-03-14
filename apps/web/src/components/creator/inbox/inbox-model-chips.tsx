@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { ModelChip } from "@/components/creator/shared";
 import type { ModelSelection } from "./inbox-types";
 
@@ -11,6 +11,7 @@ interface InboxModelChipsProps {
   activeModelId: string | null;
   onModelClick: (id: string) => void;
   disabled?: boolean;
+  isExpanded?: boolean;
 }
 
 export function InboxModelChips({
@@ -20,6 +21,7 @@ export function InboxModelChips({
   activeModelId,
   onModelClick,
   disabled = false,
+  isExpanded = false,
 }: InboxModelChipsProps) {
   const totalCredits = models.reduce((sum, m) => sum + m.creditCost, 0);
 
@@ -44,6 +46,11 @@ export function InboxModelChips({
         >
           <Plus className="h-3 w-3" />
           Add model
+          {isExpanded ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )}
         </button>
       )}
 
