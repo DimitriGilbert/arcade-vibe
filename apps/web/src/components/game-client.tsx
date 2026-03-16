@@ -301,7 +301,7 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     );
   }
 
-  const canViewPrompt = Boolean(game.prompt?.content.trim());
+  const canViewPrompt = game.prompt?.visibility === "public" && Boolean(game.prompt?.content.trim());
   const promptSnippet = canViewPrompt ? game.prompt.content : null;
   const canRate = playtime >= 60 && !myRating && isGameLoaded;
   const playtimeDisplay = `${Math.floor(playtime / 60)}:${(playtime % 60).toString().padStart(2, "0")}`;
