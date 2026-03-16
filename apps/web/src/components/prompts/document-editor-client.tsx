@@ -358,13 +358,13 @@ export default function DocumentEditorClient({ promptId }: DocumentEditorClientP
 
             <div
               className={`
-                relative rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--card)] to-[var(--muted)]/10
+                group relative rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--card)] to-[var(--muted)]/10
                 p-6 md:p-8 transition-all duration-500
                 ${isExpanded ? "shadow-xl" : "shadow-lg"}
               `}
             >
               {/* Gradient border effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--primary)]/5 via-transparent to-[var(--primary)]/5 opacity-0 transition-opacity hover:opacity-100" />
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--primary)]/5 via-transparent to-[var(--primary)]/5 opacity-0 transition-opacity group-hover:opacity-100" />
 
               <pre className="relative whitespace-pre-wrap font-mono text-sm md:text-base leading-relaxed text-[var(--foreground)]">
                 {displayContent}
