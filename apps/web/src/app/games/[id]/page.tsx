@@ -9,6 +9,7 @@ import {
   Calendar,
   Clock,
   Code2,
+  FileText,
   Gamepad2,
   Layers,
   Play,
@@ -210,6 +211,14 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
                 Play Game
               </ArcadeButton>
             </Link>
+            {game.prompt.visibility === "public" && (
+              <Link href={`/prompts/${game.prompt.id}` as Route}>
+                <ArcadeButton variant="outline">
+                  <FileText className="h-4 w-4" />
+                  View Prompt
+                </ArcadeButton>
+              </Link>
+            )}
             <Link href={"/games" as Route}>
               <ArcadeButton variant="outline">Back to Library</ArcadeButton>
             </Link>
