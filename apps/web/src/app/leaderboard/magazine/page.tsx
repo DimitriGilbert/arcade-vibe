@@ -64,33 +64,53 @@ interface LeaderboardMagazinePageProps {
   }>;
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+async function getSelectedTheme(
+  themeId?: string,
+): Promise<ThemeList | null> {
   const caller = await getServerCaller();
 
   try {
-    const currentTheme = await caller.themes.getCurrent();
+    if (themeId) {
+      const selectedTheme = await caller.themes.getById({ id: themeId });
 
-    if (!currentTheme) {
-      return {
-        title: "Leaderboard - Arcade Vibe",
-        description: "See who's making waves this month",
-      };
+      return serializeTheme(selectedTheme);
     }
 
-    return {
-      title: `Leaderboard - ${currentTheme.title} | Arcade Vibe`,
-      description: `Check out the top games in ${currentTheme.title}. Who's crushing it this month?`,
-      openGraph: {
-        title: `${currentTheme.title} Leaderboard - Arcade Vibe`,
-        description: currentTheme.description || `Top games in ${currentTheme.title}`,
-      },
-    };
+    const currentTheme = await caller.themes.getCurrent();
+    return currentTheme ? serializeTheme(currentTheme) : null;
   } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata({
+  searchParams,
+}: LeaderboardMagazinePageProps): Promise<Metadata> {
+  const resolvedSearchParams = await searchParams;
+  const currentTheme = await getSelectedTheme(resolvedSearchParams?.themeId);
+
+  if (!currentTheme) {
     return {
       title: "Leaderboard - Arcade Vibe",
       description: "See who's making waves this month",
     };
   }
+
+  const canonicalUrl = new URL("/leaderboard/magazine", "http://placeholder.local");
+  canonicalUrl.searchParams.set("themeId", currentTheme.id);
+
+  return {
+    title: `Leaderboard - ${currentTheme.title} | Arcade Vibe`,
+    description: `Check out the top games in ${currentTheme.title}. Who's crushing it this month?`,
+    alternates: {
+      canonical: canonicalUrl.pathname + canonicalUrl.search,
+    },
+    openGraph: {
+      title: `${currentTheme.title} Leaderboard - Arcade Vibe`,
+      description: currentTheme.description || `Top games in ${currentTheme.title}`,
+      url: canonicalUrl.pathname + canonicalUrl.search,
+    },
+  };
 }
 
 export default async function LeaderboardMagazinePage({

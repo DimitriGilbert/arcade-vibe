@@ -166,6 +166,31 @@ export function getGeneralSitemapEntries(): SitemapUrlEntry[] {
   ];
 }
 
+export async function getMagazineThemeEntries(): Promise<SitemapUrlEntry[]> {
+  const rows = await db
+    .selectDistinct({
+      id: themes.id,
+      updatedAt: themes.updatedAt,
+    })
+    .from(themes)
+    .leftJoin(prompts, eq(prompts.themeId, themes.id))
+    .leftJoin(games, eq(games.themeId, themes.id))
+    .where(or(PUBLIC_PROMPT_CONDITION, PUBLIC_GAME_CONDITION))
+    .orderBy(desc(themes.updatedAt), asc(themes.id));
+
+  return rows.map((row) => {
+    const url = new URL(toAbsoluteUrl("/leaderboard/magazine" as Route));
+    url.searchParams.set("themeId", row.id);
+
+    return {
+      loc: url.toString(),
+      lastmod: toIsoString(row.updatedAt),
+      changefreq: "daily",
+      priority: 0.7,
+    };
+  });
+}
+
 export async function getPublicUserCount(): Promise<number> {
   const [result] = await db
     .select({
