@@ -1,6 +1,5 @@
-"use client";
-
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { Sparkles, Clock, TrendingUp, Gamepad2 } from "lucide-react";
 import { formatTimeRemaining } from "@/lib/formatting";
@@ -10,11 +9,13 @@ export function ThemeHero({
 	description,
 	endDate,
 	entryCount,
+	themeSelector,
 }: {
 	title: string;
 	description: string | null | undefined;
 	endDate: string | null | undefined;
 	entryCount: number;
+	themeSelector?: ReactNode;
 }) {
 	const timeRemaining = endDate ? formatTimeRemaining(new Date(endDate)) : null;
 
@@ -23,9 +24,12 @@ export function ThemeHero({
 			<div className="absolute top-0 right-0 w-64 h-64 bg-[var(--primary)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
 			<div className="relative p-8 md:p-12">
-				<div className="flex items-center gap-3 mb-4">
-					<Sparkles className="h-5 w-5 text-[var(--primary)]" />
-					<ArcadeBadge text="Current Theme" variant="neon" />
+				<div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+					<div className="flex items-center gap-3">
+						<Sparkles className="h-5 w-5 text-[var(--primary)]" />
+						<ArcadeBadge text="Current Theme" variant="neon" />
+					</div>
+					{themeSelector}
 				</div>
 
 				<h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">{title.toUpperCase()}</h1>

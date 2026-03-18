@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { Play } from "lucide-react";
