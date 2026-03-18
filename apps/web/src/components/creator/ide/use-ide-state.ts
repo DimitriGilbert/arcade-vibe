@@ -5,7 +5,7 @@ import {
   useRef,
   useMemo,
 } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
 import type {
@@ -65,6 +65,7 @@ export interface UseIDEStateReturn {
   visibility: Visibility;
   setVisibility: (visibility: Visibility) => void;
   isDirty: boolean;
+  isNewPrompt: boolean;
   selectedModels: ModelSelection[];
   setSelectedModels: React.Dispatch<React.SetStateAction<ModelSelection[]>>;
   configPanelCollapsed: boolean;
@@ -99,6 +100,7 @@ export interface UseIDEStateReturn {
   handleSelectGame: (gameId: string) => void;
   handleNewPrompt: () => void;
   handleSave: () => Promise<void>;
+  handleDiscardNewPrompt: () => void;
   switchToTab: (tabId: string) => void;
   closeGameTab: (gameId: string) => void;
   openPromptTabs: (promptId: string, games: GameNode[]) => void;
@@ -137,6 +139,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
   const [cursorPosition, setCursorPositionState] = useState({ line: 1, column: 1 });
   const [isForking, setIsForking] = useState(!!urlForkId);
   const [forkOriginalPromptId, setForkOriginalPromptId] = useState<string | null>(urlForkId ?? null);
+  const [isNewPrompt, setIsNewPrompt] = useState(false);
 
   const setCursorPosition = useCallback((line: number, column: number) => {
     setCursorPositionState({ line, column });
@@ -208,33 +211,52 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     }));
   }, [promptsData, selection.themeId]);
 
-  const { data: gamesData, isLoading: gamesLoading } = useQuery({
-    queryKey: ["games-by-prompt", selection.promptId],
-    queryFn: async () => {
-      if (!selection.promptId) return [];
-      const result = await trpcClient.games.listByPrompt.query({ promptId: selection.promptId });
-      return result ?? [];
-    },
-    enabled: !!selection.promptId,
+  const expandedPromptGamesQueries = useQueries({
+    queries: expandedPrompts.map((promptId) => ({
+      queryKey: ["games-by-prompt", promptId],
+      queryFn: async () => {
+        const result = await trpcClient.games.listByPrompt.query({ promptId });
+        return result ?? [];
+      },
+      enabled: !!promptId,
+      staleTime: 30 * 1000,
+    })),
   });
 
-  const games = useMemo(() => {
-    if (!gamesData) return [];
-    return gamesData.map((g: GameListItem): GameNode => ({
-      id: g.id,
-      name: g.name,
-      modelName: g.modelName,
-      modelProvider: g.modelProvider,
-      status: g.status,
-      createdAt: g.createdAt,
-      gameId: g.id,
-      isSubmitted: g.isSubmitted,
-      promptId: g.promptId ?? "",
-    }));
-  }, [gamesData]);
+  const { gamesByPromptId, gamesLoadingByPromptId } = useMemo(() => {
+    const byId: Record<string, GameNode[]> = {};
+    const loadingById: Record<string, boolean> = {};
 
-  const gamesByPromptIdRef = useRef<Record<string, GameNode[]>>({});
-  const gamesLoadingByPromptIdRef = useRef<Record<string, boolean>>({});
+    expandedPrompts.forEach((promptId, index) => {
+      const queryResult = expandedPromptGamesQueries[index];
+      loadingById[promptId] = queryResult?.isLoading ?? false;
+      
+      if (queryResult?.data) {
+        byId[promptId] = queryResult.data.map((g: GameListItem): GameNode => ({
+          id: g.id,
+          name: g.name,
+          modelName: g.modelName,
+          modelProvider: g.modelProvider,
+          status: g.status,
+          createdAt: g.createdAt,
+          gameId: g.id,
+          isSubmitted: g.isSubmitted,
+          promptId: g.promptId ?? "",
+        }));
+      } else {
+        byId[promptId] = [];
+      }
+    });
+
+    return { gamesByPromptId: byId, gamesLoadingByPromptId: loadingById };
+  }, [expandedPrompts, expandedPromptGamesQueries]);
+
+  const games = useMemo(() => {
+    if (!selection.promptId) return [];
+    return gamesByPromptId[selection.promptId] ?? [];
+  }, [selection.promptId, gamesByPromptId]);
+
+  const gamesLoading = selection.promptId ? (gamesLoadingByPromptId[selection.promptId] ?? false) : false;
 
   useEffect(() => {
     if (themes && expandedThemes.length === 0) {
@@ -354,17 +376,54 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     },
   });
 
+  const createPromptMutation = useMutation({
+    mutationFn: async (input: { themeId: string; content: string; title: string }) => {
+      return await trpcClient.prompts.create.mutate({
+        themeId: input.themeId,
+        content: input.content,
+        title: input.title,
+        tokenizer: "gpt-4",
+        visibility: "private",
+      });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt created!");
+      setIsNewPrompt(false);
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      if (data.promptId) {
+        void handleSelectPrompt(data.promptId);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create prompt");
+    },
+  });
+
   const handleSave = useCallback(async () => {
-    if (!selection.promptId) {
-      toast.error("No prompt selected");
-      return;
-    }
     if (!promptTitle.trim() || promptTitle.trim().length < 3) {
       toast.error("Please enter a title (minimum 3 characters)");
       return;
     }
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
+      return;
+    }
+
+    if (isNewPrompt) {
+      if (!selection.themeId) {
+        toast.error("Please select a theme first");
+        return;
+      }
+      await createPromptMutation.mutateAsync({
+        themeId: selection.themeId,
+        content: promptContent,
+        title: promptTitle.trim(),
+      });
+      return;
+    }
+
+    if (!selection.promptId) {
+      toast.error("No prompt selected");
       return;
     }
 
@@ -386,11 +445,14 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     setOriginalTitle(promptTitle.trim());
     setOriginalVisibility(visibility);
   }, [
+    isNewPrompt,
+    selection.themeId,
     selection.promptId,
     promptTitle,
     promptContent,
     visibility,
     originalVisibility,
+    createPromptMutation,
     updatePromptMutation,
     updateVisibilityMutation,
   ]);
@@ -468,6 +530,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
         return;
       }
 
+      setIsNewPrompt(false);
       setPromptContentState(prompt.content);
       setPromptTitleState(prompt.title ?? "");
       setOriginalContent(prompt.content);
@@ -548,8 +611,9 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       return;
     }
 
+    setIsNewPrompt(true);
     setPromptContentState("");
-    setPromptTitleState("");
+    setPromptTitleState("Untitled");
     setOriginalContent("");
     setOriginalTitle("");
     setVisibilityState("private");
@@ -566,6 +630,25 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       activeTabId: PROMPT_TAB_ID,
     }));
   }, [selection.themeId]);
+
+  const handleDiscardNewPrompt = useCallback(() => {
+    setIsNewPrompt(false);
+    setPromptContentState("");
+    setPromptTitleState("");
+    setOriginalContent("");
+    setOriginalTitle("");
+    setVisibilityState("private");
+    setOriginalVisibility("private");
+    setSelectedModels([]);
+    setGameName("");
+    
+    setSelection((prev) => ({
+      ...prev,
+      promptId: null,
+      openTabs: [],
+      activeTabId: PROMPT_TAB_ID,
+    }));
+  }, []);
 
   const handleToggleThemeExpand = useCallback((themeId: string) => {
     setExpandedThemes((prev) => {
@@ -600,7 +683,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
 
       if (cmdKey && event.key === "s") {
         event.preventDefault();
-        if (selection.promptId && isDirty) {
+        if (isNewPrompt || (selection.promptId && isDirty)) {
           void handleSave();
         }
         return;
@@ -662,6 +745,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     selection.openTabs,
     selection.activeTabId,
     isDirty,
+    isNewPrompt,
     contextMenu.open,
     handleSave,
     handleNewPrompt,
@@ -690,6 +774,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     visibility,
     setVisibility,
     isDirty,
+    isNewPrompt,
     selectedModels,
     setSelectedModels,
     configPanelCollapsed,
@@ -711,13 +796,14 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     themes,
     prompts,
     games,
-    gamesByPromptId: gamesByPromptIdRef.current,
-    gamesLoadingByPromptId: gamesLoadingByPromptIdRef.current,
+    gamesByPromptId,
+    gamesLoadingByPromptId,
     handleSelectTheme,
     handleSelectPrompt,
     handleSelectGame,
     handleNewPrompt,
     handleSave,
+    handleDiscardNewPrompt,
     switchToTab,
     closeGameTab,
     openPromptTabs,

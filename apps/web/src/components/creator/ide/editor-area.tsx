@@ -53,8 +53,12 @@ export function EditorArea({
             readOnly={isGenerating || isForking}
             onCursorChange={onCursorChange}
           />
-        ) : activeTab?.type === "game" && activeTab.modelKey ? (
-          <GameContent gameId={activeTabId} modelKey={activeTab.modelKey} />
+        ) : activeTab?.type === "game" ? (
+          <GameContent 
+            gameId={activeTabId} 
+            modelKey={activeTab.modelKey} 
+            modelName={activeTab.label}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             Select a tab to view content

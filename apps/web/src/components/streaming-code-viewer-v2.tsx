@@ -14,6 +14,9 @@ export interface StreamingCodeViewerV2Props {
   fileName?: string;
   maxLines?: number;
   reasoning?: string;
+  showHeader?: boolean;
+  theme?: "github-dark" | "github-light";
+  onThemeChange?: (theme: "github-dark" | "github-light") => void;
 }
 
 function clampLines(source: string, maxLines: number): string {
@@ -35,8 +38,13 @@ export function StreamingCodeViewerV2({
   fileName,
   maxLines = Number.POSITIVE_INFINITY,
   reasoning,
+  showHeader = true,
+  theme: externalTheme,
+  onThemeChange,
 }: StreamingCodeViewerV2Props) {
-  const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
+  const [internalTheme, setInternalTheme] = useState<"github-dark" | "github-light">("github-dark");
+  const theme = externalTheme ?? internalTheme;
+  const setTheme = onThemeChange ?? setInternalTheme;
   const [isShikiReady, setIsShikiReady] = useState(false);
   const [highlightedCode, setHighlightedCode] = useState("");
   const [highlightedReasoning, setHighlightedReasoning] = useState("");
@@ -211,75 +219,82 @@ export function StreamingCodeViewerV2({
   }, [code, fileName]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "github-dark" ? "github-light" : "github-dark"));
+    const newTheme = theme === "github-dark" ? "github-light" : "github-dark";
+    if (onThemeChange) {
+      onThemeChange(newTheme);
+    } else {
+      setInternalTheme(newTheme);
+    }
     highlightedCodeSignatureRef.current = "";
     highlightedReasoningSignatureRef.current = "";
-  }, []);
+  }, [theme, onThemeChange]);
 
   return (
     <div
       data-shiki-theme={theme}
       className="streaming-code-viewer relative h-full min-h-0 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] overflow-hidden font-mono text-sm transition-colors duration-300 flex flex-col"
     >
-      <div className="streaming-code-viewer__header shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]">
-        <div className="flex items-center gap-2 min-w-0">
-          {fileName ? (
-            <span className="text-xs font-medium text-[var(--foreground)]/80 truncate">{fileName}</span>
-          ) : null}
-          <span className="text-xs font-mono text-[var(--foreground)]/60">{language}</span>
-        </div>
+      {showHeader ? (
+        <div className="streaming-code-viewer__header shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]">
+          <div className="flex items-center gap-2 min-w-0">
+            {fileName ? (
+              <span className="text-xs font-medium text-[var(--foreground)]/80 truncate">{fileName}</span>
+            ) : null}
+            <span className="text-xs font-mono text-[var(--foreground)]/60">{language}</span>
+          </div>
 
-        <div className="flex items-center gap-2">
-          {isStreaming ? (
-            <div className="flex items-center gap-2">
-              <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--primary)] transition-all duration-150 w-1/2" />
+          <div className="flex items-center gap-2">
+            {isStreaming ? (
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-[var(--muted)] rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--primary)] transition-all duration-150 w-1/2" />
+                </div>
+                <span className="text-xs text-[var(--muted-foreground)]">Streaming...</span>
               </div>
-              <span className="text-xs text-[var(--muted-foreground)]">Streaming...</span>
-            </div>
-          ) : null}
+            ) : null}
 
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
-            aria-label="Toggle theme"
-            title="Toggle theme"
-          >
-            {theme === "github-dark" ? (
-              <Sun className="w-4 h-4 text-[var(--muted-foreground)]" />
-            ) : (
-              <Moon className="w-4 h-4 text-[var(--muted-foreground)]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
-            aria-label={copied ? "Copied!" : "Copy code"}
-            title={copied ? "Copied!" : "Copy code"}
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-[var(--accent)]" />
-            ) : (
-              <Copy className="w-4 h-4 text-[var(--muted-foreground)]" />
-            )}
-          </button>
-
-          {fileName ? (
             <button
               type="button"
-              onClick={handleDownload}
+              onClick={toggleTheme}
               className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
-              aria-label="Download code"
-              title="Download code"
+              aria-label="Toggle theme"
+              title="Toggle theme"
             >
-              <Download className="w-4 h-4 text-[var(--muted-foreground)]" />
+              {theme === "github-dark" ? (
+                <Sun className="w-4 h-4 text-[var(--muted-foreground)]" />
+              ) : (
+                <Moon className="w-4 h-4 text-[var(--muted-foreground)]" />
+              )}
             </button>
-          ) : null}
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
+              aria-label={copied ? "Copied!" : "Copy code"}
+              title={copied ? "Copied!" : "Copy code"}
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-[var(--accent)]" />
+              ) : (
+                <Copy className="w-4 h-4 text-[var(--muted-foreground)]" />
+              )}
+            </button>
+
+            {fileName ? (
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors"
+                aria-label="Download code"
+                title="Download code"
+              >
+                <Download className="w-4 h-4 text-[var(--muted-foreground)]" />
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div
         className="streaming-code-viewer__scroll flex-1 min-h-0 max-h-[1000px] overflow-y-auto overflow-x-auto overscroll-contain"

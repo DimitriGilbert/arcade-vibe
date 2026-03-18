@@ -1,12 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Copy, Loader2 } from "lucide-react";
 import { useIDEState } from "./use-ide-state";
+import { ExplorerSidebar } from "./explorer-sidebar";
+import { EditorArea } from "./editor-area";
+import { ConfigPanel } from "./config-panel";
+import { StatusBar, countWords } from "./status-bar";
 import { ContextMenu } from "./context-menu";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DiscoveryDialog } from "@/components/creator/shared";
-import { useDiscoveryDialog } from "@/components/creator/shared/use-discovery-dialog";
+import { FeedbackButton } from "@/components/feedback";
+import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
+import { useGeneration } from "@/hooks/creator/use-generation";
+import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
+import type { Visibility, ModelSelection, IDETab } from "./types";
 
 function IDESkeleton() {
   return (
@@ -55,197 +66,30 @@ function IDESkeleton() {
 interface ForkBannerProps {
   originalPromptId: string;
   onClearFork: () => void;
+  onFork: () => void;
+  isForkPending: boolean;
 }
 
-function ForkBanner({ originalPromptId, onClearFork }: ForkBannerProps) {
+function ForkBanner({ originalPromptId, onClearFork, onFork, isForkPending }: ForkBannerProps) {
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-primary/10 border-b border-primary/20 text-sm">
       <span className="text-primary">
-        Forking from prompt: {originalPromptId.slice(0, 8)}...
+        Viewing prompt in read-only mode
       </span>
       <button
         type="button"
-        onClick={onClearFork}
-        className="text-primary hover:text-primary/80 text-xs underline"
+        onClick={onFork}
+        disabled={isForkPending}
+        className="flex items-center gap-1.5 px-3 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
       >
-        Clear
+        {isForkPending ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Copy className="h-3 w-3" />
+        )}
+        {isForkPending ? "Forking..." : "Fork this prompt to edit"}
       </button>
     </div>
-  );
-}
-
-interface ExplorerSidebarProps {
-  className?: string;
-}
-
-function ExplorerSidebar({ className }: ExplorerSidebarProps) {
-  return (
-    <aside
-      className={cn(
-        "w-64 border-r border-border bg-sidebar shrink-0 flex flex-col",
-        className
-      )}
-    >
-      <div className="h-10 border-b border-border flex items-center px-3 text-sm font-medium text-muted-foreground">
-        Explorer
-      </div>
-      <div className="flex-1 overflow-auto p-2">
-        <div className="text-xs text-muted-foreground text-center py-8">
-          Explorer content placeholder
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-interface EditorAreaProps {
-  className?: string;
-}
-
-function EditorArea({ className }: EditorAreaProps) {
-  return (
-    <main className={cn("flex-1 bg-background flex flex-col min-w-0", className)}>
-      <div className="h-10 border-b border-border flex items-center px-3 text-sm font-medium text-muted-foreground">
-        Editor
-      </div>
-      <div className="flex-1 overflow-auto">
-        <div className="text-xs text-muted-foreground text-center py-8">
-          Editor content placeholder
-        </div>
-      </div>
-    </main>
-  );
-}
-
-interface ConfigPanelProps {
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
-  className?: string;
-}
-
-function ConfigPanel({ collapsed, onToggleCollapse, className }: ConfigPanelProps) {
-  if (collapsed) {
-    return (
-      <aside
-        className={cn(
-          "w-10 border-l border-border bg-card shrink-0 flex flex-col items-center py-2",
-          className
-        )}
-      >
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-          aria-label="Expand panel"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            role="img"
-          >
-            <title>Expand panel</title>
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
-      </aside>
-    );
-  }
-
-  return (
-    <aside
-      className={cn("w-80 border-l border-border bg-card shrink-0 flex flex-col", className)}
-    >
-      <div className="h-10 border-b border-border flex items-center justify-between px-3">
-        <span className="text-sm font-medium text-muted-foreground">Config</span>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-          title="Collapse panel"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            role="img"
-          >
-            <title>Collapse panel</title>
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </button>
-      </div>
-      <div className="flex-1 overflow-auto p-4">
-        <div className="text-xs text-muted-foreground text-center py-8">
-          Config content placeholder
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-interface StatusBarProps {
-  cursorPosition?: { line: number; column: number };
-  isDirty?: boolean;
-  isGenerating?: boolean;
-  className?: string;
-}
-
-function StatusBar({ cursorPosition, isDirty, isGenerating, className }: StatusBarProps) {
-  return (
-    <footer
-      className={cn(
-        "h-6 border-t border-border bg-muted flex items-center justify-between px-3 text-xs text-muted-foreground",
-        className
-      )}
-    >
-      <div className="flex items-center gap-4">
-        {isGenerating && (
-          <span className="text-primary animate-pulse">Generating...</span>
-        )}
-        {isDirty && <span className="text-yellow-500">Unsaved</span>}
-      </div>
-      <div className="flex items-center gap-4">
-        {cursorPosition && (
-          <span>
-            Ln {cursorPosition.line}, Col {cursorPosition.column}
-          </span>
-        )}
-        <span>UTF-8</span>
-      </div>
-    </footer>
-  );
-}
-
-interface FeedbackButtonProps {
-  className?: string;
-}
-
-function FeedbackButton({ className }: FeedbackButtonProps) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "fixed bottom-4 right-4 px-3 py-1.5 text-xs rounded-md",
-        "bg-primary text-primary-foreground hover:bg-primary/90",
-        "shadow-md transition-colors",
-        className
-      )}
-    >
-      Feedback
-    </button>
   );
 }
 
@@ -257,11 +101,299 @@ interface IDELayoutProps {
 export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   const [mounted, setMounted] = useState(false);
   const state = useIDEState({ urlPromptId, urlForkId });
-  const discoveryDialog = useDiscoveryDialog();
+  const queryClient = useQueryClient();
+
+  const {
+    selection,
+    setSelection,
+    expandedThemes,
+    setExpandedThemes,
+    expandedPrompts,
+    setExpandedPrompts,
+    promptContent,
+    setPromptContent,
+    promptTitle,
+    setPromptTitle,
+    gameName,
+    setGameName,
+    originalContent,
+    originalTitle,
+    originalVisibility,
+    visibility,
+    setVisibility,
+    isDirty,
+    isNewPrompt,
+    selectedModels,
+    setSelectedModels,
+    configPanelCollapsed,
+    setConfigPanelCollapsed,
+    contextMenu,
+    showContextMenu,
+    hideContextMenu,
+    confirmDialog,
+    showConfirmDialog,
+    hideConfirmDialog,
+    themesLoading,
+    promptsLoading,
+    gamesLoading,
+    generationError,
+    clearGenerationError,
+    cursorPosition,
+    setCursorPosition,
+    themes,
+    prompts,
+    games,
+    gamesByPromptId,
+    gamesLoadingByPromptId,
+    handleSelectTheme,
+    handleSelectPrompt,
+    handleSelectGame,
+    handleNewPrompt,
+    handleSave,
+    handleDiscardNewPrompt,
+    switchToTab,
+    closeGameTab,
+    openPromptTabs,
+    handleToggleThemeExpand,
+    handleTogglePromptExpand,
+    currentPromptId,
+    isForking,
+    forkOriginalPromptId,
+    clearFork,
+  } = state;
+
+  const addGenerationTabs = useCallback((models: ModelSelection[]) => {
+    setSelection((prev) => {
+      const existingTabIds = new Set(prev.openTabs.map((t) => t.id));
+      const newTabs: IDETab[] = models
+        .filter((m) => !existingTabIds.has(m.id))
+        .map((m) => ({
+          id: m.id,
+          type: "game" as const,
+          label: m.modelName,
+          modelKey: m.id,
+        }));
+      
+      if (newTabs.length === 0) return prev;
+      
+      return {
+        ...prev,
+        openTabs: [...prev.openTabs, ...newTabs],
+        activeTabId: newTabs[0]?.id ?? prev.activeTabId,
+      };
+    });
+  }, [setSelection]);
+
+  const updateGenerationTabId = useCallback((modelId: string, gameId: string) => {
+    setSelection((prev) => {
+    const tabIndex = prev.openTabs.findIndex((t) => t.id === gameId);
+    if (tabIndex !== -1) return prev;
+    
+    const targetIndex = prev.openTabs.findIndex((t) => t.id === modelId);
+    if (targetIndex === -1) return prev;
+    
+    const newTabs = [...prev.openTabs];
+    const existingTab = newTabs[targetIndex];
+    if (!existingTab) return prev;
+    
+    newTabs[targetIndex] = {
+      ...existingTab,
+      id: gameId,
+      label: existingTab.label,
+    };
+    
+    const newActiveTabId = prev.activeTabId === modelId ? gameId : prev.activeTabId;
+    
+    return {
+      ...prev,
+      openTabs: newTabs,
+      activeTabId: newActiveTabId,
+    };
+  });
+  }, [setSelection]);
+
+  const {
+    isGenerating,
+    handleGenerate,
+    discoveryDialog,
+    completedCount,
+  } = useGeneration({
+    promptContent,
+    gameName,
+    selectedTheme: selection.themeId,
+    selectedModels,
+    existingPromptId: currentPromptId,
+    visibility,
+    onPromptCreated: (promptId) => {
+      void handleSelectPrompt(promptId);
+    },
+    onGenerationStart: addGenerationTabs,
+    onGenerationComplete: (gameId, modelId) => {
+      updateGenerationTabId(modelId, gameId);
+    },
+  });
+
+  const { data: credits } = useQuery({
+    queryKey: ["credits"],
+    queryFn: () => trpcClient.credits.getBalance.query(),
+  });
+
+  const { data: versions } = useQuery({
+    queryKey: ["prompt-versions", currentPromptId],
+    queryFn: async () => {
+      if (!currentPromptId) return [];
+      return await trpcClient.prompts.listVersions.query({ promptId: currentPromptId });
+    },
+    enabled: !!currentPromptId,
+  });
+
+  const forkPromptMutation = useMutation({
+    mutationFn: async (input: { forkId: string }) => {
+      const result = await trpcClient.prompts.fork.mutate({
+        promptId: input.forkId,
+        visibility: "private" as Visibility,
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt forked!");
+      window.location.href = `/creator/ide?promptId=${data.promptId}`;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to fork prompt");
+    },
+  });
+
+  const updatePromptMutation = useMutation({
+    mutationFn: async (input: { id: string; title: string }) => {
+      return await trpcClient.prompts.update.mutate({
+        id: input.id,
+        content: promptContent,
+        title: input.title,
+        tokenizer: "gpt-4",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Prompt title updated!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update prompt");
+    },
+  });
+
+  const deletePromptMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      return await trpcClient.prompts.softDelete.mutate({ id: input.id });
+    },
+    onSuccess: (data) => {
+      toast.success("Prompt deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      if (currentPromptId === data.promptId) {
+        handleNewPrompt();
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete prompt");
+    },
+  });
+
+  const updateGameMutation = useMutation({
+    mutationFn: async (input: { id: string; name: string }) => {
+      return await trpcClient.games.update.mutate({
+        gameId: input.id,
+        name: input.name,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Game name updated!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update game");
+    },
+  });
+
+  const deleteGameMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      return await trpcClient.games.softDelete.mutate({ gameId: input.id });
+    },
+    onSuccess: () => {
+      toast.success("Game deleted!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete game");
+    },
+  });
+
+  const toggleGamePublishedMutation = useMutation({
+    mutationFn: async (input: { id: string; isSubmitted: boolean }) => {
+      if (input.isSubmitted) {
+        return await trpcClient.games.submit.mutate({ gameId: input.id });
+      } else {
+        return await trpcClient.games.unpublish.mutate({ gameId: input.id });
+      }
+    },
+    onSuccess: () => {
+      toast.success("Game visibility updated!");
+      void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update game visibility");
+    },
+  });
+
+  const handleModelToggle = useCallback((model: ModelSelection) => {
+    setSelectedModels((prev) => {
+      if (prev.some((m) => m.modelKey === model.modelKey)) {
+        return prev;
+      }
+      return [...prev, model];
+    });
+  }, [setSelectedModels]);
+
+  const handleModelRemove = useCallback((modelId: string) => {
+    setSelectedModels((prev) => prev.filter((m) => m.id !== modelId));
+  }, [setSelectedModels]);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpandedThemes([]);
+    setExpandedPrompts([]);
+  }, [setExpandedThemes, setExpandedPrompts]);
+
+  const handleExpandAll = useCallback(() => {
+    if (themes) {
+      setExpandedThemes(themes.map((t) => t.id));
+    }
+    if (prompts) {
+      setExpandedPrompts(prompts.map((p) => p.id));
+    }
+  }, [themes, prompts, setExpandedThemes, setExpandedPrompts]);
+
+  const handleFork = useCallback(() => {
+    if (forkOriginalPromptId) {
+      forkPromptMutation.mutate({ forkId: forkOriginalPromptId });
+    }
+  }, [forkOriginalPromptId, forkPromptMutation]);
+
+  const handleSelectVersion = useCallback(async (versionId: string) => {
+    const versionData = versions?.find((v) => v.id === versionId);
+    if (versionData) {
+      setPromptContent(versionData.content);
+    }
+  }, [versions, setPromptContent]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const canGenerate = !!promptTitle.trim() && promptTitle.trim().length >= 3 && !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId && !isForking;
+
+  const activeTab = selection.openTabs.find((t) => t.id === selection.activeTabId);
+  const activeTabType = activeTab?.type ?? "prompt";
+  const wordCount = promptContent ? countWords(promptContent) : 0;
+  const totalModels = selectedModels.length;
 
   if (!mounted) {
     return <IDESkeleton />;
@@ -269,52 +401,127 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {state.isForking && state.forkOriginalPromptId && (
+      {isForking && forkOriginalPromptId && (
         <ForkBanner
-          originalPromptId={state.forkOriginalPromptId}
-          onClearFork={state.clearFork}
+          originalPromptId={forkOriginalPromptId}
+          onClearFork={clearFork}
+          onFork={handleFork}
+          isForkPending={forkPromptMutation.isPending}
         />
       )}
 
       <div className="flex-1 min-h-0 flex">
-        <ExplorerSidebar />
-        <EditorArea />
+        <ExplorerSidebar
+            themes={themes ?? []}
+            selection={selection}
+            expandedThemes={expandedThemes}
+            expandedPrompts={expandedPrompts}
+            themesLoading={themesLoading}
+            isGenerating={isGenerating}
+            isDirty={isDirty}
+            isNewPrompt={isNewPrompt}
+            promptTitle={promptTitle}
+            prompts={prompts}
+            promptsLoading={promptsLoading}
+            games={games}
+            gamesLoading={gamesLoading}
+            gamesByPromptId={gamesByPromptId}
+            gamesLoadingByPromptId={gamesLoadingByPromptId}
+            onSelectTheme={handleSelectTheme}
+            onSelectPrompt={handleSelectPrompt}
+            onSelectGame={handleSelectGame}
+            onNewPrompt={handleNewPrompt}
+            onSave={handleSave}
+            onDiscardNewPrompt={handleDiscardNewPrompt}
+            onPromptTitleChange={setPromptTitle}
+            onCollapseAll={handleCollapseAll}
+            onExpandAll={handleExpandAll}
+            toggleThemeExpanded={handleToggleThemeExpand}
+            togglePromptExpanded={handleTogglePromptExpand}
+            showContextMenu={showContextMenu}
+            showConfirmDialog={showConfirmDialog}
+            updatePromptMutation={updatePromptMutation}
+            deletePromptMutation={deletePromptMutation}
+            updateGameMutation={updateGameMutation}
+            deleteGameMutation={deleteGameMutation}
+            toggleGamePublishedMutation={toggleGamePublishedMutation}
+          />
+        <EditorArea
+          selection={selection}
+          promptContent={promptContent}
+          setPromptContent={setPromptContent}
+          isDirty={isDirty}
+          isGenerating={isGenerating}
+          isForking={isForking}
+          onSwitchToTab={switchToTab}
+          onCloseGameTab={closeGameTab}
+          onSave={handleSave}
+          onCursorChange={setCursorPosition}
+        />
         <ConfigPanel
-          collapsed={state.configPanelCollapsed}
-          onToggleCollapse={() => state.setConfigPanelCollapsed(!state.configPanelCollapsed)}
+          collapsed={configPanelCollapsed}
+          onCollapse={setConfigPanelCollapsed}
+          visibility={visibility}
+          onVisibilityChange={setVisibility}
+          gameName={gameName}
+          setGameName={setGameName}
+          selectedModels={selectedModels}
+          onModelToggle={handleModelToggle}
+          onModelRemove={handleModelRemove}
+          isGenerating={isGenerating}
+          canGenerate={canGenerate}
+          onGenerate={handleGenerate}
+          credits={credits}
+          versions={versions}
+          onSelectVersion={handleSelectVersion}
+          selection={selection}
         />
       </div>
 
       <StatusBar
-        cursorPosition={state.cursorPosition}
-        isDirty={state.isDirty}
-        isGenerating={state.isGenerating}
+        credits={credits}
+        isGenerating={isGenerating}
+        completedCount={completedCount}
+        totalModels={totalModels}
+        cursorLine={cursorPosition.line}
+        cursorColumn={cursorPosition.column}
+        wordCount={wordCount}
+        activeTabType={activeTabType}
       />
 
-      {state.contextMenu.open && (
+      {contextMenu.open && (
         <ContextMenu
-          x={state.contextMenu.x}
-          y={state.contextMenu.y}
-          items={state.contextMenu.items}
-          onClose={state.hideContextMenu}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={hideContextMenu}
         />
       )}
 
       <ConfirmDialog
-        open={state.confirmDialog.open}
+        open={confirmDialog.open}
         onOpenChange={(open) => {
-          if (!open) state.hideConfirmDialog();
+          if (!open) hideConfirmDialog();
         }}
-        title={state.confirmDialog.title}
-        message={state.confirmDialog.message}
-        confirmText={state.confirmDialog.confirmText}
-        variant={state.confirmDialog.variant}
-        onConfirm={state.confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        variant={confirmDialog.variant}
+        onConfirm={confirmDialog.onConfirm}
       />
 
       <DiscoveryDialog {...discoveryDialog.dialogProps} />
 
-      <FeedbackButton />
+      <div className="fixed bottom-4 right-4 z-50">
+        <FeedbackButton
+          schema={editorFeedbackSchema}
+          fields={editorFeedbackFields}
+          subject="IDE Feedback"
+          label="Feedback"
+          variant="outline"
+          description="Help us improve the IDE experience."
+        />
+      </div>
     </div>
   );
 }

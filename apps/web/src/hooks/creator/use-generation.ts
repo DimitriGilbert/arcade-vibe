@@ -18,6 +18,7 @@ export interface UseGenerationOptions {
   existingPromptId?: string | null;
   visibility?: Visibility;
   onPromptCreated?: (promptId: string) => void;
+  onGenerationStart?: (models: ModelSelection[]) => void;
   onGenerationComplete?: (gameId: string, modelId: string) => void;
   setActiveOutputTab?: (id: string | null) => void;
 }
@@ -39,6 +40,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     existingPromptId,
     visibility = "private",
     onPromptCreated,
+    onGenerationStart,
     onGenerationComplete,
     setActiveOutputTab,
   } = options;
@@ -107,6 +109,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
       };
     }
     setMultipleGenerations(initialGenerations);
+    onGenerationStart?.(selectedModels);
 
     discoveryDialog.open();
 
@@ -239,6 +242,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     queryClient,
     discoveryDialog,
     onPromptCreated,
+    onGenerationStart,
     onGenerationComplete,
     setActiveOutputTab,
   ]);

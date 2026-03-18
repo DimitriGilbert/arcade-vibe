@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { Editor } from "@monaco-editor/react";
-import { useTheme } from "next-themes";
 
 interface MonacoEditor {
   onDidChangeCursorPosition: (callback: (e: { position: { lineNumber: number; column: number } }) => void) => void;
@@ -21,7 +20,6 @@ export function PromptContent({
   readOnly,
   onCursorChange,
 }: PromptContentProps) {
-  const { resolvedTheme } = useTheme();
   const editorRef = useRef<MonacoEditor | null>(null);
 
   const handleEditorDidMount = (editorInstance: MonacoEditor) => {
@@ -38,7 +36,7 @@ export function PromptContent({
         defaultLanguage="markdown"
         value={content}
         onChange={(value) => onChange(value ?? "")}
-        theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
+        theme="vs-dark"
         onMount={handleEditorDidMount}
         options={{
           minimap: { enabled: false },

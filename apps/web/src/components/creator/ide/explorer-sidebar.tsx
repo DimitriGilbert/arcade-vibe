@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus,
   Save,
@@ -18,6 +18,8 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  FileText,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,15 +41,21 @@ interface ExplorerSidebarProps {
   themesLoading: boolean;
   isGenerating: boolean;
   isDirty: boolean;
+  isNewPrompt: boolean;
+  promptTitle: string;
   prompts: PromptNode[] | undefined;
   promptsLoading: boolean;
   games: GameNode[];
   gamesLoading: boolean;
+  gamesByPromptId: Record<string, GameNode[]>;
+  gamesLoadingByPromptId: Record<string, boolean>;
   onSelectTheme: (themeId: string) => void;
   onSelectPrompt: (promptId: string) => void;
   onSelectGame: (gameId: string) => void;
   onNewPrompt: () => void;
   onSave: () => void;
+  onDiscardNewPrompt: () => void;
+  onPromptTitleChange: (title: string) => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
   toggleThemeExpanded: (themeId: string) => void;
@@ -467,21 +475,85 @@ function PromptFolderComponent({
   );
 }
 
+function NewPromptComponent({
+  title,
+  onTitleChange,
+  onDiscard,
+  onSave,
+}: {
+  title: string;
+  onTitleChange: (title: string) => void;
+  onDiscard: () => void;
+  onSave: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSave();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onDiscard();
+    }
+  };
+
+  return (
+    <div className="ml-2">
+      <div className="group flex items-center gap-2 px-2 py-1 bg-primary/5 border border-primary/20 rounded">
+        <FileText className="h-4 w-4 shrink-0 text-primary animate-pulse" />
+        <input
+          ref={inputRef}
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter prompt title..."
+          className="flex-1 bg-transparent outline-none text-sm italic placeholder:text-muted-foreground/50"
+        />
+        <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded shrink-0 animate-pulse">
+          new
+        </span>
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+          title="Discard (Esc)"
+        >
+          <X className="h-3 w-3 text-muted-foreground" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ThemeNodeComponent({
   theme,
   prompts,
   promptsLoading,
   games,
   gamesLoading,
+  gamesByPromptId,
+  gamesLoadingByPromptId,
   expandedPrompts,
   selection,
   isExpanded,
   isSelected,
+  isNewPrompt,
+  newPromptTitle,
   onToggle,
   onSelect,
   onTogglePrompt,
   onSelectPrompt,
   onSelectGame,
+  onNewPromptTitleChange,
+  onDiscardNewPrompt,
+  onSave,
   showContextMenu,
   showConfirmDialog,
   updatePromptMutation,
@@ -495,15 +567,22 @@ function ThemeNodeComponent({
   promptsLoading: boolean;
   games: GameNode[];
   gamesLoading: boolean;
+  gamesByPromptId: Record<string, GameNode[]>;
+  gamesLoadingByPromptId: Record<string, boolean>;
   expandedPrompts: string[];
   selection: IDESelection;
   isExpanded: boolean;
   isSelected: boolean;
+  isNewPrompt: boolean;
+  newPromptTitle: string;
   onToggle: () => void;
   onSelect: () => void;
   onTogglePrompt: (promptId: string) => void;
   onSelectPrompt: (promptId: string) => void;
   onSelectGame: (gameId: string) => void;
+  onNewPromptTitleChange: (title: string) => void;
+  onDiscardNewPrompt: () => void;
+  onSave: () => void;
   showContextMenu: ExplorerSidebarProps["showContextMenu"];
   showConfirmDialog: ExplorerSidebarProps["showConfirmDialog"];
   updatePromptMutation: ExplorerSidebarProps["updatePromptMutation"];
@@ -552,6 +631,14 @@ function ThemeNodeComponent({
       </div>
       {isExpanded && (
         <div className="ml-2 pb-2">
+          {isNewPrompt && (
+            <NewPromptComponent
+              title={newPromptTitle}
+              onTitleChange={onNewPromptTitleChange}
+              onDiscard={onDiscardNewPrompt}
+              onSave={onSave}
+            />
+          )}
           {promptsLoading ? (
             <div className="flex items-center gap-2 px-2 py-1">
               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -567,8 +654,8 @@ function ThemeNodeComponent({
                 onToggle={() => onTogglePrompt(prompt.id)}
                 onSelect={() => onSelectPrompt(prompt.id)}
                 promptsLoading={promptsLoading}
-                games={prompt.id === selection.promptId ? games : []}
-                gamesLoading={prompt.id === selection.promptId && gamesLoading}
+                games={gamesByPromptId[prompt.id] ?? (prompt.id === selection.promptId ? games : [])}
+                gamesLoading={gamesLoadingByPromptId[prompt.id] ?? (prompt.id === selection.promptId && gamesLoading)}
                 selection={selection}
                 onSelectGame={onSelectGame}
                 showContextMenu={showContextMenu}
@@ -580,11 +667,11 @@ function ThemeNodeComponent({
                 toggleGamePublishedMutation={toggleGamePublishedMutation}
               />
             ))
-          ) : (
+          ) : !isNewPrompt ? (
             <div className="px-2 py-1">
               <span className="text-xs text-muted-foreground">No prompts yet</span>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
@@ -599,15 +686,21 @@ export function ExplorerSidebar({
   themesLoading,
   isGenerating,
   isDirty,
+  isNewPrompt,
+  promptTitle,
   prompts,
   promptsLoading,
   games,
   gamesLoading,
+  gamesByPromptId,
+  gamesLoadingByPromptId,
   onSelectTheme,
   onSelectPrompt,
   onSelectGame,
   onNewPrompt,
   onSave,
+  onDiscardNewPrompt,
+  onPromptTitleChange,
   onCollapseAll,
   onExpandAll,
   toggleThemeExpanded,
@@ -645,7 +738,7 @@ export function ExplorerSidebar({
           onClick={onSave}
           className="p-1.5 rounded hover:bg-sidebar-accent text-sidebar-foreground disabled:opacity-50"
           title="Save (Ctrl+S)"
-          disabled={!isDirty || isGenerating}
+          disabled={(!isDirty && !isNewPrompt) || isGenerating}
         >
           <Save className="h-4 w-4" />
         </button>
@@ -691,15 +784,22 @@ export function ExplorerSidebar({
                 promptsLoading={theme.id === selection.themeId && promptsLoading}
                 games={games}
                 gamesLoading={gamesLoading}
+                gamesByPromptId={gamesByPromptId}
+                gamesLoadingByPromptId={gamesLoadingByPromptId}
                 expandedPrompts={expandedPrompts}
                 selection={selection}
                 isExpanded={expandedThemes.includes(theme.id)}
                 isSelected={theme.id === selection.themeId}
+                isNewPrompt={isNewPrompt && theme.id === selection.themeId}
+                newPromptTitle={promptTitle}
                 onToggle={() => toggleThemeExpanded(theme.id)}
                 onSelect={() => onSelectTheme(theme.id)}
                 onTogglePrompt={togglePromptExpanded}
                 onSelectPrompt={onSelectPrompt}
                 onSelectGame={onSelectGame}
+                onNewPromptTitleChange={onPromptTitleChange}
+                onDiscardNewPrompt={onDiscardNewPrompt}
+                onSave={onSave}
                 showContextMenu={showContextMenu}
                 showConfirmDialog={showConfirmDialog}
                 updatePromptMutation={updatePromptMutation}
