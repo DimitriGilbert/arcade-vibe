@@ -2,8 +2,11 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, FileText, Code, Save, X } from "lucide-react";
+import { StatusIcon } from "@/components/creator/shared";
+import { useGenerationStatus } from "@/stores/generations-store";
 import { cn } from "@/lib/utils";
 import type { IDETab } from "./types";
+import type { GenerationStatus } from "@/lib/trpc-types";
 
 export interface EditorTabsProps {
   tabs: IDETab[];
@@ -12,6 +15,84 @@ export interface EditorTabsProps {
   onTabClose: (tabId: string) => void;
   isDirty: boolean;
   onSave: () => void;
+}
+
+function mapGameStatusToGenerationStatus(status: IDETab["gameStatus"]): GenerationStatus | null {
+  switch (status) {
+    case "completed":
+      return "complete";
+    case "failed":
+      return "error";
+    case "generating":
+      return "generating";
+    default:
+      return null;
+  }
+}
+
+function EditorTabButton({
+  tab,
+  isActive,
+  onTabClick,
+  onTabClose,
+  isDirty,
+  onSave,
+}: {
+  tab: IDETab;
+  isActive: boolean;
+  onTabClick: (tabId: string) => void;
+  onTabClose: (tabId: string) => void;
+  isDirty: boolean;
+  onSave: () => void;
+}) {
+  const liveStatus = useGenerationStatus(tab.modelSelectionId ?? tab.modelKey ?? tab.id);
+  const fallbackStatus = mapGameStatusToGenerationStatus(tab.gameStatus);
+  const status = liveStatus ?? fallbackStatus;
+
+  return (
+    <button
+      type="button"
+      key={tab.id}
+      onClick={() => onTabClick(tab.id)}
+      className={cn(
+        "flex items-center gap-2 px-4 py-2 text-sm border-r border-border",
+        "hover:bg-muted/50 transition-colors whitespace-nowrap",
+        isActive && "bg-background border-b-2 border-b-primary"
+      )}
+    >
+      {tab.type === "prompt" ? (
+        <FileText className="h-4 w-4" />
+      ) : (
+        <>
+          {status ? <StatusIcon status={status} className="h-3.5 w-3.5" /> : <Code className="h-4 w-4" />}
+        </>
+      )}
+      <span className="truncate max-w-32">{tab.label}</span>
+
+      {tab.type === "prompt" && isDirty ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSave();
+          }}
+          className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+        >
+          <Save className="h-3 w-3 text-primary" />
+        </button>
+      ) : null}
+
+      {tab.type === "game" ? (
+        <X
+          className="h-3 w-3 hover:text-destructive cursor-pointer"
+          onClick={(event) => {
+            event.stopPropagation();
+            onTabClose(tab.id);
+          }}
+        />
+      ) : null}
+    </button>
+  );
 }
 
 export function EditorTabs({
@@ -70,46 +151,15 @@ export function EditorTabs({
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {tabs.map((tab) => (
-          <button
-            type="button"
+          <EditorTabButton
             key={tab.id}
-            onClick={() => onTabClick(tab.id)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm border-r border-border",
-              "hover:bg-muted/50 transition-colors whitespace-nowrap",
-              tab.id === activeTabId && "bg-background border-b-2 border-b-primary"
-            )}
-          >
-            {tab.type === "prompt" ? (
-              <FileText className="h-4 w-4" />
-            ) : (
-              <Code className="h-4 w-4" />
-            )}
-            <span className="truncate max-w-32">{tab.label}</span>
-
-            {tab.type === "prompt" && isDirty ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSave();
-                }}
-                className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
-              >
-                <Save className="h-3 w-3 text-primary" />
-              </button>
-            ) : null}
-
-            {tab.type === "game" ? (
-              <X
-                className="h-3 w-3 hover:text-destructive cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTabClose(tab.id);
-                }}
-              />
-            ) : null}
-          </button>
+            tab={tab}
+            isActive={tab.id === activeTabId}
+            onTabClick={onTabClick}
+            onTabClose={onTabClose}
+            isDirty={isDirty}
+            onSave={onSave}
+          />
         ))}
       </div>
 

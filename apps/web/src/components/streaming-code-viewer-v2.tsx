@@ -17,6 +17,7 @@ export interface StreamingCodeViewerV2Props {
   showHeader?: boolean;
   theme?: "github-dark" | "github-light";
   onThemeChange?: (theme: "github-dark" | "github-light") => void;
+  showReasoningLabel?: boolean;
 }
 
 function clampLines(source: string, maxLines: number): string {
@@ -41,6 +42,7 @@ export function StreamingCodeViewerV2({
   showHeader = true,
   theme: externalTheme,
   onThemeChange,
+  showReasoningLabel = true,
 }: StreamingCodeViewerV2Props) {
   const [internalTheme, setInternalTheme] = useState<"github-dark" | "github-light">("github-dark");
   const theme = externalTheme ?? internalTheme;
@@ -303,9 +305,11 @@ export function StreamingCodeViewerV2({
         <div className="inline-block min-w-full p-4 md:p-5">
           {highlightedReasoning ? (
             <div className="mb-4 pb-4 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium text-blue-400">Reasoning</span>
-              </div>
+              {showReasoningLabel ? (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-blue-400">Reasoning</span>
+                </div>
+              ) : null}
               <p className="text-xs text-blue-300/80 italic whitespace-pre-wrap font-mono leading-relaxed">
                 {highlightedReasoning}
               </p>

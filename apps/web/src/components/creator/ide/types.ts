@@ -27,7 +27,11 @@ export interface GameNode {
   gameId: string | null;
   isSubmitted: boolean;
   promptId: string;
+  isTransient?: boolean;
+  modelSelectionId?: string | null;
 }
+
+export type EditorTheme = "github-dark" | "github-light";
 
 export interface IDETab {
   id: string;
@@ -35,6 +39,9 @@ export interface IDETab {
   label: string;
   modelKey?: string;
   modelName?: string;
+  gameStatus?: GameStatus;
+  modelSelectionId?: string;
+  isTransient?: boolean;
 }
 
 export interface IDESelection {

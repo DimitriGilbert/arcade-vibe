@@ -8,6 +8,7 @@ import {
 import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { trpcClient } from "@/utils/trpc";
+import { useAllGenerations } from "@/stores/generations-store";
 import type {
   IDESelection,
   IDETab,
@@ -19,10 +20,25 @@ import type {
   PromptNode,
   Visibility,
   ModelSelection,
+  GenerationStatus,
 } from "./types";
 import type { GameListItem } from "@/lib/trpc-types";
 
 const PROMPT_TAB_ID = "prompt.md";
+
+function mapGenerationStatusToGameStatus(status: GenerationStatus): GameNode["status"] {
+  switch (status) {
+    case "reasoning":
+    case "generating":
+      return "generating";
+    case "complete":
+      return "completed";
+    case "error":
+      return "failed";
+    default:
+      return "generating";
+  }
+}
 
 function createPromptTab(): IDETab {
   return {
@@ -39,6 +55,9 @@ function createGameTab(game: GameNode): IDETab {
     label: game.name ?? `Game ${game.id.slice(0, 8)}`,
     modelKey: game.modelName ?? undefined,
     modelName: game.modelName ?? undefined,
+    gameStatus: game.status,
+    modelSelectionId: game.modelSelectionId ?? undefined,
+    isTransient: game.isTransient ?? false,
   };
 }
 
@@ -141,6 +160,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
   const [isForking, setIsForking] = useState(!!urlForkId);
   const [forkOriginalPromptId, setForkOriginalPromptId] = useState<string | null>(urlForkId ?? null);
   const [isNewPrompt, setIsNewPrompt] = useState(false);
+  const allGenerations = useAllGenerations();
 
   const setCursorPosition = useCallback((line: number, column: number) => {
     setCursorPositionState({ line, column });
@@ -224,7 +244,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     })),
   });
 
-  const { gamesByPromptId, gamesLoadingByPromptId } = useMemo(() => {
+  const { gamesByPromptId: persistedGamesByPromptId, gamesLoadingByPromptId } = useMemo(() => {
     const byId: Record<string, GameNode[]> = {};
     const loadingById: Record<string, boolean> = {};
 
@@ -251,6 +271,51 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
 
     return { gamesByPromptId: byId, gamesLoadingByPromptId: loadingById };
   }, [expandedPrompts, expandedPromptGamesQueries]);
+
+  const gamesByPromptId = useMemo(() => {
+    const mergedGamesByPromptId: Record<string, GameNode[]> = { ...persistedGamesByPromptId };
+
+    const promptId = selection.promptId;
+    if (!promptId) {
+      return mergedGamesByPromptId;
+    }
+
+    const persistedGames = persistedGamesByPromptId[promptId] ?? [];
+    const persistedGameIds = new Set(persistedGames.map((game) => game.id));
+
+    const liveGames = allGenerations
+      .filter((generation) => generation.status !== "idle")
+      .map((generation): GameNode | null => {
+        const id = generation.gameId ?? generation.modelSelectionId;
+        if (!id) {
+          return null;
+        }
+
+        if (generation.gameId && persistedGameIds.has(generation.gameId)) {
+          return null;
+        }
+
+        return {
+          id,
+          name: gameName.trim() || null,
+          modelName:
+            selectedModels.find((model) => model.id === generation.modelSelectionId)?.modelName ??
+            generation.modelKey,
+          modelProvider: null,
+          status: mapGenerationStatusToGameStatus(generation.status),
+          createdAt: new Date().toISOString(),
+          gameId: generation.gameId,
+          isSubmitted: false,
+          promptId,
+          isTransient: generation.status !== "complete",
+          modelSelectionId: generation.modelSelectionId,
+        };
+      })
+      .filter((game): game is GameNode => game !== null);
+
+    mergedGamesByPromptId[promptId] = [...liveGames, ...persistedGames];
+    return mergedGamesByPromptId;
+  }, [allGenerations, gameName, persistedGamesByPromptId, selectedModels, selection.promptId]);
 
   const games = useMemo(() => {
     if (!selection.promptId) return [];
@@ -459,8 +524,8 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
   ]);
 
   const openPromptTabs = useCallback((promptId: string, gamesList: GameNode[]) => {
-    const promptTab = createPromptTab();
-    const gameTabs = gamesList.map(createGameTab);
+      const promptTab = createPromptTab();
+      const gameTabs = gamesList.map(createGameTab);
     
     setSelection((prev) => ({
       ...prev,
@@ -552,6 +617,8 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
         gameId: g.id,
         isSubmitted: g.isSubmitted,
         promptId: g.promptId ?? "",
+        isTransient: false,
+        modelSelectionId: null,
       }));
 
       setSelection((prev) => {

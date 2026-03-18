@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { EditorTabs } from "./editor-tabs";
 import { PromptContent } from "./prompt-content";
 import { GameContent } from "./game-content";
-import type { IDESelection, IDETab } from "./types";
+import type { EditorTheme, IDESelection, IDETab } from "./types";
 
 export interface EditorAreaProps {
   selection: IDESelection;
@@ -31,6 +32,7 @@ export function EditorArea({
   onCursorChange,
 }: EditorAreaProps) {
   const { openTabs, activeTabId } = selection;
+  const [editorTheme, setEditorTheme] = useState<EditorTheme>("github-dark");
 
   const activeTab = openTabs.find((tab: IDETab) => tab.id === activeTabId);
 
@@ -52,6 +54,7 @@ export function EditorArea({
             onChange={setPromptContent}
             readOnly={isGenerating || isForking}
             onCursorChange={onCursorChange}
+            theme={editorTheme}
           />
         ) : activeTab?.type === "game" ? (
           <GameContent 
@@ -59,6 +62,9 @@ export function EditorArea({
             modelKey={activeTab.modelKey} 
             modelName={activeTab.modelName}
             title={activeTab.label}
+            gameStatus={activeTab.gameStatus}
+            theme={editorTheme}
+            onThemeChange={setEditorTheme}
           />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
