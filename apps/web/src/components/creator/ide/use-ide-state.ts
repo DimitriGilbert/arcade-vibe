@@ -37,7 +37,8 @@ function createGameTab(game: GameNode): IDETab {
     id: game.id,
     type: "game",
     label: game.name ?? `Game ${game.id.slice(0, 8)}`,
-    modelKey: game.modelProvider ?? undefined,
+    modelKey: game.modelName ?? undefined,
+    modelName: game.modelName ?? undefined,
   };
 }
 

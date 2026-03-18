@@ -34,6 +34,7 @@ export interface IDETab {
   type: "prompt" | "game";
   label: string;
   modelKey?: string;
+  modelName?: string;
 }
 
 export interface IDESelection {

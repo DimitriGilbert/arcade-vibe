@@ -24,6 +24,7 @@ import { ArcadeButton } from "@/components/arcade";
 interface ConfigPanelProps {
   collapsed: boolean;
   onCollapse: (collapsed: boolean) => void;
+  width: number;
   visibility: Visibility;
   onVisibilityChange: (visibility: Visibility) => void;
   gameName: string;
@@ -54,6 +55,7 @@ type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
 export function ConfigPanel({
   collapsed,
   onCollapse,
+  width,
   visibility,
   onVisibilityChange,
   gameName,
@@ -249,13 +251,14 @@ export function ConfigPanel({
 
   return (
     <aside
+      style={collapsed ? undefined : { width: `${width}px` }}
       className={cn(
         "h-full border-l border-[var(--border)] bg-[var(--card)] shrink-0 transition-all duration-300 overflow-hidden relative",
-        collapsed ? "w-0" : "w-80"
+        collapsed ? "w-0" : ""
       )}
     >
       {!collapsed && (
-        <div className="w-80 h-full flex flex-col">
+        <div className="h-full flex flex-col">
           <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
             <h3 className="text-sm font-semibold text-[var(--foreground)]">Config</h3>
             <button
@@ -285,6 +288,29 @@ export function ConfigPanel({
                   </SelectContent>
                 </Select>
               </div>
+
+              {versions && versions.length > 0 && onSelectVersion && (
+                <>
+                  <div className="border-t border-[var(--border)]" />
+                  <div>
+                    <span className="text-sm font-medium mb-1.5 block text-[var(--foreground)]">
+                      Version History
+                    </span>
+                    <Select value="" onValueChange={(v) => v && onSelectVersion(v)}>
+                      <SelectTrigger className="w-full" aria-label="Select version">
+                        <SelectValue placeholder="Load version..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {versions.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            v{v.version} - {new Date(v.createdAt).toLocaleDateString()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               <div className="border-t border-[var(--border)]" />
 
@@ -373,28 +399,24 @@ export function ConfigPanel({
                 />
               </div>
 
-              {versions && versions.length > 0 && onSelectVersion && (
-                <>
-                  <div className="border-t border-[var(--border)]" />
-                  <div>
-                    <span className="text-sm font-medium mb-1.5 block text-[var(--foreground)]">
-                      Version History
-                    </span>
-                    <Select value="" onValueChange={(v) => v && onSelectVersion(v)}>
-                      <SelectTrigger className="w-full" aria-label="Select version">
-                        <SelectValue placeholder="Load version..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {versions.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            v{v.version} - {new Date(v.createdAt).toLocaleDateString()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+              <ArcadeButton
+                variant="glow"
+                className="w-full"
+                onClick={onGenerate}
+                disabled={!canGenerate || isGenerating || !hasPrompt}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Generate
+                  </>
+                )}
+              </ArcadeButton>
 
               <div className="border-t border-[var(--border)]" />
 
@@ -411,27 +433,6 @@ export function ConfigPanel({
               )}
             </div>
           </ScrollArea>
-
-          <div className="p-4 border-t border-[var(--border)]">
-            <ArcadeButton
-              variant="glow"
-              className="w-full"
-              onClick={onGenerate}
-              disabled={!canGenerate || isGenerating || !hasPrompt}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Generate
-                </>
-              )}
-            </ArcadeButton>
-          </div>
         </div>
       )}
 

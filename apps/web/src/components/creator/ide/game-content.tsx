@@ -10,10 +10,11 @@ import { trpcClient } from "@/utils/trpc";
 export interface GameContentProps {
   gameId: string;
   modelKey: string | undefined;
+  title?: string;
   modelName?: string;
 }
 
-export function GameContent({ gameId, modelKey, modelName }: GameContentProps) {
+export function GameContent({ gameId, modelKey, title, modelName }: GameContentProps) {
   const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
   const [copied, setCopied] = useState(false);
 
@@ -44,7 +45,9 @@ export function GameContent({ gameId, modelKey, modelName }: GameContentProps) {
   const code = hasCodeInMemory 
     ? generation.code 
     : (gameCode ?? "");
+  const displayTitle = title ?? modelName ?? generation?.modelKey ?? modelKey ?? "Game";
   const displayModelName = modelName ?? generation?.modelKey ?? modelKey ?? "Model";
+  const showModelName = displayModelName !== displayTitle;
   const hasGameId = generation?.gameId ?? (gameCode ? gameId : null);
 
   const isLoading = isLoadingGame && !code;
@@ -78,9 +81,14 @@ export function GameContent({ gameId, modelKey, modelName }: GameContentProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]/50 shrink-0">
-        <span className="text-sm font-medium truncate">
-          {displayModelName}
-        </span>
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate">{displayTitle}</div>
+          {showModelName ? (
+            <div className="text-xs text-[var(--muted-foreground)] truncate">
+              {displayModelName}
+            </div>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1">
           {hasGameId ? (
             <button

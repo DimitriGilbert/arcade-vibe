@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Loader2 } from "lucide-react";
@@ -98,8 +98,26 @@ interface IDELayoutProps {
   urlForkId?: string;
 }
 
+const MIN_EXPLORER_WIDTH = 240;
+const MAX_EXPLORER_WIDTH = 520;
+const DEFAULT_EXPLORER_WIDTH = 320;
+const MIN_CONFIG_WIDTH = 280;
+const MAX_CONFIG_WIDTH = 520;
+const DEFAULT_CONFIG_WIDTH = 320;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   const [mounted, setMounted] = useState(false);
+  const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
+  const [configWidth, setConfigWidth] = useState(DEFAULT_CONFIG_WIDTH);
+  const resizeStateRef = useRef<{
+    panel: "explorer" | "config";
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const state = useIDEState({ urlPromptId, urlForkId });
   const queryClient = useQueryClient();
 
@@ -172,6 +190,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           type: "game" as const,
           label: m.modelName,
           modelKey: m.id,
+          modelName: m.modelName,
         }));
       
       if (newTabs.length === 0) return prev;
@@ -388,6 +407,58 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const resizeState = resizeStateRef.current;
+      if (!resizeState) return;
+
+      if (resizeState.panel === "explorer") {
+        const nextWidth = clamp(
+          resizeState.startWidth + (event.clientX - resizeState.startX),
+          MIN_EXPLORER_WIDTH,
+          MAX_EXPLORER_WIDTH
+        );
+        setExplorerWidth(nextWidth);
+        return;
+      }
+
+      const nextWidth = clamp(
+        resizeState.startWidth - (event.clientX - resizeState.startX),
+        MIN_CONFIG_WIDTH,
+        MAX_CONFIG_WIDTH
+      );
+      setConfigWidth(nextWidth);
+    };
+
+    const handlePointerUp = () => {
+      if (!resizeStateRef.current) return;
+      resizeStateRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, []);
+
+  const startResize = useCallback((panel: "explorer" | "config", event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    resizeStateRef.current = {
+      panel,
+      startX: event.clientX,
+      startWidth: panel === "explorer" ? explorerWidth : configWidth,
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [configWidth, explorerWidth]);
+
   const canGenerate = !!promptTitle.trim() && promptTitle.trim().length >= 3 && !!promptContent.trim() && selectedModels.length > 0 && !!selection.themeId && !isForking;
 
   const activeTab = selection.openTabs.find((t) => t.id === selection.activeTabId);
@@ -411,7 +482,11 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
       )}
 
       <div className="flex-1 min-h-0 flex">
-        <ExplorerSidebar
+        <aside
+          style={{ width: `${explorerWidth}px` }}
+          className="h-full shrink-0 border-r border-border bg-sidebar"
+        >
+          <ExplorerSidebar
             themes={themes ?? []}
             selection={selection}
             expandedThemes={expandedThemes}
@@ -446,6 +521,14 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
             deleteGameMutation={deleteGameMutation}
             toggleGamePublishedMutation={toggleGamePublishedMutation}
           />
+        </aside>
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize explorer sidebar"
+          onPointerDown={(event) => startResize("explorer", event)}
+          className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)]"
+        />
         <EditorArea
           selection={selection}
           promptContent={promptContent}
@@ -458,9 +541,19 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           onSave={handleSave}
           onCursorChange={setCursorPosition}
         />
+        {!configPanelCollapsed && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize config panel"
+            onPointerDown={(event) => startResize("config", event)}
+            className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)]"
+          />
+        )}
         <ConfigPanel
           collapsed={configPanelCollapsed}
           onCollapse={setConfigPanelCollapsed}
+          width={configWidth}
           visibility={visibility}
           onVisibilityChange={setVisibility}
           gameName={gameName}

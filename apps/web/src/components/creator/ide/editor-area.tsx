@@ -57,7 +57,8 @@ export function EditorArea({
           <GameContent 
             gameId={activeTabId} 
             modelKey={activeTab.modelKey} 
-            modelName={activeTab.label}
+            modelName={activeTab.modelName}
+            title={activeTab.label}
           />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
