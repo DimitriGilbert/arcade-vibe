@@ -1,10 +1,12 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
-import type { LeaderboardEntry } from "@/lib/trpc-types";
+import type { LeaderboardEntry, LeaderboardResult } from "@/lib/trpc-types";
 
 export interface UseLeaderboardDataOptions {
   themeId?: string;
   pageSize?: number;
+  initialResult?: LeaderboardResult | null;
+  initialThemeId?: string;
 }
 
 export interface UseLeaderboardDataReturn {
@@ -21,7 +23,12 @@ const DEFAULT_PAGE_SIZE = 50;
 export function useLeaderboardData(
   options?: UseLeaderboardDataOptions,
 ): UseLeaderboardDataReturn {
-  const { themeId, pageSize = DEFAULT_PAGE_SIZE } = options ?? {};
+  const {
+    themeId,
+    pageSize = DEFAULT_PAGE_SIZE,
+    initialResult,
+    initialThemeId,
+  } = options ?? {};
 
   const {
     data,
@@ -41,6 +48,13 @@ export function useLeaderboardData(
       return result;
     },
     initialPageParam: undefined as string | undefined,
+    initialData:
+      initialResult && themeId === initialThemeId
+        ? {
+            pages: [initialResult],
+            pageParams: [undefined as string | undefined],
+          }
+        : undefined,
     getNextPageParam: (lastPage) => {
       if (!lastPage || !lastPage.hasMore || !lastPage.nextCursor) {
         return undefined;

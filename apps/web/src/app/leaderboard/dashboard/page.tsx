@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeCard, ArcadeButton } from "@/components/arcade";
 import { RefreshCw, Zap } from "lucide-react";
-import type { Theme, LeaderboardEntry } from "@/lib/trpc-types";
+import type { ThemeList, LeaderboardEntry } from "@/lib/trpc-types";
 import { formatTimeRemaining } from "@/lib/formatting";
 import { useCurrentTheme } from "@/hooks/use-current-theme";
 import { ThemeSelector } from "@/components/leaderboard/shared/theme-selector";
@@ -97,7 +97,7 @@ export default function LeaderboardDashboardPage() {
 
 	const isLoading = themeLoading || leaderboardLoading;
 
-	const handleThemeSelect = useCallback((theme: Theme | null) => {
+	const handleThemeSelect = useCallback((theme: ThemeList | null) => {
 		setCurrentTheme(theme);
 	}, [setCurrentTheme]);
 

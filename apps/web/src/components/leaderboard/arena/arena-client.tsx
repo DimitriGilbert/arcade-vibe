@@ -15,7 +15,7 @@ import {
 	Sparkles,
 	Gamepad2,
 } from "lucide-react";
-import type { LeaderboardEntry, Theme } from "@/lib/trpc-types";
+import type { LeaderboardEntry, ThemeList } from "@/lib/trpc-types";
 import { useCurrentTheme } from "@/hooks/use-current-theme";
 import { ThemeSelector } from "@/components/leaderboard/shared/theme-selector";
 import {
@@ -32,7 +32,7 @@ export default function ArenaClient() {
 	const [cursor, setCursor] = useState<string | undefined>(undefined);
 	const [hasMore, setHasMore] = useState(true);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
-	const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
+	const [selectedTheme, setSelectedTheme] = useState<ThemeList | null>(null);
 
 	const {
 		currentTheme: serverTheme,
@@ -44,7 +44,7 @@ export default function ArenaClient() {
 
 	const currentTheme = selectedTheme ?? serverTheme;
 
-	const handleThemeSelect = useCallback((theme: Theme | null) => {
+	const handleThemeSelect = useCallback((theme: ThemeList | null) => {
 		setSelectedTheme(theme);
 		setCurrentTheme(theme);
 		setAllEntries([]);

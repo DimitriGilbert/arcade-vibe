@@ -8,14 +8,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentTheme } from "@/hooks/use-current-theme";
 import { useLeaderboardData } from "@/hooks/use-leaderboard-data";
 import { ThemeSelector } from "@/components/leaderboard/shared/theme-selector";
+import type { LeaderboardResult, ThemeList } from "@/lib/trpc-types";
 import {
 	CoverStoryCard,
 	CompactLeaderboardRow,
 	ThemeHero,
 } from "@/components/leaderboard/magazine";
 
-export default function LeaderboardMagazineClient() {
-	const { currentTheme, allThemes, isLoading: themeLoading, setCurrentTheme } = useCurrentTheme({ includeAllThemes: true });
+interface LeaderboardMagazineClientProps {
+	initialCurrentTheme: ThemeList | null;
+	initialThemes: ThemeList[];
+	initialLeaderboardResult: LeaderboardResult | null;
+}
+
+export default function LeaderboardMagazineClient({
+	initialCurrentTheme,
+	initialThemes,
+	initialLeaderboardResult,
+}: LeaderboardMagazineClientProps) {
+	const { currentTheme, allThemes, isLoading: themeLoading, setCurrentTheme } = useCurrentTheme({
+		includeAllThemes: true,
+		initialCurrentTheme,
+		initialAllThemes: initialThemes,
+	});
 
 	const {
 		entries,
@@ -26,13 +41,17 @@ export default function LeaderboardMagazineClient() {
 	} = useLeaderboardData({
 		themeId: currentTheme?.id,
 		pageSize: 50,
+		initialResult: initialLeaderboardResult,
+		initialThemeId: initialCurrentTheme?.id,
 	});
 
-	const isLoading = themeLoading || leaderboardLoading;
+	const shouldShowBlockingLoading =
+		(themeLoading && !currentTheme && initialThemes.length === 0) ||
+		(leaderboardLoading && !initialLeaderboardResult && entries.length === 0);
 	const top3 = entries.slice(0, 3);
 	const rest = entries.slice(3);
 
-	if (isLoading) {
+	if (shouldShowBlockingLoading) {
 		return (
 			<main className="min-h-screen bg-background py-12">
 				<div className="container mx-auto">

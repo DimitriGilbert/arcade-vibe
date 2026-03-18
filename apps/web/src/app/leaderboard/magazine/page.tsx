@@ -29,6 +29,23 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function LeaderboardMagazinePage() {
-  return <LeaderboardMagazineClient />;
+export default async function LeaderboardMagazinePage() {
+  const currentTheme = await trpcClient.themes.getCurrent.query().catch(() => null);
+  const allThemes = await trpcClient.themes.list.query().catch(() => []);
+  const initialLeaderboardResult = currentTheme
+    ? await trpcClient.leaderboard.getTop
+        .query({
+          themeId: currentTheme.id,
+          limit: 50,
+        })
+        .catch(() => null)
+    : null;
+
+  return (
+    <LeaderboardMagazineClient
+      initialCurrentTheme={currentTheme}
+      initialThemes={allThemes}
+      initialLeaderboardResult={initialLeaderboardResult}
+    />
+  );
 }

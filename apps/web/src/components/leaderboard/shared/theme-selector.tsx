@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Theme } from "@/lib/trpc-types";
+import type { ThemeList } from "@/lib/trpc-types";
 import {
   Select,
   SelectContent,
@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/select";
 
 export interface ThemeSelectorProps {
-  currentTheme: Theme | null;
-  themes: Theme[];
-  onSelect: (theme: Theme | null) => void;
+  currentTheme: ThemeList | null;
+  themes: ThemeList[];
+  onSelect: (theme: ThemeList | null) => void;
   includeAllOption?: boolean;
 }
 
