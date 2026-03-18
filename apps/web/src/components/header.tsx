@@ -35,6 +35,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     label: "Creator",
     href: "/creator",
     children: [
+      { label: "IDE", href: "/creator/ide" },
       { label: "Inbox", href: "/creator/inbox" },
       { label: "File Browser", href: "/creator/filebrowser" },
       { label: "Workbench", href: "/creator/workbench" },

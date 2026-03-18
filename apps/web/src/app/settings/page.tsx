@@ -83,6 +83,7 @@ const LEADERBOARD_IMPLEMENTATIONS: readonly LeaderboardImplementation[] = [
   "magazine",
 ];
 const CREATOR_IMPLEMENTATIONS: readonly CreatorImplementation[] = [
+  "ide",
   "workbench",
   "inbox",
   "filebrowser",
@@ -104,6 +105,7 @@ const leaderboardImplementationLabels: Record<
 };
 
 const creatorImplementationLabels: Record<CreatorImplementation, string> = {
+  ide: "IDE",
   workbench: "Workbench",
   inbox: "Inbox",
   filebrowser: "File Browser",

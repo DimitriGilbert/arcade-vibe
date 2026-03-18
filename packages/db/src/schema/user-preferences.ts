@@ -27,6 +27,7 @@ export type LeaderboardImplementation =
   (typeof LEADERBOARD_IMPLEMENTATIONS)[number];
 
 export const CREATOR_IMPLEMENTATIONS = [
+  "ide",
   "workbench",
   "inbox",
   "filebrowser",
