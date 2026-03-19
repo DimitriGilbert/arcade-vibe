@@ -307,6 +307,7 @@ export type AdminStatsGetStatsOutput = AdminOutput["stats"]["getStats"];
 export type AdminStatsGetActionsOutput = AdminOutput["stats"]["getActions"];
 
 export type AdminDirectGetGamesOutput = AdminOutput["direct"]["getGames"];
+export type AdminDirectGetUsersOutput = AdminOutput["direct"]["getUsers"];
 
 // --- Feedback Router ---
 
@@ -502,12 +503,9 @@ export type UserProfile = UserGetByNameOutput;
 
 /**
  * Admin view of user with full details
- * Combines extended profile with name and email
+ * @source RouterOutput["admin"]["direct"]["getUsers"][number]
  */
-export type UserAdminView = UserExtended & {
-  name: string;
-  email: string;
-};
+export type UserAdminView = AdminDirectGetUsersOutput[number];
 
 /**
  * Extract user extended profile (includes credits and reputation)

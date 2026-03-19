@@ -33,13 +33,13 @@ import { useFormedible } from "@/hooks/use-formedible";
 import { z } from "zod";
 import type { UserAdminView as User } from "@/lib/trpc-types";
 
-type SortField = "name" | "email" | "role" | "credits";
+type SortField = "name" | "email" | "role" | "credits" | "createdAt";
 type SortOrder = "asc" | "desc";
 
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [suspendDialog, setSuspendDialog] = useState<{
     open: boolean;
     user: User | null;
@@ -136,6 +136,11 @@ export default function AdminUsersPage() {
           break;
         case "credits":
           comparison = a.credits - b.credits;
+          break;
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt ?? 0).getTime() -
+            new Date(b.createdAt ?? 0).getTime();
           break;
       }
       return sortOrder === "asc" ? comparison : -comparison;
@@ -295,6 +300,7 @@ export default function AdminUsersPage() {
                     { field: "name" as SortField, label: "Name" },
                     { field: "role" as SortField, label: "Role" },
                     { field: "credits" as SortField, label: "Credits" },
+                    { field: "createdAt" as SortField, label: "Created" },
                   ].map((column) => (
                     <th
                       key={column.field}
@@ -358,6 +364,11 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-4 py-3">
                         {user.credits.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--muted-foreground)]">
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString()
+                          : "-"}
                       </td>
                       <td className="px-4 py-3">
                         {user.isSuspended ? (
