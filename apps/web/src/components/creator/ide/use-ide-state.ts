@@ -324,7 +324,25 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       })
       .filter((game): game is GameNode => game !== null);
 
-    mergedGamesByPromptId[promptId] = [...liveGames, ...persistedGames];
+    const liveModelNames = new Set(
+      liveGames
+        .map((game) => game.modelName)
+        .filter((modelName): modelName is string => typeof modelName === "string"),
+    );
+
+    const dedupedPersistedGames = persistedGames.filter((game) => {
+      if (game.status !== "generating") {
+        return true;
+      }
+
+      if (!game.modelName) {
+        return true;
+      }
+
+      return !liveModelNames.has(game.modelName);
+    });
+
+    mergedGamesByPromptId[promptId] = [...liveGames, ...dedupedPersistedGames];
     return mergedGamesByPromptId;
   }, [allGenerations, gameName, persistedGamesByPromptId, selectedModels, selection.promptId]);
 
@@ -636,15 +654,12 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
 
       setSelection((prev) => {
         const promptTab = createPromptTab();
-        const gameTabs = gamesList.map(createGameTab);
         const preservedGameTabs = options?.preserveOpenGameTabs
           ? prev.openTabs.filter((tab) => tab.type === "game")
           : [];
-        const preservedTabIds = new Set(preservedGameTabs.map((tab) => tab.id));
-        const mergedGameTabs = [
-          ...preservedGameTabs,
-          ...gameTabs.filter((tab) => !preservedTabIds.has(tab.id)),
-        ];
+        const mergedGameTabs = options?.preserveOpenGameTabs
+          ? preservedGameTabs
+          : gamesList.map(createGameTab);
         
         return {
           ...prev,
