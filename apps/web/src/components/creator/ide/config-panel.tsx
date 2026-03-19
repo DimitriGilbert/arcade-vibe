@@ -355,20 +355,22 @@ export function ConfigPanel({
                         <Plus className="h-3 w-3" />
                         Add model
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvancedOptions((current) => !current)}
-                        className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                        disabled={modelsLoading}
-                      >
-                        <SlidersHorizontal className="h-3 w-3" />
-                        Advanced
-                        {showAdvancedOptions ? (
-                          <ChevronUp className="h-3 w-3" />
-                        ) : (
-                          <ChevronDown className="h-3 w-3" />
-                        )}
-                      </button>
+                      {showModelSelector && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvancedOptions((current) => !current)}
+                          className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                          disabled={modelsLoading}
+                        >
+                          <SlidersHorizontal className="h-3 w-3" />
+                          Advanced
+                          {showAdvancedOptions ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </button>
+                      )}
                     </div>
 
                     {showModelSelector && (
@@ -381,7 +383,7 @@ export function ConfigPanel({
                       </div>
                     )}
 
-                    {apiKeyOptions.length === 1 && showModelSelector && (
+                    {showModelSelector && showAdvancedOptions && apiKeyOptions.length === 1 && (
                       <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
                         <Key className="h-3 w-3" />
                         <span>Add API keys in Settings for BYOK</span>

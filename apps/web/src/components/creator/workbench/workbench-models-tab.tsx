@@ -329,7 +329,7 @@ export function WorkbenchModelsTab({
 
         <Form key={formKey} className="space-y-3" />
 
-        {apiKeys.length === 0 && (
+        {showFilters && apiKeys.length === 0 && (
           <div className="flex items-center gap-1.5 text-[10px] text-[var(--muted-foreground)] mt-2">
             <Key className="h-3 w-3" />
             <span>Add API keys in Settings for BYOK</span>

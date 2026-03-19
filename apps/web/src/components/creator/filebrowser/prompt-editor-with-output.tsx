@@ -347,16 +347,18 @@ export function PromptEditorWithOutput({
                   Add model
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                disabled={modelsLoading}
-              >
-                <Filter className="h-3 w-3" />
-                {showFilters ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <span>Filters</span>
-              </button>
+              {showModelSelector && (
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  disabled={modelsLoading}
+                >
+                  <Filter className="h-3 w-3" />
+                  {showFilters ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <span>Filters</span>
+                </button>
+              )}
             </div>
 
             {showModelSelector && (
@@ -369,7 +371,7 @@ export function PromptEditorWithOutput({
               </div>
             )}
 
-            {apiKeyOptions.length === 1 && showModelSelector && (
+            {showModelSelector && showFilters && apiKeyOptions.length === 1 && (
               <div className="flex items-center gap-1 mt-1 text-xs text-[var(--muted-foreground)]">
                 <Key className="h-3 w-3" />
                 <span>Add API keys in Settings for BYOK</span>

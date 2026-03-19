@@ -238,7 +238,7 @@ export function PromptEditor({
               )}
             </div>
 
-            {apiKeyOptions.length === 0 && (
+            {showFilters && apiKeyOptions.length === 0 && (
               <div className="flex items-center gap-1 mt-1 text-xs text-[var(--muted-foreground)]">
                 <Key className="h-3 w-3" />
                 <span>Add API keys in Settings for BYOK</span>

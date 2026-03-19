@@ -287,7 +287,7 @@ export function ModelSelector({
 
       <Form key={formKey} className="space-y-4" />
 
-      {apiKeys.length === 0 && (
+      {showFilters && apiKeys.length === 0 && (
         <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
           <Key className="h-3 w-3" />
           <span>Add API keys in Settings for BYOK</span>
