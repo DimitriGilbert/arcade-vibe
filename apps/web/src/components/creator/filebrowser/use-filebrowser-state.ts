@@ -84,7 +84,6 @@ export interface UseFilebrowserStateReturn {
   expandedPrompts: string[];
   activeOutputTab: string | null;
   setActiveOutputTab: (id: string | null) => void;
-  titleEditTrigger: number;
 
   // Queries
   themes: ThemeNode[] | undefined;
@@ -160,7 +159,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
   const [deletingPromptId, setDeletingPromptId] = useState<string | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
-  const [titleEditTrigger, setTitleEditTrigger] = useState(0);
+  const effectiveActiveOutputTab = activeOutputTab ?? selectedModels[0]?.id ?? null;
 
   // Game action states
   const [submittingGameId, setSubmittingGameId] = useState<string | null>(null);
@@ -176,7 +175,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
   const removeGeneration = useGenerationsStore((state) => state.removeGeneration);
   const clearGenerations = useGenerationsStore((state) => state.clearGenerations);
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
-  const activeGameId = useGenerationGameId(activeOutputTab);
+  const activeGameId = useGenerationGameId(effectiveActiveOutputTab);
   const completedCount = useCompletedCount();
 
   const discoveryDialog = useDiscoveryDialog();
@@ -385,14 +384,6 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
       clearPersistedState();
     }
   }, [selectedPromptId, urlPromptId, urlForkId]);
-
-  // Auto-select first output tab when models change
-  useEffect(() => {
-    const firstModel = selectedModels[0];
-    if (firstModel && !activeOutputTab) {
-      setActiveOutputTab(firstModel.id);
-    }
-  }, [selectedModels, activeOutputTab]);
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
@@ -784,8 +775,6 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     setSelectedModels([]);
     clearGenerations();
     setActiveOutputTab(null);
-    // Trigger title editing mode
-    setTitleEditTrigger((prev) => prev + 1);
   }, [clearGenerations]);
 
   // Select prompt handler
@@ -903,9 +892,8 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     expandedThemes,
     setExpandedThemes,
     expandedPrompts,
-    activeOutputTab,
+    activeOutputTab: effectiveActiveOutputTab,
     setActiveOutputTab,
-    titleEditTrigger,
 
     // Queries
     themes,

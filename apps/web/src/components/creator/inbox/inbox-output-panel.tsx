@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, AlertCircle, Loader2 } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
@@ -9,6 +9,7 @@ import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection } from "./inbox-types";
 import type { GameListItem } from "@/lib/trpc-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
+import { useAutoScroll } from "@/hooks/creator/use-auto-scroll";
 import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
 interface EmptyStateCardProps {
@@ -43,9 +44,6 @@ export function InboxOutputPanel({
   selectedGameFromHistory,
 }: InboxOutputPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const userScrollIntentRef = useRef(false);
-  const isAutoScrollingRef = useRef(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const generation = useGenerationById(activeOutputTab);
   const hasMultipleModels = selectedModels.length > 1;
@@ -87,86 +85,12 @@ export function InboxOutputPanel({
     : generation?.reasoning;
   const isViewingHistory = !!selectedGameFromHistory;
   const isLoadingCode = isLoadingHistorical || (isComplete && !hasCodeInMemory && isLoadingCompleted);
-
-  const getScrollElement = useCallback((): HTMLElement | null => {
-    const root = panelRef.current;
-    if (!root) return null;
-    const scroller = root.querySelector(".streaming-code-viewer__scroll");
-    return scroller instanceof HTMLElement ? scroller : null;
-  }, []);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    const markUserScrollIntent = () => {
-      userScrollIntentRef.current = true;
-    };
-
-    const onScroll = () => {
-      const isNearBottom =
-        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrollingRef.current && userScrollIntentRef.current && !isNearBottom) {
-        isAutoScrollingRef.current = false;
-      }
-      setShowScrollButton(!isNearBottom);
-      if (isNearBottom) {
-        userScrollIntentRef.current = false;
-      }
-    };
-
-    scroller.addEventListener("wheel", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("touchstart", markUserScrollIntent, {
-      passive: true,
-    });
-    scroller.addEventListener("mousedown", markUserScrollIntent);
-    scroller.addEventListener("scroll", onScroll);
-    return () => {
-      scroller.removeEventListener("wheel", markUserScrollIntent);
-      scroller.removeEventListener("touchstart", markUserScrollIntent);
-      scroller.removeEventListener("mousedown", markUserScrollIntent);
-      scroller.removeEventListener("scroll", onScroll);
-    };
-  }, [getScrollElement]);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-    scroller.scrollLeft = 0;
-  }, [activeOutputTab, getScrollElement]);
-
-  useEffect(() => {
-    if (isStreaming) {
-      isAutoScrollingRef.current = true;
-      setShowScrollButton(false);
-    }
-  }, [isStreaming]);
-
-  useEffect(() => {
-    if (!isStreaming) return;
-    if (!isAutoScrollingRef.current) return;
-
-    const frameId = requestAnimationFrame(() => {
-      const scroller = getScrollElement();
-      if (scroller && isAutoScrollingRef.current) {
-        scroller.scrollTop = scroller.scrollHeight;
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [isStreaming, codeLength, reasoningLength, getScrollElement]);
-
-  const scrollToBottom = () => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
-    userScrollIntentRef.current = false;
-    isAutoScrollingRef.current = true;
-    setShowScrollButton(false);
-  };
+  const { showScrollButton, scrollToBottom } = useAutoScroll(panelRef, isStreaming, {
+    resetKeys: [activeOutputTab],
+    resetHorizontalOnChange: true,
+    scrollWhileStreamingDeps: [codeLength, reasoningLength],
+    useAnimationFrame: true,
+  });
 
   if (selectedGameFromHistory) {
     return (

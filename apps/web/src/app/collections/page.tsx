@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -29,32 +29,32 @@ export default function CollectionsPage() {
     enabled: Boolean(session?.user),
   });
 
-  useEffect(() => {
-    if (!collections || collections.length === 0) return;
-    if (selectedCollectionId) return;
-    setSelectedCollectionId(collections[0]?.id ?? null);
-  }, [collections, selectedCollectionId]);
+  const effectiveSelectedCollectionId = selectedCollectionId ?? collections?.[0]?.id ?? null;
 
   const {
     data: selectedCollection,
     isLoading: isLoadingSelectedCollection,
   } = useQuery({
-    queryKey: ["collections", "by-id", selectedCollectionId],
+    queryKey: ["collections", "by-id", effectiveSelectedCollectionId],
     queryFn: async () => {
-      if (!selectedCollectionId) {
+      if (!effectiveSelectedCollectionId) {
         return null;
       }
-      return await trpcClient.collections.getById.query({ id: selectedCollectionId });
+      return await trpcClient.collections.getById.query({
+        id: effectiveSelectedCollectionId,
+      });
     },
-    enabled: Boolean(session?.user && selectedCollectionId),
+    enabled: Boolean(session?.user && effectiveSelectedCollectionId),
   });
 
   const selectedCollectionMeta = useMemo(() => {
-    if (!collections || !selectedCollectionId) {
+    if (!collections || !effectiveSelectedCollectionId) {
       return null;
     }
-    return collections.find((collection) => collection.id === selectedCollectionId) ?? null;
-  }, [collections, selectedCollectionId]);
+    return (
+      collections.find((collection) => collection.id === effectiveSelectedCollectionId) ?? null
+    );
+  }, [collections, effectiveSelectedCollectionId]);
 
   if (isSessionPending) {
     return (
@@ -107,7 +107,7 @@ export default function CollectionsPage() {
               ) : (
                 <div className="space-y-2">
                   {collections.map((collection) => {
-                    const isSelected = selectedCollectionId === collection.id;
+                    const isSelected = effectiveSelectedCollectionId === collection.id;
                     return (
                       <button
                         key={collection.id}
@@ -141,7 +141,7 @@ export default function CollectionsPage() {
             </div>
 
             <div className="rounded-[var(--radius)] border border-[var(--border)] p-4 min-h-96">
-              {!selectedCollectionId ? (
+              {!effectiveSelectedCollectionId ? (
                 <div className="h-full flex items-center justify-center">
                   <EmptyState
                     title="Pick a collection"

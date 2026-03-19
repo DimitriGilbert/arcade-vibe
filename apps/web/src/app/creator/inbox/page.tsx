@@ -23,7 +23,12 @@ import {
   toModelConfig,
   MAX_MODELS,
 } from "@/components/creator/inbox";
-import { DiscoveryDialog, useDiscoveryDialog, EditableTitle } from "@/components/creator/shared";
+import {
+  DiscoveryDialog,
+  useDiscoveryDialog,
+  EditableTitle,
+  type EditableTitleHandle,
+} from "@/components/creator/shared";
 import {
   useGenerationsStore,
   useGenerationGameId,
@@ -109,7 +114,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const [selectedGameFromHistory, setSelectedGameFromHistory] = useState<GameListItem | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [isViewingOldVersion, setIsViewingOldVersion] = useState(false);
-  const [titleEditTrigger, setTitleEditTrigger] = useState(0);
+  const editableTitleRef = useRef<EditableTitleHandle>(null);
 
   // Generations store hooks
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -120,7 +125,8 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
   const removeGeneration = useGenerationsStore((state) => state.removeGeneration);
   const clearGenerations = useGenerationsStore((state) => state.clearGenerations);
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
-  const activeGameId = useGenerationGameId(activeOutputTab);
+  const effectiveActiveOutputTab = activeOutputTab ?? selectedModels[0]?.id ?? null;
+  const activeGameId = useGenerationGameId(effectiveActiveOutputTab);
   const completedCount = useCompletedCount();
 
   const discoveryDialog = useDiscoveryDialog();
@@ -179,14 +185,19 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     },
     enabled: !!(resolvedSearchParams?.promptId || resolvedSearchParams?.forkId),
   });
+  const effectiveSelectedThemeId =
+    selectedTheme ||
+    existingPrompt?.themeId ||
+    currentTheme?.id ||
+    "";
 
   // Fetch prompts for sidebar
   const { data: myPrompts, isLoading: promptsLoading } = useQuery({
-    queryKey: ["prompts-by-theme", selectedTheme],
+    queryKey: ["prompts-by-theme", effectiveSelectedThemeId],
     queryFn: async () => {
-      if (selectedTheme) {
+      if (effectiveSelectedThemeId) {
         return await trpcClient.prompts.listMineByTheme.query({
-          themeId: selectedTheme,
+          themeId: effectiveSelectedThemeId,
         });
       }
       return await trpcClient.prompts.listMine.query();
@@ -227,13 +238,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     }
   }, [existingPrompt, promptContent]);
 
-  // Auto-select current theme on initial load
-  useEffect(() => {
-    if (currentTheme && !selectedTheme && !existingPrompt) {
-      setSelectedTheme(currentTheme.id);
-    }
-  }, [currentTheme, selectedTheme, existingPrompt]);
-
   // Persist editor state to localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -264,14 +268,6 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       clearPersistedState();
     }
   }, [existingPrompt]);
-
-  // Auto-select first output tab when generations start
-  useEffect(() => {
-    const firstModel = selectedModels[0];
-    if (firstModel && !activeOutputTab) {
-      setActiveOutputTab(firstModel.id);
-    }
-  }, [selectedModels, activeOutputTab]);
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
@@ -433,7 +429,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       toast.error("Please enter prompt content");
       return;
     }
-    if (!existingPrompt && !selectedTheme) {
+    if (!effectiveSelectedThemeId) {
       toast.error("Please select a theme");
       return;
     }
@@ -443,7 +439,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       return;
     }
 
-    const currentThemeId = existingPrompt?.themeId || selectedTheme;
+    const currentThemeId = effectiveSelectedThemeId;
     if (!currentThemeId) {
       toast.error("Theme not found");
       return;
@@ -473,7 +469,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       let promptId = existingPrompt?.id ?? selectedPromptId;
       if (!promptId) {
         const result = await createPromptMutation.mutateAsync({
-          themeId: selectedTheme,
+          themeId: effectiveSelectedThemeId,
           content: promptContent,
         });
         promptId = result.promptId;
@@ -587,7 +583,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     promptTitle,
     gameName,
     existingPrompt,
-    selectedTheme,
+    effectiveSelectedThemeId,
     selectedModels,
     createPromptMutation,
     selectedPromptId,
@@ -606,7 +602,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       toast.error("Title must be at least 3 characters");
       return;
     }
-    if (!selectedTheme) {
+    if (!effectiveSelectedThemeId) {
       toast.error("Please select a theme");
       return;
     }
@@ -617,7 +613,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
 
     if (isViewingOldVersion) {
       createPromptMutation.mutate({
-        themeId: selectedTheme,
+        themeId: effectiveSelectedThemeId,
         content: promptContent,
       });
       setIsViewingOldVersion(false);
@@ -632,13 +628,13 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       });
     } else {
       createPromptMutation.mutate({
-        themeId: selectedTheme,
+        themeId: effectiveSelectedThemeId,
         content: promptContent,
       });
     }
   }, [
     promptTitle,
-    selectedTheme,
+    effectiveSelectedThemeId,
     promptContent,
     existingPrompt,
     selectedPromptId,
@@ -690,8 +686,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
     setActiveOutputTab(null);
     setSelectedGameFromHistory(null);
     setRightSidebarCollapsed(true);
-    // Trigger title editing mode
-    setTitleEditTrigger((prev) => prev + 1);
+    editableTitleRef.current?.startEditing("");
   }, [clearGenerations]);
 
   const handleSelectVersion = useCallback(
@@ -728,11 +723,11 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       <header className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--card)]">
         <div className="flex items-center gap-3">
           <EditableTitle
+            ref={editableTitleRef}
             value={promptTitle}
             onChange={setPromptTitle}
             placeholder="Prompt title..."
             disabled={isGenerating}
-            startEditingTrigger={titleEditTrigger}
           />
           <ArcadeButton
             variant="outline"
@@ -815,7 +810,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
       <div className="flex-1 min-h-0 flex">
         {/* Left Sidebar - Theme/Prompts - Collapsible */}
         <InboxSidebar
-          selectedTheme={selectedTheme}
+          selectedTheme={effectiveSelectedThemeId}
           onSelectTheme={(themeId) => {
             setSelectedTheme(themeId);
             // Clear prompt-related state when theme changes
@@ -873,7 +868,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
                 models={selectedModels}
                 onRemoveModel={handleRemoveModel}
                 onAddModelClick={() => setShowModelSelector(!showModelSelector)}
-                activeModelId={activeOutputTab}
+                activeModelId={effectiveActiveOutputTab}
                 onModelClick={setActiveOutputTab}
                 disabled={isGenerating}
                 isExpanded={showModelSelector}
@@ -1021,7 +1016,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
               </div>
               <div className="flex-1 min-h-0 p-2">
                 <InboxOutputPanel
-                  activeOutputTab={activeOutputTab}
+                  activeOutputTab={effectiveActiveOutputTab}
                   selectedModels={selectedModels}
                   onOutputTabChange={setActiveOutputTab}
                   selectedGameFromHistory={selectedGameFromHistory}

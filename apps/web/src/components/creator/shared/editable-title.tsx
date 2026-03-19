@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { forwardRef, useState, useCallback, useEffect, useRef, useImperativeHandle } from "react";
 import { Pencil, Check, X } from "lucide-react";
+
+export interface EditableTitleHandle {
+  startEditing: (nextValue?: string) => void;
+}
 
 interface EditableTitleProps {
   value: string;
@@ -10,26 +14,25 @@ interface EditableTitleProps {
   disabled?: boolean;
   className?: string;
   maxWidth?: string;
-  /** External trigger to start editing - increment this value to trigger edit mode */
-  startEditingTrigger?: number;
 }
 
-export function EditableTitle({
+export const EditableTitle = forwardRef<EditableTitleHandle, EditableTitleProps>(function EditableTitle({
   value,
   onChange,
   placeholder = "Untitled",
   disabled = false,
   className = "",
   maxWidth = "max-w-[180px]",
-  startEditingTrigger = 0,
-}: EditableTitleProps) {
+}, ref) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setEditValue(value);
-  }, [value]);
+    if (!isEditing) {
+      setEditValue(value);
+    }
+  }, [value, isEditing]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -38,19 +41,19 @@ export function EditableTitle({
     }
   }, [isEditing]);
 
-  // External trigger to start editing
-  useEffect(() => {
-    if (startEditingTrigger > 0 && !disabled) {
-      setEditValue(value);
-      setIsEditing(true);
-    }
-  }, [startEditingTrigger, disabled, value]);
-
   const handleStartEdit = useCallback(() => {
     if (disabled) return;
     setEditValue(value);
     setIsEditing(true);
   }, [value, disabled]);
+
+  useImperativeHandle(ref, () => ({
+    startEditing: (nextValue?: string) => {
+      if (disabled) return;
+      setEditValue(nextValue ?? value);
+      setIsEditing(true);
+    },
+  }), [disabled, value]);
 
   const handleSaveEdit = useCallback(() => {
     onChange(editValue.trim());
@@ -115,4 +118,4 @@ export function EditableTitle({
       <Pencil className="h-3 w-3 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
     </button>
   );
-}
+});

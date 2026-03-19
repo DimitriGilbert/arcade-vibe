@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, Loader2, Send, EyeOff, Trash2, Globe, Play } from "lucide-react";
 import { ArcadeButton, ArcadeBadge } from "@/components/arcade";
@@ -8,6 +8,7 @@ import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
+import { useAutoScroll } from "@/hooks/creator/use-auto-scroll";
 import type { RunNode } from "./types";
 import { ModelOutputTab, OutputStatusCard, WaitingState } from "@/components/creator/shared";
 import { GameActionsDropdown } from "@/components/creator/shared";
@@ -69,9 +70,6 @@ export function OutputViewer({
   deletingGameId,
 }: OutputViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const userScrollIntentRef = useRef(false);
-  const isAutoScrollingRef = useRef(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [gameToDelete, setGameToDelete] = useState<RunNode | null>(null);
 
@@ -84,6 +82,12 @@ export function OutputViewer({
   const hasCodeInMemory = !!generation?.code;
   const codeLength = generation?.code.length ?? 0;
   const reasoningLength = generation?.reasoning?.length ?? 0;
+  const { showScrollButton, scrollToBottom } = useAutoScroll(panelRef, isStreaming, {
+    resetKeys: [activeOutputTab],
+    resetHorizontalOnChange: true,
+    scrollWhileStreamingDeps: [codeLength, reasoningLength],
+    useAnimationFrame: true,
+  });
 
   // Fetch raw code for completed generations that don't have code in memory
   const { data: completedGameCode, isLoading: isLoadingCompleted } = useQuery({
@@ -104,84 +108,6 @@ export function OutputViewer({
     ? undefined
     : generation?.reasoning;
   const isLoadingCode = isComplete && !hasCodeInMemory && isLoadingCompleted;
-
-  const getScrollElement = useCallback((): HTMLElement | null => {
-    const root = panelRef.current;
-    if (!root) return null;
-    const scroller = root.querySelector(".streaming-code-viewer__scroll");
-    return scroller instanceof HTMLElement ? scroller : null;
-  }, []);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    const markUserScrollIntent = () => {
-      userScrollIntentRef.current = true;
-    };
-
-    const onScroll = () => {
-      const isNearBottom =
-        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrollingRef.current && userScrollIntentRef.current && !isNearBottom) {
-        isAutoScrollingRef.current = false;
-      }
-      setShowScrollButton(!isNearBottom);
-      if (isNearBottom) {
-        userScrollIntentRef.current = false;
-      }
-    };
-
-    scroller.addEventListener("wheel", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("touchstart", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("mousedown", markUserScrollIntent);
-    scroller.addEventListener("scroll", onScroll);
-    return () => {
-      scroller.removeEventListener("wheel", markUserScrollIntent);
-      scroller.removeEventListener("touchstart", markUserScrollIntent);
-      scroller.removeEventListener("mousedown", markUserScrollIntent);
-      scroller.removeEventListener("scroll", onScroll);
-    };
-  }, [getScrollElement]);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-    scroller.scrollLeft = 0;
-  }, [activeOutputTab, getScrollElement]);
-
-  useEffect(() => {
-    if (isStreaming) {
-      isAutoScrollingRef.current = true;
-      setShowScrollButton(false);
-    }
-  }, [isStreaming]);
-
-  useEffect(() => {
-    if (!isStreaming) return;
-    if (!isAutoScrollingRef.current) return;
-
-    const frameId = requestAnimationFrame(() => {
-      const scroller = getScrollElement();
-      if (scroller && isAutoScrollingRef.current) {
-        scroller.scrollTop = scroller.scrollHeight;
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [isStreaming, codeLength, reasoningLength, getScrollElement]);
-
-  const scrollToBottom = () => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
-    userScrollIntentRef.current = false;
-    isAutoScrollingRef.current = true;
-    setShowScrollButton(false);
-  };
 
   // Fetch raw code for selected run from history
   const { data: historicalRunCode, isLoading: isLoadingHistoricalRun } = useQuery({

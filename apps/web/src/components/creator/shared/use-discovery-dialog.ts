@@ -10,9 +10,11 @@ interface UseDiscoveryDialogOptions {
 export function useDiscoveryDialog(options: UseDiscoveryDialogOptions = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [excludeGameIds, setExcludeGameIds] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
 
   const open = useCallback((gameIdsToExclude: string[] = []) => {
     setExcludeGameIds(gameIdsToExclude);
+    setPage(0);
     setIsOpen(true);
     options.onOpen?.();
   }, [options]);
@@ -33,6 +35,7 @@ export function useDiscoveryDialog(options: UseDiscoveryDialogOptions = {}) {
   return {
     isOpen,
     excludeGameIds,
+    page,
     open,
     close,
     toggle,
@@ -40,6 +43,9 @@ export function useDiscoveryDialog(options: UseDiscoveryDialogOptions = {}) {
       open: isOpen,
       onOpenChange: setIsOpen,
       excludeGameIds,
+      page,
+      onNextPage: () => setPage((currentPage) => currentPage + 1),
+      onPreviousPage: () => setPage((currentPage) => Math.max(0, currentPage - 1)),
     },
   };
 }

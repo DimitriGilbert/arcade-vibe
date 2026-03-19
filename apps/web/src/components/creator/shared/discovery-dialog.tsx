@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Trophy, TrendingUp, Sparkles, ChevronLeft, ChevronRight, Loader2, Gamepad2 } from "lucide-react";
 import {
@@ -31,6 +31,9 @@ interface DiscoveryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   excludeGameIds?: string[];
+  page: number;
+  onNextPage: () => void;
+  onPreviousPage: () => void;
 }
 
 function DiscoveryGameCard({ game, category }: { game: DiscoveryGame; category: "top" | "trending" | "new" }) {
@@ -83,9 +86,14 @@ function DiscoveryGameCard({ game, category }: { game: DiscoveryGame; category: 
   );
 }
 
-export function DiscoveryDialog({ open, onOpenChange, excludeGameIds = [] }: DiscoveryDialogProps) {
-  const [page, setPage] = useState(0);
-
+export function DiscoveryDialog({
+  open,
+  onOpenChange,
+  excludeGameIds = [],
+  page,
+  onNextPage,
+  onPreviousPage,
+}: DiscoveryDialogProps) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["discovery-games", page, excludeGameIds],
     queryFn: () => trpcClient.games.getDiscoveryGames.query({ page, excludeGameIds }),
@@ -93,19 +101,13 @@ export function DiscoveryDialog({ open, onOpenChange, excludeGameIds = [] }: Dis
     staleTime: 60 * 1000,
   });
 
-  useEffect(() => {
-    if (open) {
-      setPage(0);
-    }
-  }, [open]);
-
   const handleNext = useCallback(() => {
-    setPage((p) => p + 1);
-  }, []);
+    onNextPage();
+  }, [onNextPage]);
 
   const handlePrev = useCallback(() => {
-    setPage((p) => Math.max(0, p - 1));
-  }, []);
+    onPreviousPage();
+  }, [onPreviousPage]);
 
   const hasGames = data && (data.top.length > 0 || data.trending.length > 0 || data.new.length > 0);
 

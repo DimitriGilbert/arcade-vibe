@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trpcClient } from "@/utils/trpc";
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
@@ -29,6 +29,7 @@ import {
   useAllGenerations,
   useGenerationsStore,
 } from "@/stores/generations-store";
+import { useAutoScroll } from "@/hooks/creator/use-auto-scroll";
 import { OutputStatusCard, WaitingState } from "@/components/creator/shared";
 
 interface WorkbenchHistoryTabProps {
@@ -130,9 +131,6 @@ export function WorkbenchHistoryTab({
 
   // Output panel scroll state
   const panelRef = useRef<HTMLDivElement>(null);
-  const userScrollIntentRef = useRef(false);
-  const isAutoScrollingRef = useRef(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Get current generation state - need to look up by gameId for completed generations
   const generation = useGenerationById(activeOutputTab);
@@ -145,8 +143,7 @@ export function WorkbenchHistoryTab({
   const currentModel = selectedModels.find((model) => model.id === activeOutputTab);
   const isStreaming =
     activeGeneration?.status === "reasoning" || activeGeneration?.status === "generating";
-  const codeLength = activeGeneration?.code.length ?? 0;
-  const reasoningLength = activeGeneration?.reasoning?.length ?? 0;
+  const { showScrollButton, scrollToBottom } = useAutoScroll(panelRef, isStreaming);
 
   // Get all running generations
   const allGenerations = useAllGenerations();
@@ -259,79 +256,6 @@ export function WorkbenchHistoryTab({
 
   const handleUnpublish = (gameId: string) => {
     unpublishMutation.mutate(gameId);
-  };
-
-  // Scroll handling for output
-  const getScrollElement = useCallback((): HTMLElement | null => {
-    const root = panelRef.current;
-    if (!root) return null;
-    const scroller = root.querySelector(".streaming-code-viewer__scroll");
-    return scroller instanceof HTMLElement ? scroller : null;
-  }, []);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    const markUserScrollIntent = () => {
-      userScrollIntentRef.current = true;
-    };
-
-    const onScroll = () => {
-      const isNearBottom =
-        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrollingRef.current && userScrollIntentRef.current && !isNearBottom) {
-        isAutoScrollingRef.current = false;
-      }
-      setShowScrollButton(!isNearBottom);
-      if (isNearBottom) {
-        userScrollIntentRef.current = false;
-      }
-    };
-
-    scroller.addEventListener("wheel", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("touchstart", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("mousedown", markUserScrollIntent);
-    scroller.addEventListener("scroll", onScroll);
-    return () => {
-      scroller.removeEventListener("wheel", markUserScrollIntent);
-      scroller.removeEventListener("touchstart", markUserScrollIntent);
-      scroller.removeEventListener("mousedown", markUserScrollIntent);
-      scroller.removeEventListener("scroll", onScroll);
-    };
-  }, [getScrollElement]);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-    scroller.scrollLeft = 0;
-  }, [getScrollElement]);
-
-  useEffect(() => {
-    if (isStreaming) {
-      isAutoScrollingRef.current = true;
-      setShowScrollButton(false);
-    }
-  }, [isStreaming]);
-
-  useEffect(() => {
-    if (!isStreaming) return;
-    if (!isAutoScrollingRef.current) return;
-
-    const scroller = getScrollElement();
-    if (scroller && isAutoScrollingRef.current) {
-      scroller.scrollTop = scroller.scrollHeight;
-    }
-  }, [isStreaming, getScrollElement]);
-
-  const scrollToBottom = () => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
-    userScrollIntentRef.current = false;
-    isAutoScrollingRef.current = true;
-    setShowScrollButton(false);
   };
 
   return (

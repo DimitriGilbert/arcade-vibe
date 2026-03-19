@@ -1,5 +1,6 @@
 export { DiscoveryDialog } from "./discovery-dialog";
 export { EditableTitle } from "./editable-title";
+export type { EditableTitleHandle } from "./editable-title";
 export { useDiscoveryDialog } from "./use-discovery-dialog";
 export { GameActionsDropdown } from "./game-actions-dropdown";
 export { ModelChip } from "./model-chip";

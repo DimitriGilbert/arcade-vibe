@@ -7,12 +7,26 @@ export interface UseAutoScrollReturn {
   scrollToBottom: () => void;
 }
 
+interface UseAutoScrollOptions {
+  resetKeys?: readonly unknown[];
+  scrollWhileStreamingDeps?: readonly unknown[];
+  resetHorizontalOnChange?: boolean;
+  useAnimationFrame?: boolean;
+}
+
 const SCROLL_THRESHOLD = 32;
 
 export function useAutoScroll(
   ref: RefObject<HTMLElement | null>,
-  isStreaming: boolean
+  isStreaming: boolean,
+  options: UseAutoScrollOptions = {},
 ): UseAutoScrollReturn {
+  const {
+    resetKeys = [],
+    scrollWhileStreamingDeps = [],
+    resetHorizontalOnChange = false,
+    useAnimationFrame = false,
+  } = options;
   const userScrollIntentRef = useRef(false);
   const isAutoScrollingRef = useRef(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -64,14 +78,36 @@ export function useAutoScroll(
   }, [isStreaming]);
 
   useEffect(() => {
+    if (!resetHorizontalOnChange) return;
+
+    const scroller = getScrollElement();
+    if (!scroller) return;
+
+    scroller.scrollLeft = 0;
+  }, [getScrollElement, resetHorizontalOnChange, ...resetKeys]);
+
+  useEffect(() => {
     if (!isStreaming) return;
     if (!isAutoScrollingRef.current) return;
 
     const scroller = getScrollElement();
-    if (scroller) {
+    if (!scroller) return;
+
+    if (!useAnimationFrame) {
       scroller.scrollTop = scroller.scrollHeight;
+      return;
     }
-  }, [isStreaming, getScrollElement]);
+
+    const frameId = requestAnimationFrame(() => {
+      if (isAutoScrollingRef.current) {
+        scroller.scrollTop = scroller.scrollHeight;
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [isStreaming, getScrollElement, useAnimationFrame, ...scrollWhileStreamingDeps]);
 
   const scrollToBottom = useCallback(() => {
     const scroller = getScrollElement();

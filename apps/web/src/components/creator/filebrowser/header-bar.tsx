@@ -1,8 +1,9 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { Loader2, Save, Play, Plus, ExternalLink, ChevronRight } from "lucide-react";
 import { ArcadeButton } from "@/components/arcade";
-import { EditableTitle } from "@/components/creator/shared";
+import { EditableTitle, type EditableTitleHandle } from "@/components/creator/shared";
 import type { ThemeNode, PromptNode, RunNode, FilebrowserSelection } from "./types";
 
 interface HeaderBarProps {
@@ -24,7 +25,6 @@ interface HeaderBarProps {
   onGenerate: () => void;
   onPlayGame: () => void;
   onHome: () => void;
-  titleEditTrigger?: number;
 }
 
 export function HeaderBar({
@@ -46,8 +46,8 @@ export function HeaderBar({
   onGenerate,
   onPlayGame,
   onHome,
-  titleEditTrigger = 0,
 }: HeaderBarProps) {
+  const editableTitleRef = useRef<EditableTitleHandle>(null);
   const theme = themes?.find((t) => t.id === selection.themeId);
   const prompt = prompts?.find((p) => p.id === selection.promptId);
   const run = runs?.find((r) => r.id === selection.runId);
@@ -79,6 +79,11 @@ export function HeaderBar({
   const breadcrumbs = getBreadcrumbs();
 
   const isEditingPrompt = selection.type === "theme" || selection.type === "prompt" || selection.type === "new-prompt";
+
+  const handleNewPromptClick = useCallback(() => {
+    onNewPrompt();
+    editableTitleRef.current?.startEditing("");
+  }, [onNewPrompt]);
 
   return (
     <header className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--card)] shrink-0">
@@ -117,11 +122,11 @@ export function HeaderBar({
         {/* Title (EditableTitle) - only when editing prompt */}
         {isEditingPrompt && (
           <EditableTitle
+            ref={editableTitleRef}
             value={promptTitle}
             onChange={onPromptTitleChange}
             placeholder="Prompt title"
             disabled={isGenerating}
-            startEditingTrigger={titleEditTrigger}
           />
         )}
 
@@ -130,7 +135,7 @@ export function HeaderBar({
           <ArcadeButton
             variant="outline"
             size="sm"
-            onClick={onNewPrompt}
+            onClick={handleNewPromptClick}
           >
             <Plus className="h-3 w-3" />
             New

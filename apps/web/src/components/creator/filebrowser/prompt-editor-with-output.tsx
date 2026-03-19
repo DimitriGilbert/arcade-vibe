@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Editor from "@monaco-editor/react";
 import { useFormedible } from "@/hooks/use-formedible";
@@ -12,6 +12,7 @@ import { trpcClient } from "@/utils/trpc";
 import type { ModelSelection, GenerationStatus } from "@/lib/model-types";
 import { MAX_MODELS } from "@/lib/model-types";
 import { useGenerationById, useGenerationStatus } from "@/stores/generations-store";
+import { useAutoScroll } from "@/hooks/creator/use-auto-scroll";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import type { Visibility } from "@/lib/trpc-types";
 import { ModelChip, ModelOutputTab, OutputStatusCard, WaitingState, VersionComparisonDialog } from "@/components/creator/shared";
@@ -92,15 +93,11 @@ export function PromptEditorWithOutput({
   const idCounterRef = useRef(0);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  const userScrollIntentRef = useRef(false);
-  const isAutoScrollingRef = useRef(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const generation = useGenerationById(activeOutputTab);
   const currentModel = selectedModels.find((m) => m.id === activeOutputTab);
   const isStreaming = generation?.status === "reasoning" || generation?.status === "generating";
-  const codeLength = generation?.code.length ?? 0;
-  const reasoningLength = generation?.reasoning?.length ?? 0;
+  const { showScrollButton, scrollToBottom } = useAutoScroll(panelRef, isStreaming);
 
   const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
     queryKey: ["modelMetadata"],
@@ -271,71 +268,6 @@ export function PromptEditorWithOutput({
       },
     },
   });
-
-  const getScrollElement = useCallback((): HTMLElement | null => {
-    const root = panelRef.current;
-    if (!root) return null;
-    const scroller = root.querySelector(".streaming-code-viewer__scroll");
-    return scroller instanceof HTMLElement ? scroller : null;
-  }, []);
-
-  useEffect(() => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-
-    const markUserScrollIntent = () => {
-      userScrollIntentRef.current = true;
-    };
-
-    const onScroll = () => {
-      const isNearBottom =
-        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 32;
-      if (isAutoScrollingRef.current && userScrollIntentRef.current && !isNearBottom) {
-        isAutoScrollingRef.current = false;
-      }
-      setShowScrollButton(!isNearBottom);
-      if (isNearBottom) {
-        userScrollIntentRef.current = false;
-      }
-    };
-
-    scroller.addEventListener("wheel", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("touchstart", markUserScrollIntent, { passive: true });
-    scroller.addEventListener("mousedown", markUserScrollIntent);
-    scroller.addEventListener("scroll", onScroll);
-    return () => {
-      scroller.removeEventListener("wheel", markUserScrollIntent);
-      scroller.removeEventListener("touchstart", markUserScrollIntent);
-      scroller.removeEventListener("mousedown", markUserScrollIntent);
-      scroller.removeEventListener("scroll", onScroll);
-    };
-  }, [getScrollElement]);
-
-  useEffect(() => {
-    if (isStreaming) {
-      isAutoScrollingRef.current = true;
-      setShowScrollButton(false);
-    }
-  }, [isStreaming]);
-
-  useEffect(() => {
-    if (!isStreaming) return;
-    if (!isAutoScrollingRef.current) return;
-
-    const scroller = getScrollElement();
-    if (scroller) {
-      scroller.scrollTop = scroller.scrollHeight;
-    }
-  }, [isStreaming, getScrollElement]);
-
-  const scrollToBottom = () => {
-    const scroller = getScrollElement();
-    if (!scroller) return;
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
-    userScrollIntentRef.current = false;
-    isAutoScrollingRef.current = true;
-    setShowScrollButton(false);
-  };
 
   const totalCredits = selectedModels.reduce((sum, m) => sum + m.creditCost, 0);
   const hasOutput = generation?.code || generation?.reasoning;

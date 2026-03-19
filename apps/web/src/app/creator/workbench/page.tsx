@@ -111,6 +111,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   const [gameName, setGameName] = useState("");
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("models");
   const [activeOutputTab, setActiveOutputTab] = useState<string | null>(null);
+  const effectiveActiveOutputTab = activeOutputTab ?? selectedModels[0]?.id ?? null;
 
   // Use Zustand store for generations
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
@@ -121,7 +122,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   const removeGeneration = useGenerationsStore((state) => state.removeGeneration);
   const clearGenerations = useGenerationsStore((state) => state.clearGenerations);
   const setMultipleGenerations = useGenerationsStore((state) => state.setMultipleGenerations);
-  const activeGameId = useGenerationGameId(activeOutputTab);
+  const activeGameId = useGenerationGameId(effectiveActiveOutputTab);
   const completedCount = useCompletedCount();
 
   const discoveryDialog = useDiscoveryDialog();
@@ -143,14 +144,6 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     queryKey: ["themes"],
     queryFn: () => trpcClient.themes.list.query(),
   });
-
-  // Auto-select first theme as default
-  useEffect(() => {
-    if (themes && themes.length > 0 && !selectedTheme) {
-      const activeTheme = themes.find((t) => t.status === "active");
-      setSelectedTheme(activeTheme?.id ?? themes[0]!.id);
-    }
-  }, [themes, selectedTheme]);
 
   // Fetch model metadata
   const { data: modelMetadata, isLoading: modelsLoading } = useQuery({
@@ -181,6 +174,12 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     },
     enabled: !!(resolvedSearchParams?.promptId || resolvedSearchParams?.forkId),
   });
+  const effectiveSelectedThemeId =
+    selectedTheme ||
+    existingPrompt?.themeId ||
+    themes?.find((t) => t.status === "active")?.id ||
+    themes?.[0]?.id ||
+    "";
 
   // Fetch prompt versions
   const { data: versions } = useQuery({
@@ -239,14 +238,6 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       clearPersistedState();
     }
   }, [existingPrompt]);
-
-  // Auto-select first output tab when generations start
-  useEffect(() => {
-    const firstModel = selectedModels[0];
-    if (firstModel && !activeOutputTab) {
-      setActiveOutputTab(firstModel.id);
-    }
-  }, [selectedModels, activeOutputTab]);
 
   // Create prompt mutation
   const createPromptMutation = useMutation({
@@ -405,7 +396,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.error("Please enter prompt content");
       return;
     }
-    if (!selectedTheme) {
+    if (!effectiveSelectedThemeId) {
       toast.error("Please select a theme");
       return;
     }
@@ -440,7 +431,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       let promptId = selectedPromptId;
       if (!promptId) {
         const result = await createPromptMutation.mutateAsync({
-          themeId: selectedTheme,
+          themeId: effectiveSelectedThemeId,
           content: promptContent,
           title: promptTitle.trim(),
           visibility,
@@ -496,7 +487,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
                 completionStats.completed++;
                 updateGenerationGameId(model.id, chunk.gameId as string);
                 // Preserve selection when transitioning from model ID to game ID
-                if (activeOutputTab === model.id) {
+                if ((activeOutputTab ?? selectedModels[0]?.id ?? null) === model.id) {
                   setActiveOutputTab(chunk.gameId as string);
                 }
               } else if (chunk.type === "error") {
@@ -548,7 +539,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
   }, [
     promptContent,
     promptTitle,
-    selectedTheme,
+    effectiveSelectedThemeId,
     selectedModels,
     selectedPromptId,
     visibility,
@@ -570,7 +561,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
       toast.error("Please enter a title (at least 3 characters)");
       return;
     }
-    if (!selectedTheme) {
+    if (!effectiveSelectedThemeId) {
       toast.error("Please select a theme");
       return;
     }
@@ -581,7 +572,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     
     // If viewing old version, always create new prompt (new version)
     if (isViewingOldVersion) {
-      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, title: promptTitle.trim(), visibility });
+      createPromptMutation.mutate({ themeId: effectiveSelectedThemeId, content: promptContent, title: promptTitle.trim(), visibility });
       setIsViewingOldVersion(false);
       return;
     }
@@ -590,9 +581,9 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
     if (promptId) {
       updatePromptMutation.mutate({ id: promptId, content: promptContent, title: promptTitle.trim() });
     } else {
-      createPromptMutation.mutate({ themeId: selectedTheme, content: promptContent, title: promptTitle.trim(), visibility });
+      createPromptMutation.mutate({ themeId: effectiveSelectedThemeId, content: promptContent, title: promptTitle.trim(), visibility });
     }
-  }, [promptTitle, selectedTheme, promptContent, selectedPromptId, visibility, isViewingOldVersion, updatePromptMutation, createPromptMutation]);
+  }, [promptTitle, effectiveSelectedThemeId, promptContent, selectedPromptId, visibility, isViewingOldVersion, updatePromptMutation, createPromptMutation]);
 
   const handleFork = useCallback(() => {
     if (!resolvedSearchParams?.forkId) return;
@@ -690,7 +681,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
         isLoading={modelsLoading}
         themes={themes}
         themesLoading={themesLoading}
-        selectedTheme={selectedTheme}
+        selectedTheme={effectiveSelectedThemeId}
         onSelectTheme={setSelectedTheme}
         selectedPromptId={selectedPromptId}
         onSelectPrompt={handleSelectPrompt}
@@ -745,7 +736,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
           <WorkbenchRightPanel
             activeTab={activeRightTab}
             onTabChange={setActiveRightTab}
-            activeOutputTab={activeOutputTab}
+            activeOutputTab={effectiveActiveOutputTab}
             selectedModels={selectedModels}
             onOutputTabChange={setActiveOutputTab}
             promptId={selectedPromptId}
