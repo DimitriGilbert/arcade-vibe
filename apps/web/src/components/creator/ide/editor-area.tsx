@@ -17,6 +17,9 @@ export interface EditorAreaProps {
   onCloseGameTab: (gameId: string) => void;
   onSave: () => void;
   onCursorChange: (line: number, column: number) => void;
+  onGameTabViewModeChange: (gameId: string, viewMode: "game" | "code") => void;
+  onToggleGamePublish: (gameId: string, isSubmitted: boolean) => void;
+  isPublishingGame: boolean;
 }
 
 export function EditorArea({
@@ -30,6 +33,9 @@ export function EditorArea({
   onCloseGameTab,
   onSave,
   onCursorChange,
+  onGameTabViewModeChange,
+  onToggleGamePublish,
+  isPublishingGame,
 }: EditorAreaProps) {
   const { openTabs, activeTabId } = selection;
   const [editorTheme, setEditorTheme] = useState<EditorTheme>("github-dark");
@@ -63,8 +69,13 @@ export function EditorArea({
             modelName={activeTab.modelName}
             title={activeTab.label}
             gameStatus={activeTab.gameStatus}
+            isSubmitted={activeTab.isSubmitted}
+            viewMode={activeTab.viewMode ?? "game"}
             theme={editorTheme}
             onThemeChange={setEditorTheme}
+            onViewModeChange={(viewMode) => onGameTabViewModeChange(activeTabId, viewMode)}
+            onTogglePublish={(isSubmitted) => onToggleGamePublish(activeTabId, isSubmitted)}
+            isPublishing={isPublishingGame}
           />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">

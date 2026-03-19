@@ -40,8 +40,10 @@ export interface IDETab {
   modelKey?: string;
   modelName?: string;
   gameStatus?: GameStatus;
+  isSubmitted?: boolean;
   modelSelectionId?: string;
   isTransient?: boolean;
+  viewMode?: "game" | "code";
 }
 
 export interface IDESelection {
@@ -122,4 +124,10 @@ export interface IDEState {
   clearGenerationError: () => void;
   cursorPosition: { line: number; column: number };
   setCursorPosition: (line: number, column: number) => void;
+  handleSelectPrompt: (
+    promptId: string,
+    options?: { preserveSelectedModels?: boolean; preserveGameName?: boolean }
+  ) => Promise<void>;
+  setGameTabViewMode: (gameId: string, viewMode: "game" | "code") => void;
+  updateGameTabPublishedState: (gameId: string, isSubmitted: boolean) => void;
 }

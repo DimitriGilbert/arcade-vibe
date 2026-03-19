@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFormedible } from "@/hooks/use-formedible";
-import { ChevronLeft, ChevronRight, Loader2, Play, Filter, Key, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Play, Key, Plus, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
@@ -71,7 +71,7 @@ export function ConfigPanel({
   onSelectVersion,
   selection,
 }: ConfigPanelProps) {
-  const [showFilters, setShowFilters] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const idCounterRef = useRef(0);
@@ -154,7 +154,7 @@ export function ConfigPanel({
         label: "Tier",
         section: { title: "" },
         options: tierOptions,
-        conditional: () => showFilters,
+        conditional: () => showAdvancedOptions,
         multiSelectConfig: { placeholder: "All tiers", searchable: false },
       },
       {
@@ -163,7 +163,7 @@ export function ConfigPanel({
         label: "Provider",
         section: { title: "" },
         options: providerOptions,
-        conditional: () => showFilters,
+        conditional: () => showAdvancedOptions,
         multiSelectConfig: { placeholder: "All providers", searchable: true },
       },
       {
@@ -172,6 +172,7 @@ export function ConfigPanel({
         label: "Model",
         section: { title: "" },
         options: (values) => getFilteredModels(values as ModelSelectionValues),
+        gridColumnSpan: 2,
         comboboxConfig: {
           searchable: true,
           placeholder: "Search models...",
@@ -186,6 +187,7 @@ export function ConfigPanel({
         label: "API Key",
         section: { title: "" },
         options: apiKeyOptions,
+        conditional: () => showAdvancedOptions,
         selectConfig: { placeholder: "Platform credits" },
       },
       {
@@ -193,6 +195,7 @@ export function ConfigPanel({
         type: "switch",
         label: "Reasoning",
         section: { title: "" },
+        conditional: () => showAdvancedOptions,
         description: "Enable thinking for supported models",
       },
       {
@@ -200,7 +203,7 @@ export function ConfigPanel({
         type: "number",
         label: "Max Thinking Tokens",
         section: { title: "" },
-        conditional: (values) => values.reasoningEnabled === true,
+        conditional: (values) => showAdvancedOptions && values.reasoningEnabled === true,
         min: 500,
         max: 10000,
       },
@@ -354,12 +357,17 @@ export function ConfigPanel({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowFilters(!showFilters)}
+                        onClick={() => setShowAdvancedOptions((current) => !current)}
                         className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                         disabled={modelsLoading}
                       >
-                        <Filter className="h-3 w-3" />
-                        Filters
+                        <SlidersHorizontal className="h-3 w-3" />
+                        Advanced
+                        {showAdvancedOptions ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
                       </button>
                     </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, PanelRightOpen } from "lucide-react";
 import { useIDEState } from "./use-ide-state";
 import { ExplorerSidebar } from "./explorer-sidebar";
 import { EditorArea } from "./editor-area";
@@ -22,7 +22,7 @@ import type { Visibility, ModelSelection, IDETab } from "./types";
 function IDESkeleton() {
   return (
     <div className="h-screen flex flex-col bg-background">
-      <div className="flex-1 min-h-0 flex">
+      <div className="relative flex-1 min-h-0 flex">
         <aside className="w-64 border-r border-border bg-sidebar shrink-0">
           <div className="h-10 border-b border-border" />
           <div className="p-2 space-y-2">
@@ -170,6 +170,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     handleSave,
     handleDiscardNewPrompt,
     switchToTab,
+    setGameTabViewMode,
+    updateGameTabPublishedState,
     closeGameTab,
     openPromptTabs,
     handleToggleThemeExpand,
@@ -191,6 +193,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           label: m.modelName,
           modelKey: m.id,
           modelName: m.modelName,
+          isSubmitted: false,
+          viewMode: "game" as const,
         }));
       
       if (newTabs.length === 0) return prev;
@@ -244,7 +248,10 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     existingPromptId: currentPromptId,
     visibility,
     onPromptCreated: (promptId) => {
-      void handleSelectPrompt(promptId);
+      void handleSelectPrompt(promptId, {
+        preserveSelectedModels: true,
+        preserveGameName: true,
+      });
     },
     onGenerationStart: addGenerationTabs,
     onGenerationComplete: (gameId, modelId) => {
@@ -354,9 +361,11 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
         return await trpcClient.games.unpublish.mutate({ gameId: input.id });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      updateGameTabPublishedState(variables.id, variables.isSubmitted);
       toast.success("Game visibility updated!");
       void queryClient.invalidateQueries({ queryKey: ["games-by-prompt"] });
+      void queryClient.invalidateQueries({ queryKey: ["game", variables.id] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update game visibility");
@@ -481,7 +490,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
         />
       )}
 
-      <div className="flex-1 min-h-0 flex">
+      <div className="relative flex-1 min-h-0 flex">
         <aside
           style={{ width: `${explorerWidth}px` }}
           className="h-full shrink-0 border-r border-border bg-sidebar"
@@ -540,6 +549,11 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           onCloseGameTab={closeGameTab}
           onSave={handleSave}
           onCursorChange={setCursorPosition}
+          onGameTabViewModeChange={setGameTabViewMode}
+          onToggleGamePublish={(gameId, isSubmitted) =>
+            toggleGamePublishedMutation.mutate({ id: gameId, isSubmitted })
+          }
+          isPublishingGame={toggleGamePublishedMutation.isPending}
         />
         {!configPanelCollapsed && (
           <div
@@ -569,6 +583,18 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           onSelectVersion={handleSelectVersion}
           selection={selection}
         />
+        {configPanelCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setConfigPanelCollapsed(false)}
+            className="absolute right-0 top-2 z-30 inline-flex items-center gap-2 rounded-l-md border border-r-0 border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--foreground)] shadow-md transition-colors hover:bg-[var(--muted)]"
+            aria-label="Expand config panel"
+            title="Expand config panel"
+          >
+            <PanelRightOpen className="h-4 w-4 text-[var(--muted-foreground)]" />
+            <span>Config</span>
+          </button>
+        ) : null}
       </div>
 
       <StatusBar

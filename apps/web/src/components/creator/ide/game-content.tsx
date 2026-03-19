@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Play, Download, Moon, Sun } from "lucide-react";
+import { Code2, Download, Eye, EyeOff, Moon, Play, Sun } from "lucide-react";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { useGenerationById } from "@/stores/generations-store";
 import { OutputStatusCard, StatusIcon, WaitingState } from "@/components/creator/shared";
 import { trpcClient } from "@/utils/trpc";
+import { cn } from "@/lib/utils";
 import type { EditorTheme, GameStatus, GenerationStatus } from "./types";
 
 export interface GameContentProps {
@@ -15,8 +16,13 @@ export interface GameContentProps {
   title?: string;
   modelName?: string;
   gameStatus?: GameStatus;
+  isSubmitted?: boolean;
+  viewMode: "game" | "code";
   theme: EditorTheme;
   onThemeChange: (theme: EditorTheme) => void;
+  onViewModeChange: (viewMode: "game" | "code") => void;
+  onTogglePublish: (isSubmitted: boolean) => void;
+  isPublishing: boolean;
 }
 
 function mapGameStatusToGenerationStatus(status: GameStatus | undefined): GenerationStatus {
@@ -38,8 +44,13 @@ export function GameContent({
   title,
   modelName,
   gameStatus,
+  isSubmitted,
+  viewMode,
   theme,
   onThemeChange,
+  onViewModeChange,
+  onTogglePublish,
+  isPublishing,
 }: GameContentProps) {
   const generation = useGenerationById(modelKey);
   const isStreaming =
@@ -47,6 +58,10 @@ export function GameContent({
   const hasGenerationInStore = !!generation;
   const isComplete = generation?.status === "complete";
   const hasCodeInMemory = !!generation?.code;
+  const [iframeKey, setIframeKey] = useState(0);
+  const hasPersistedGameId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    gameId
+  );
 
   const { data: gameCode, isLoading: isLoadingGame } = useQuery({
     queryKey: ["game-code", gameId],
@@ -60,6 +75,15 @@ export function GameContent({
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: persistedGame } = useQuery({
+    queryKey: ["game", gameId],
+    queryFn: async () => {
+      if (!gameId) return null;
+      return await trpcClient.games.getById.query({ id: gameId });
+    },
+    enabled: hasPersistedGameId,
   });
 
   const code = hasCodeInMemory ? generation.code : (gameCode ?? "");
@@ -80,6 +104,11 @@ export function GameContent({
             : "Ready";
 
   const isLoading = isLoadingGame && !code;
+  const canPlay = Boolean(hasGameId);
+  const canRenderGame = !!code && status !== "error";
+  const published = persistedGame?.isSubmitted ?? isSubmitted ?? false;
+
+  const iframeDocument = useMemo(() => code, [code]);
 
   const handleDownload = useCallback(() => {
     const blob = new Blob([code], { type: "text/html" });
@@ -97,9 +126,13 @@ export function GameContent({
     onThemeChange(theme === "github-dark" ? "github-light" : "github-dark");
   }, [onThemeChange, theme]);
 
+  const handleReloadGame = useCallback(() => {
+    setIframeKey((current) => current + 1);
+  }, []);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)] bg-[var(--muted)]/50 shrink-0">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--muted)]/50 px-4 py-2 shrink-0">
         <div className="min-w-0 flex items-center gap-2">
           <StatusIcon status={status} className="h-3.5 w-3.5" />
           <div className="text-sm font-medium truncate">{displayTitle}</div>
@@ -112,16 +145,66 @@ export function GameContent({
             </div>
           ) : null}
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--card)] p-1">
+            <button
+              type="button"
+              onClick={() => onViewModeChange("game")}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs transition-colors",
+                viewMode === "game"
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              )}
+            >
+              Game
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("code")}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs transition-colors",
+                viewMode === "code"
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              )}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Code2 className="h-3.5 w-3.5" />
+                Code
+              </span>
+            </button>
+          </div>
+
           {hasGameId ? (
             <button
               type="button"
-              onClick={() => window.open(`/game/${hasGameId}`, "_blank")}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-[var(--primary)] text-[var(--primary-foreground)] rounded hover:opacity-90 transition-opacity"
+              onClick={() => onTogglePublish(!published)}
+              disabled={isPublishing}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-60",
+                published
+                  ? "border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]"
+                  : "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+              )}
             >
-              <Play className="h-3 w-3" /> Play
+              {published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {published ? "Unpublish" : "Publish"}
             </button>
           ) : null}
+
+          {canPlay ? (
+            <button
+              type="button"
+              onClick={() => window.open(`/game/${hasGameId}`, "_blank")}
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            >
+              <Play className="h-3 w-3" />
+              Play
+            </button>
+          ) : null}
+
           <button
             type="button"
             onClick={toggleTheme}
@@ -163,6 +246,31 @@ export function GameContent({
           />
         ) : !code ? (
           <OutputStatusCard type="empty" />
+        ) : viewMode === "game" ? (
+          canRenderGame ? (
+            <div className="h-full bg-black/5">
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted-foreground)]">
+                <span>Live preview</span>
+                <button
+                  type="button"
+                  onClick={handleReloadGame}
+                  className="rounded border border-[var(--border)] px-2 py-1 transition-colors hover:bg-[var(--muted)]"
+                >
+                  Reload
+                </button>
+              </div>
+              <iframe
+                key={`${gameId}-${iframeKey}`}
+                title={`Game preview: ${displayTitle}`}
+                srcDoc={iframeDocument}
+                className="h-[calc(100%-41px)] w-full border-0 bg-white"
+                sandbox="allow-scripts allow-same-origin"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <OutputStatusCard type="empty" />
+          )
         ) : (
           <StreamingCodeViewerV2
             code={code}

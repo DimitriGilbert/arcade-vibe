@@ -121,9 +121,6 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
           content: promptContent,
         });
         promptId = result.promptId ?? null;
-        if (promptId) {
-          onPromptCreated?.(promptId);
-        }
       }
 
       if (!promptId) {
