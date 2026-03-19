@@ -9,6 +9,8 @@ import { OutputStatusCard, StatusIcon, WaitingState } from "@/components/creator
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
 import type { EditorTheme, GameStatus, GenerationStatus } from "./types";
+import { GuidanceBubble } from "./creator-guidance";
+import type { CreatorGuidanceState } from "./creator-guidance";
 
 export interface GameContentProps {
   gameId: string;
@@ -21,8 +23,10 @@ export interface GameContentProps {
   theme: EditorTheme;
   onThemeChange: (theme: EditorTheme) => void;
   onViewModeChange: (viewMode: "game" | "code") => void;
-  onTogglePublish: (isSubmitted: boolean) => void;
+  onTogglePublish: (gameId: string, isSubmitted: boolean) => void;
   isPublishing: boolean;
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }
 
 function mapGameStatusToGenerationStatus(status: GameStatus | undefined): GenerationStatus {
@@ -51,6 +55,8 @@ export function GameContent({
   onViewModeChange,
   onTogglePublish,
   isPublishing,
+  guidance,
+  onDismissGuidance,
 }: GameContentProps) {
   const generation = useGenerationById(modelKey);
   const isStreaming =
@@ -90,7 +96,7 @@ export function GameContent({
   const displayTitle = title ?? modelName ?? generation?.modelKey ?? modelKey ?? "Game";
   const displayModelName = modelName ?? generation?.modelKey ?? modelKey ?? "Model";
   const showModelName = displayModelName !== displayTitle;
-  const hasGameId = generation?.gameId ?? (gameCode ? gameId : null);
+  const resolvedGameId = generation?.gameId ?? (hasPersistedGameId ? gameId : null);
   const status = generation?.status ?? mapGameStatusToGenerationStatus(gameStatus);
   const statusLabel =
     status === "reasoning"
@@ -104,7 +110,7 @@ export function GameContent({
             : "Ready";
 
   const isLoading = isLoadingGame && !code;
-  const canPlay = Boolean(hasGameId);
+  const canPlay = Boolean(resolvedGameId);
   const canRenderGame = !!code && status !== "error";
   const published = persistedGame?.isSubmitted ?? isSubmitted ?? false;
 
@@ -177,27 +183,37 @@ export function GameContent({
             </button>
           </div>
 
-          {hasGameId ? (
-            <button
-              type="button"
-              onClick={() => onTogglePublish(!published)}
-              disabled={isPublishing}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-60",
-                published
-                  ? "border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]"
-                  : "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
-              )}
-            >
-              {published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {published ? "Unpublish" : "Publish"}
-            </button>
+          {resolvedGameId ? (
+            <div className="relative">
+              {guidance?.currentStep === "publish" && !published ? (
+                <div className="absolute bottom-full right-0 z-10 mb-2 w-52">
+                  <GuidanceBubble
+                    text="If this output is good enough, publish it."
+                    onDismiss={onDismissGuidance}
+                  />
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => onTogglePublish(resolvedGameId, !published)}
+                disabled={isPublishing}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-60",
+                  published
+                    ? "border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]"
+                    : "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+                )}
+              >
+                {published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {published ? "Unpublish" : "Publish"}
+              </button>
+            </div>
           ) : null}
 
           {canPlay ? (
             <button
               type="button"
-              onClick={() => window.open(`/game/${hasGameId}`, "_blank")}
+              onClick={() => window.open(`/game/${resolvedGameId}`, "_blank")}
               className="inline-flex items-center gap-1 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
             >
               <Play className="h-3 w-3" />
@@ -229,7 +245,6 @@ export function GameContent({
           </button>
         </div>
       </div>
-
       <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-[var(--muted-foreground)]">

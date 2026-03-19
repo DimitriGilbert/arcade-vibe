@@ -30,11 +30,13 @@ import {
   WandSparkles,
   Loader2,
   Shield,
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { AccountManagementCard } from "@/components/settings/account-management-card";
+import { Switch } from "@/components/ui/switch";
 
 interface SettingsSectionProps {
   title: string;
@@ -140,14 +142,17 @@ function hasPreferencesChanged(
   nextLeaderboardImplementation: LeaderboardImplementation | null,
   nextCreatorImplementation: CreatorImplementation | null,
   nextProfileImplementation: ProfileImplementation | null,
+  nextCreatorIdeHintsEnabled: boolean,
   currentLeaderboardImplementation: LeaderboardImplementation | null,
   currentCreatorImplementation: CreatorImplementation | null,
   currentProfileImplementation: ProfileImplementation | null,
+  currentCreatorIdeHintsEnabled: boolean,
 ): boolean {
   return (
     nextLeaderboardImplementation !== currentLeaderboardImplementation ||
     nextCreatorImplementation !== currentCreatorImplementation ||
-    nextProfileImplementation !== currentProfileImplementation
+    nextProfileImplementation !== currentProfileImplementation ||
+    nextCreatorIdeHintsEnabled !== currentCreatorIdeHintsEnabled
   );
 }
 
@@ -184,15 +189,16 @@ export default function SettingsPage() {
       defaultLeaderboardImplementation: LeaderboardImplementation | null;
       defaultCreatorImplementation: CreatorImplementation | null;
       defaultProfileImplementation: ProfileImplementation | null;
+      creatorIdeHintsEnabled: boolean;
     }) => trpcClient.user.updatePreferences.mutate(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["user", "preferences"],
       });
-      toast.success("Routing defaults updated");
+      toast.success("Preferences updated");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to update routing defaults");
+      toast.error(error.message || "Failed to update preferences");
     },
   });
 
@@ -224,6 +230,8 @@ export default function SettingsPage() {
     preferences?.defaultCreatorImplementation ?? null;
   const selectedProfileImplementation =
     preferences?.defaultProfileImplementation ?? null;
+  const selectedCreatorIdeHintsEnabled =
+    preferences?.creatorIdeHintsEnabled ?? true;
 
   const handleLeaderboardPreferenceChange = (value: string | null) => {
     const nextLeaderboardImplementation =
@@ -236,9 +244,11 @@ export default function SettingsPage() {
         nextLeaderboardImplementation,
         selectedCreatorImplementation,
         selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
         selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
       )
     ) {
       return;
@@ -248,6 +258,7 @@ export default function SettingsPage() {
       defaultLeaderboardImplementation: nextLeaderboardImplementation,
       defaultCreatorImplementation: selectedCreatorImplementation,
       defaultProfileImplementation: selectedProfileImplementation,
+      creatorIdeHintsEnabled: selectedCreatorIdeHintsEnabled,
     });
   };
 
@@ -262,9 +273,11 @@ export default function SettingsPage() {
         selectedLeaderboardImplementation,
         nextCreatorImplementation,
         selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
         selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
       )
     ) {
       return;
@@ -274,6 +287,7 @@ export default function SettingsPage() {
       defaultLeaderboardImplementation: selectedLeaderboardImplementation,
       defaultCreatorImplementation: nextCreatorImplementation,
       defaultProfileImplementation: selectedProfileImplementation,
+      creatorIdeHintsEnabled: selectedCreatorIdeHintsEnabled,
     });
   };
 
@@ -288,9 +302,11 @@ export default function SettingsPage() {
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
         nextProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
         selectedLeaderboardImplementation,
         selectedCreatorImplementation,
         selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
       )
     ) {
       return;
@@ -300,6 +316,31 @@ export default function SettingsPage() {
       defaultLeaderboardImplementation: selectedLeaderboardImplementation,
       defaultCreatorImplementation: selectedCreatorImplementation,
       defaultProfileImplementation: nextProfileImplementation,
+      creatorIdeHintsEnabled: selectedCreatorIdeHintsEnabled,
+    });
+  };
+
+  const handleCreatorIdeHintsChange = (checked: boolean) => {
+    if (
+      !hasPreferencesChanged(
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+        selectedProfileImplementation,
+        checked,
+        selectedLeaderboardImplementation,
+        selectedCreatorImplementation,
+        selectedProfileImplementation,
+        selectedCreatorIdeHintsEnabled,
+      )
+    ) {
+      return;
+    }
+
+    updatePreferencesMutation.mutate({
+      defaultLeaderboardImplementation: selectedLeaderboardImplementation,
+      defaultCreatorImplementation: selectedCreatorImplementation,
+      defaultProfileImplementation: selectedProfileImplementation,
+      creatorIdeHintsEnabled: checked,
     });
   };
 
@@ -518,13 +559,41 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-lime-400/10 rounded-lg">
+                    <Lightbulb className="h-4 w-4 text-lime-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Creator guidance hints</p>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Show lightweight next-step hints in the IDE creator flow.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-white/8 bg-white/5 px-3 py-3">
+                  <div>
+                    <p className="text-sm font-medium">Hints in `/creator/ide`</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Guide prompt creation, model selection, generation, and publishing.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={selectedCreatorIdeHintsEnabled}
+                    onCheckedChange={handleCreatorIdeHintsChange}
+                    disabled={preferencesLoading || updatePreferencesMutation.isPending}
+                    aria-label="Toggle creator guidance hints"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mt-auto pt-6">
               {updatePreferencesMutation.isPending ? (
                 <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Saving routing defaults...</span>
+                  <span>Saving preferences...</span>
                 </div>
               ) : (
                 <p className="text-sm text-[var(--muted-foreground)]">

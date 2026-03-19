@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { GuidanceBubble } from "./creator-guidance";
 import type {
   ThemeNode,
   PromptNode,
@@ -32,6 +33,7 @@ import type {
   ContextMenuItemOrDivider,
   IDESelection,
 } from "./types";
+import type { CreatorGuidanceState } from "./creator-guidance";
 
 interface ExplorerSidebarProps {
   themes: ThemeNode[];
@@ -88,6 +90,8 @@ interface ExplorerSidebarProps {
     mutate: (input: { id: string; isSubmitted: boolean }) => void;
     isPending: boolean;
   };
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }
 
 function getStatusIcon(status: GameStatus) {
@@ -480,11 +484,15 @@ function NewPromptComponent({
   onTitleChange,
   onDiscard,
   onSave,
+  showNameHint,
+  onDismissGuidance,
 }: {
   title: string;
   onTitleChange: (title: string) => void;
   onDiscard: () => void;
   onSave: () => void;
+  showNameHint: boolean;
+  onDismissGuidance: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -505,7 +513,15 @@ function NewPromptComponent({
   };
 
   return (
-    <div className="ml-2">
+    <div className="relative ml-2">
+      {showNameHint ? (
+        <div className="absolute left-0 top-full z-10 mt-2 max-w-52">
+          <GuidanceBubble
+            text="Name the prompt, then press Enter."
+            onDismiss={onDismissGuidance}
+          />
+        </div>
+      ) : null}
       <div className="group flex items-center gap-2 px-2 py-1 bg-primary/5 border border-primary/20 rounded">
         <FileText className="h-4 w-4 shrink-0 text-primary animate-pulse" />
         <input
@@ -561,6 +577,8 @@ function ThemeNodeComponent({
   updateGameMutation,
   deleteGameMutation,
   toggleGamePublishedMutation,
+  guidance,
+  onDismissGuidance,
 }: {
   theme: ThemeNode;
   prompts: PromptNode[] | undefined;
@@ -590,6 +608,8 @@ function ThemeNodeComponent({
   updateGameMutation: ExplorerSidebarProps["updateGameMutation"];
   deleteGameMutation: ExplorerSidebarProps["deleteGameMutation"];
   toggleGamePublishedMutation: ExplorerSidebarProps["toggleGamePublishedMutation"];
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }) {
   return (
     <div className="border-b border-border last:border-b-0">
@@ -637,6 +657,8 @@ function ThemeNodeComponent({
               onTitleChange={onNewPromptTitleChange}
               onDiscard={onDiscardNewPrompt}
               onSave={onSave}
+              showNameHint={guidance?.currentStep === "name"}
+              onDismissGuidance={onDismissGuidance}
             />
           )}
           {promptsLoading ? (
@@ -712,6 +734,8 @@ export function ExplorerSidebar({
   updateGameMutation,
   deleteGameMutation,
   toggleGamePublishedMutation,
+  guidance,
+  onDismissGuidance,
 }: ExplorerSidebarProps) {
   const hasExpandedItems = expandedThemes.length > 0 || expandedPrompts.length > 0;
 
@@ -722,7 +746,7 @@ export function ExplorerSidebar({
 
   return (
     <div className="flex flex-col h-full bg-sidebar">
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border shrink-0">
+      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-border shrink-0">
         <button
           type="button"
           onClick={onNewPrompt}
@@ -763,6 +787,19 @@ export function ExplorerSidebar({
         >
           <ChevronsUpDown className="h-4 w-4" />
         </button>
+
+        {guidance?.currentStep === "create" ? (
+          <div className="absolute left-2 top-full z-10 mt-2 max-w-52">
+            <GuidanceBubble
+              text={
+                selection.themeId
+                  ? "Start here: create a new prompt."
+                  : "Select a theme, then create a new prompt."
+              }
+              onDismiss={onDismissGuidance}
+            />
+          </div>
+        ) : null}
       </div>
 
       <ScrollArea className="flex-1">
@@ -807,6 +844,8 @@ export function ExplorerSidebar({
                 updateGameMutation={updateGameMutation}
                 deleteGameMutation={deleteGameMutation}
                 toggleGamePublishedMutation={toggleGamePublishedMutation}
+                guidance={guidance}
+                onDismissGuidance={onDismissGuidance}
               />
             ))}
           </div>

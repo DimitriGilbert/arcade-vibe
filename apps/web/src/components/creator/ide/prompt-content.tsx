@@ -2,7 +2,9 @@
 
 import { useCallback, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
+import { GuidanceBubble } from "./creator-guidance";
 import type { EditorTheme } from "./types";
+import type { CreatorGuidanceState } from "./creator-guidance";
 
 interface MonacoEditor {
   onDidChangeCursorPosition: (callback: (e: { position: { lineNumber: number; column: number } }) => void) => void;
@@ -28,6 +30,8 @@ export interface PromptContentProps {
   readOnly: boolean;
   onCursorChange?: (line: number, column: number) => void;
   theme: EditorTheme;
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }
 
 export function PromptContent({
@@ -36,6 +40,8 @@ export function PromptContent({
   readOnly,
   onCursorChange,
   theme,
+  guidance,
+  onDismissGuidance,
 }: PromptContentProps) {
   const editorRef = useRef<MonacoEditor | null>(null);
   const monacoTheme = theme === "github-light" ? "arcade-github-light" : "arcade-github-dark";
@@ -85,9 +91,17 @@ export function PromptContent({
 
   return (
     <div
-      className="h-full [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4"
+      className="relative h-full [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4"
       style={{ backgroundColor: theme === "github-light" ? "#ffffff" : "#0d1117" }}
     >
+      {guidance?.currentStep === "content" ? (
+        <div className="absolute left-4 top-4 z-10 max-w-60">
+          <GuidanceBubble
+            text="Write the prompt content here."
+            onDismiss={onDismissGuidance}
+          />
+        </div>
+      ) : null}
       <Editor
         height="100%"
         defaultLanguage="markdown"

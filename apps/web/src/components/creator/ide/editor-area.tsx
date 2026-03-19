@@ -5,6 +5,7 @@ import { EditorTabs } from "./editor-tabs";
 import { PromptContent } from "./prompt-content";
 import { GameContent } from "./game-content";
 import type { EditorTheme, IDESelection, IDETab } from "./types";
+import type { CreatorGuidanceState } from "./creator-guidance";
 
 export interface EditorAreaProps {
   selection: IDESelection;
@@ -20,6 +21,8 @@ export interface EditorAreaProps {
   onGameTabViewModeChange: (gameId: string, viewMode: "game" | "code") => void;
   onToggleGamePublish: (gameId: string, isSubmitted: boolean) => void;
   isPublishingGame: boolean;
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }
 
 export function EditorArea({
@@ -36,6 +39,8 @@ export function EditorArea({
   onGameTabViewModeChange,
   onToggleGamePublish,
   isPublishingGame,
+  guidance,
+  onDismissGuidance,
 }: EditorAreaProps) {
   const { openTabs, activeTabId } = selection;
   const [editorTheme, setEditorTheme] = useState<EditorTheme>("github-dark");
@@ -61,6 +66,8 @@ export function EditorArea({
             readOnly={isGenerating || isForking}
             onCursorChange={onCursorChange}
             theme={editorTheme}
+            guidance={guidance}
+            onDismissGuidance={onDismissGuidance}
           />
         ) : activeTab?.type === "game" ? (
           <GameContent 
@@ -74,8 +81,10 @@ export function EditorArea({
             theme={editorTheme}
             onThemeChange={setEditorTheme}
             onViewModeChange={(viewMode) => onGameTabViewModeChange(activeTabId, viewMode)}
-            onTogglePublish={(isSubmitted) => onToggleGamePublish(activeTabId, isSubmitted)}
+            onTogglePublish={onToggleGamePublish}
             isPublishing={isPublishingGame}
+            guidance={guidance}
+            onDismissGuidance={onDismissGuidance}
           />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">

@@ -53,13 +53,13 @@ function createGameTab(game: GameNode): IDETab {
     id: game.id,
     type: "game",
     label: game.name ?? `Game ${game.id.slice(0, 8)}`,
-    modelKey: game.modelName ?? undefined,
+    modelKey: game.modelSelectionId ?? game.modelName ?? undefined,
     modelName: game.modelName ?? undefined,
     gameStatus: game.status,
     isSubmitted: game.isSubmitted,
     modelSelectionId: game.modelSelectionId ?? undefined,
     isTransient: game.isTransient ?? false,
-    viewMode: "game",
+    viewMode: game.isTransient ? "code" : "game",
   };
 }
 
@@ -120,7 +120,11 @@ export interface UseIDEStateReturn {
   handleSelectTheme: (themeId: string) => void;
   handleSelectPrompt: (
     promptId: string,
-    options?: { preserveSelectedModels?: boolean; preserveGameName?: boolean }
+    options?: {
+      preserveSelectedModels?: boolean;
+      preserveGameName?: boolean;
+      preserveOpenGameTabs?: boolean;
+    }
   ) => Promise<void>;
   handleSelectGame: (gameId: string) => void;
   handleNewPrompt: () => void;
@@ -340,32 +344,6 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       }
     }
   }, [themes, expandedThemes.length]);
-
-  useEffect(() => {
-    if (games.length > 0 && selection.promptId) {
-      const currentTabs = selection.openTabs;
-      const hasPromptTab = currentTabs.some((t) => t.id === PROMPT_TAB_ID);
-      const gameIds = new Set(games.map((g) => g.id));
-      const existingGameTabIds = new Set(
-        currentTabs.filter((t) => t.type === "game").map((t) => t.id)
-      );
-
-      const needsUpdate = !hasPromptTab || 
-        games.some((g) => !existingGameTabIds.has(g.id));
-
-      if (needsUpdate && hasPromptTab) {
-        const newGameTabs = games
-          .filter((g) => !existingGameTabIds.has(g.id))
-          .map(createGameTab);
-        if (newGameTabs.length > 0) {
-          setSelection((prev) => ({
-            ...prev,
-            openTabs: [...prev.openTabs, ...newGameTabs],
-          }));
-        }
-      }
-    }
-  }, [games, selection.promptId, selection.openTabs]);
 
   const setPromptContent = useCallback((content: string) => {
     setPromptContentState(content);
@@ -618,7 +596,11 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
 
   const handleSelectPrompt = useCallback(async (
     promptId: string,
-    options?: { preserveSelectedModels?: boolean; preserveGameName?: boolean }
+    options?: {
+      preserveSelectedModels?: boolean;
+      preserveGameName?: boolean;
+      preserveOpenGameTabs?: boolean;
+    }
   ) => {
     try {
       const prompt = await trpcClient.prompts.getById.query({ id: promptId });
@@ -655,13 +637,24 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       setSelection((prev) => {
         const promptTab = createPromptTab();
         const gameTabs = gamesList.map(createGameTab);
+        const preservedGameTabs = options?.preserveOpenGameTabs
+          ? prev.openTabs.filter((tab) => tab.type === "game")
+          : [];
+        const preservedTabIds = new Set(preservedGameTabs.map((tab) => tab.id));
+        const mergedGameTabs = [
+          ...preservedGameTabs,
+          ...gameTabs.filter((tab) => !preservedTabIds.has(tab.id)),
+        ];
         
         return {
           ...prev,
           themeId: prompt.themeId,
           promptId: prompt.id,
-          openTabs: [promptTab, ...gameTabs],
-          activeTabId: PROMPT_TAB_ID,
+          openTabs: [promptTab, ...mergedGameTabs],
+          activeTabId:
+            options?.preserveOpenGameTabs && prev.activeTabId !== PROMPT_TAB_ID
+              ? prev.activeTabId
+              : PROMPT_TAB_ID,
         };
       });
 

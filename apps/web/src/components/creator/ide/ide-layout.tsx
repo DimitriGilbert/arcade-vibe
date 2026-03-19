@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Loader2, PanelRightOpen } from "lucide-react";
@@ -11,6 +11,7 @@ import { ConfigPanel } from "./config-panel";
 import { StatusBar, countWords } from "./status-bar";
 import { ContextMenu } from "./context-menu";
 import { ConfirmDialog } from "./confirm-dialog";
+import { deriveCreatorGuidanceState } from "./creator-guidance";
 import { DiscoveryDialog } from "@/components/creator/shared";
 import { FeedbackButton } from "@/components/feedback";
 import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schemas";
@@ -18,6 +19,7 @@ import { useGeneration } from "@/hooks/creator/use-generation";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
 import type { Visibility, ModelSelection, IDETab } from "./types";
+import type { CreatorGuidanceStep } from "./creator-guidance";
 
 function IDESkeleton() {
   return (
@@ -113,6 +115,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   const [mounted, setMounted] = useState(false);
   const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
   const [configWidth, setConfigWidth] = useState(DEFAULT_CONFIG_WIDTH);
+  const [dismissedGuidanceStep, setDismissedGuidanceStep] =
+    useState<CreatorGuidanceStep | null>(null);
   const resizeStateRef = useRef<{
     panel: "explorer" | "config";
     startX: number;
@@ -184,9 +188,13 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
 
   const addGenerationTabs = useCallback((models: ModelSelection[]) => {
     setSelection((prev) => {
-      const existingTabIds = new Set(prev.openTabs.map((t) => t.id));
+      const promptTab =
+        prev.openTabs.find((tab) => tab.type === "prompt") ?? {
+          id: "prompt.md",
+          type: "prompt" as const,
+          label: "prompt.md",
+        };
       const newTabs: IDETab[] = models
-        .filter((m) => !existingTabIds.has(m.id))
         .map((m) => ({
           id: m.id,
           type: "game" as const,
@@ -194,14 +202,12 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           modelKey: m.id,
           modelName: m.modelName,
           isSubmitted: false,
-          viewMode: "game" as const,
+          viewMode: "code" as const,
         }));
-      
-      if (newTabs.length === 0) return prev;
-      
+
       return {
         ...prev,
-        openTabs: [...prev.openTabs, ...newTabs],
+        openTabs: [promptTab, ...newTabs],
         activeTabId: newTabs[0]?.id ?? prev.activeTabId,
       };
     });
@@ -209,30 +215,39 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
 
   const updateGenerationTabId = useCallback((modelId: string, gameId: string) => {
     setSelection((prev) => {
-    const tabIndex = prev.openTabs.findIndex((t) => t.id === gameId);
-    if (tabIndex !== -1) return prev;
-    
-    const targetIndex = prev.openTabs.findIndex((t) => t.id === modelId);
-    if (targetIndex === -1) return prev;
-    
-    const newTabs = [...prev.openTabs];
-    const existingTab = newTabs[targetIndex];
-    if (!existingTab) return prev;
-    
-    newTabs[targetIndex] = {
-      ...existingTab,
-      id: gameId,
-      label: existingTab.label,
-    };
-    
-    const newActiveTabId = prev.activeTabId === modelId ? gameId : prev.activeTabId;
-    
-    return {
-      ...prev,
-      openTabs: newTabs,
-      activeTabId: newActiveTabId,
-    };
-  });
+      const existingGameTabIndex = prev.openTabs.findIndex((tab) => tab.id === gameId);
+      const transientTabIndex = prev.openTabs.findIndex((tab) => tab.id === modelId);
+
+      if (transientTabIndex === -1) {
+        return prev;
+      }
+
+      if (existingGameTabIndex !== -1) {
+        const nextTabs = prev.openTabs.filter((tab) => tab.id !== modelId);
+        return {
+          ...prev,
+          openTabs: nextTabs,
+          activeTabId: prev.activeTabId === modelId ? gameId : prev.activeTabId,
+        };
+      }
+
+      const nextTabs = [...prev.openTabs];
+      const transientTab = nextTabs[transientTabIndex];
+      if (!transientTab) {
+        return prev;
+      }
+
+      nextTabs[transientTabIndex] = {
+        ...transientTab,
+        id: gameId,
+      };
+
+      return {
+        ...prev,
+        openTabs: nextTabs,
+        activeTabId: prev.activeTabId === modelId ? gameId : prev.activeTabId,
+      };
+    });
   }, [setSelection]);
 
   const {
@@ -242,6 +257,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     completedCount,
   } = useGeneration({
     promptContent,
+    promptTitle,
     gameName,
     selectedTheme: selection.themeId,
     selectedModels,
@@ -251,6 +267,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
       void handleSelectPrompt(promptId, {
         preserveSelectedModels: true,
         preserveGameName: true,
+        preserveOpenGameTabs: true,
       });
     },
     onGenerationStart: addGenerationTabs,
@@ -262,6 +279,11 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   const { data: credits } = useQuery({
     queryKey: ["credits"],
     queryFn: () => trpcClient.credits.getBalance.query(),
+  });
+
+  const { data: preferences } = useQuery({
+    queryKey: ["user", "preferences"],
+    queryFn: () => trpcClient.user.getPreferences.query(),
   });
 
   const { data: versions } = useQuery({
@@ -474,6 +496,40 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   const activeTabType = activeTab?.type ?? "prompt";
   const wordCount = promptContent ? countWords(promptContent) : 0;
   const totalModels = selectedModels.length;
+  const creatorHintsEnabled = preferences?.creatorIdeHintsEnabled ?? true;
+  const derivedGuidance = creatorHintsEnabled
+    ? deriveCreatorGuidanceState({
+        selection,
+        isNewPrompt,
+        promptTitle,
+        promptContent,
+        selectedModels,
+        games,
+      })
+    : null;
+
+  useEffect(() => {
+    if (!derivedGuidance) {
+      setDismissedGuidanceStep(null);
+      return;
+    }
+
+    setDismissedGuidanceStep((current) =>
+      current !== derivedGuidance.currentStep ? null : current,
+    );
+  }, [derivedGuidance?.currentStep, derivedGuidance]);
+
+  const guidance =
+    derivedGuidance && dismissedGuidanceStep !== derivedGuidance.currentStep
+      ? derivedGuidance
+      : null;
+
+  const dismissGuidance = useCallback(() => {
+    if (!derivedGuidance) {
+      return;
+    }
+    setDismissedGuidanceStep(derivedGuidance.currentStep);
+  }, [derivedGuidance]);
 
   if (!mounted) {
     return <IDESkeleton />;
@@ -529,6 +585,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
             updateGameMutation={updateGameMutation}
             deleteGameMutation={deleteGameMutation}
             toggleGamePublishedMutation={toggleGamePublishedMutation}
+            guidance={guidance}
+            onDismissGuidance={dismissGuidance}
           />
         </aside>
         <div
@@ -554,6 +612,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
             toggleGamePublishedMutation.mutate({ id: gameId, isSubmitted })
           }
           isPublishingGame={toggleGamePublishedMutation.isPending}
+          guidance={guidance}
+          onDismissGuidance={dismissGuidance}
         />
         {!configPanelCollapsed && (
           <div
@@ -582,6 +642,8 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           versions={versions}
           onSelectVersion={handleSelectVersion}
           selection={selection}
+          guidance={guidance}
+          onDismissGuidance={dismissGuidance}
         />
         {configPanelCollapsed ? (
           <button

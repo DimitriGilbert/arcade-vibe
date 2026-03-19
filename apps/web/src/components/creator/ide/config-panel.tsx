@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArcadeButton } from "@/components/arcade";
+import { GuidanceBubble } from "./creator-guidance";
+import type { CreatorGuidanceState } from "./creator-guidance";
 
 interface ConfigPanelProps {
   collapsed: boolean;
@@ -39,6 +41,8 @@ interface ConfigPanelProps {
   versions?: Array<{ id: string; version: number; createdAt: string }>;
   onSelectVersion?: (versionId: string) => void;
   selection: IDESelection;
+  guidance: CreatorGuidanceState | null;
+  onDismissGuidance: () => void;
 }
 
 const modelSelectionSchema = z.object({
@@ -70,6 +74,8 @@ export function ConfigPanel({
   versions,
   onSelectVersion,
   selection,
+  guidance,
+  onDismissGuidance,
 }: ConfigPanelProps) {
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
@@ -250,8 +256,6 @@ export function ConfigPanel({
   });
 
   const totalCredits = selectedModels.reduce((sum, m) => sum + m.creditCost, 0);
-  const hasPrompt = selection.promptId !== null;
-
   return (
     <aside
       style={collapsed ? undefined : { width: `${width}px` }}
@@ -345,7 +349,7 @@ export function ConfigPanel({
 
                 {selectedModels.length < MAX_MODELS && (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="relative flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setShowModelSelector(!showModelSelector)}
@@ -355,6 +359,14 @@ export function ConfigPanel({
                         <Plus className="h-3 w-3" />
                         Add model
                       </button>
+                      {guidance?.currentStep === "model" ? (
+                        <div className="absolute left-0 top-full z-10 mt-2 max-w-52">
+                          <GuidanceBubble
+                            text="Add one model before generating."
+                            onDismiss={onDismissGuidance}
+                          />
+                        </div>
+                      ) : null}
                       {showModelSelector && (
                         <button
                           type="button"
@@ -409,12 +421,21 @@ export function ConfigPanel({
                 />
               </div>
 
-              <ArcadeButton
-                variant="glow"
-                className="w-full"
-                onClick={onGenerate}
-                disabled={!canGenerate || isGenerating || !hasPrompt}
-              >
+              <div className="relative">
+                {guidance?.currentStep === "generate" ? (
+                  <div className="absolute bottom-full left-0 z-10 mb-2 max-w-56">
+                    <GuidanceBubble
+                      text="Everything is ready. Generate now."
+                      onDismiss={onDismissGuidance}
+                    />
+                  </div>
+                ) : null}
+                <ArcadeButton
+                  variant="glow"
+                  className="w-full"
+                  onClick={onGenerate}
+                  disabled={!canGenerate || isGenerating}
+                >
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -426,7 +447,8 @@ export function ConfigPanel({
                     Generate
                   </>
                 )}
-              </ArcadeButton>
+                </ArcadeButton>
+              </div>
 
               <div className="border-t border-[var(--border)]" />
 

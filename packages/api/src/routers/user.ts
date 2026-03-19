@@ -1,6 +1,7 @@
 import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import {
   CREATOR_IMPLEMENTATIONS,
+  CREATOR_IDE_HINTS_ENABLED_PREFERENCE,
   db,
   LEADERBOARD_IMPLEMENTATIONS,
   PROFILE_IMPLEMENTATIONS,
@@ -36,12 +37,15 @@ const scryptAsync = promisify(scrypt);
 const leaderboardImplementationSchema = z.enum(LEADERBOARD_IMPLEMENTATIONS);
 const creatorImplementationSchema = z.enum(CREATOR_IMPLEMENTATIONS);
 const profileImplementationSchema = z.enum(PROFILE_IMPLEMENTATIONS);
+const creatorIdeHintsEnabledSchema = z.boolean();
 const DEFAULT_LEADERBOARD_IMPLEMENTATION: UserPreferenceName =
   "defaultLeaderboardImplementation";
 const DEFAULT_CREATOR_IMPLEMENTATION: UserPreferenceName =
   "defaultCreatorImplementation";
 const DEFAULT_PROFILE_IMPLEMENTATION: UserPreferenceName =
   "defaultProfileImplementation";
+const CREATOR_IDE_HINTS_ENABLED: UserPreferenceName =
+  CREATOR_IDE_HINTS_ENABLED_PREFERENCE;
 
 function buildPreferencesRecord(
   preferences: Array<{ name: string; value: string }>,
@@ -51,6 +55,7 @@ function buildPreferencesRecord(
   > | null;
   defaultCreatorImplementation: z.infer<typeof creatorImplementationSchema> | null;
   defaultProfileImplementation: z.infer<typeof profileImplementationSchema> | null;
+  creatorIdeHintsEnabled: z.infer<typeof creatorIdeHintsEnabledSchema>;
 } {
   const preferencesMap = new Map(
     preferences.map((preference) => [preference.name, preference.value]),
@@ -71,6 +76,14 @@ function buildPreferencesRecord(
     profileValue !== undefined
       ? profileImplementationSchema.safeParse(profileValue)
       : null;
+  const creatorIdeHintsEnabledValue = preferencesMap.get(CREATOR_IDE_HINTS_ENABLED);
+  const parsedCreatorIdeHintsEnabledValue =
+    creatorIdeHintsEnabledValue !== undefined
+      ? z
+          .enum(["true", "false"])
+          .transform((value) => value === "true")
+          .safeParse(creatorIdeHintsEnabledValue)
+      : null;
 
   return {
     defaultLeaderboardImplementation:
@@ -85,6 +98,10 @@ function buildPreferencesRecord(
       parsedProfileValue?.success === true
         ? parsedProfileValue.data
         : null,
+    creatorIdeHintsEnabled:
+      parsedCreatorIdeHintsEnabledValue?.success === true
+        ? parsedCreatorIdeHintsEnabledValue.data
+        : true,
   };
 }
 
@@ -207,6 +224,7 @@ export const userRouter = router({
           leaderboardImplementationSchema.nullable(),
         defaultCreatorImplementation: creatorImplementationSchema.nullable(),
         defaultProfileImplementation: profileImplementationSchema.nullable(),
+        creatorIdeHintsEnabled: creatorIdeHintsEnabledSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -229,6 +247,10 @@ export const userRouter = router({
         {
           name: DEFAULT_PROFILE_IMPLEMENTATION,
           value: input.defaultProfileImplementation,
+        },
+        {
+          name: CREATOR_IDE_HINTS_ENABLED,
+          value: String(input.creatorIdeHintsEnabled),
         },
       ] as const;
 

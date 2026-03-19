@@ -12,6 +12,7 @@ import { useDiscoveryDialog } from "@/components/creator/shared";
 
 export interface UseGenerationOptions {
   promptContent: string;
+  promptTitle?: string;
   gameName?: string;
   selectedTheme: string | null;
   selectedModels: ModelSelection[];
@@ -34,6 +35,7 @@ export interface UseGenerationReturn {
 export function useGeneration(options: UseGenerationOptions): UseGenerationReturn {
   const {
     promptContent,
+    promptTitle = "",
     gameName = "",
     selectedTheme,
     selectedModels,
@@ -48,6 +50,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
   const generationAbortedRef = useRef(false);
+  const generationInFlightRef = useRef(false);
 
   const updateGenerationStatus = useGenerationsStore((state) => state.updateGenerationStatus);
   const updateGenerationCode = useGenerationsStore((state) => state.updateGenerationCode);
@@ -59,10 +62,11 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
   const discoveryDialog = useDiscoveryDialog();
 
   const createPromptMutation = useMutation({
-    mutationFn: async (input: { themeId: string; content: string }) => {
+    mutationFn: async (input: { themeId: string; content: string; title?: string }) => {
       return await trpcClient.prompts.create.mutate({
         themeId: input.themeId,
         content: input.content,
+        title: input.title,
         tokenizer: "gpt-4",
         visibility,
       });
@@ -80,6 +84,10 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
   }, []);
 
   const handleGenerate = useCallback(async () => {
+    if (generationInFlightRef.current) {
+      return;
+    }
+
     if (!promptContent.trim()) {
       toast.error("Please enter prompt content");
       return;
@@ -93,6 +101,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
       return;
     }
 
+    generationInFlightRef.current = true;
     setIsGenerating(true);
     generationAbortedRef.current = false;
 
@@ -119,6 +128,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
         const result = await createPromptMutation.mutateAsync({
           themeId: selectedTheme,
           content: promptContent,
+          title: promptTitle.trim() || undefined,
         });
         promptId = result.promptId ?? null;
       }
@@ -221,10 +231,12 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to generate games");
     } finally {
+      generationInFlightRef.current = false;
       setIsGenerating(false);
     }
   }, [
     promptContent,
+    promptTitle,
     gameName,
     selectedTheme,
     selectedModels,
