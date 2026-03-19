@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, FileText, Code, Save, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Code, Save, X, ArrowRightToLine } from "lucide-react";
 import { StatusIcon } from "@/components/creator/shared";
 import { useGenerationStatus } from "@/stores/generations-store";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ function EditorTabButton({
       key={tab.id}
       onClick={() => onTabClick(tab.id)}
       className={cn(
-        "flex items-center gap-2 px-4 py-2 text-sm border-r border-border",
+        "flex shrink-0 items-center gap-2 px-4 py-2 text-sm border-r border-border",
         "hover:bg-muted/50 transition-colors whitespace-nowrap",
         isActive && "bg-background border-b-2 border-b-primary"
       )}
@@ -106,12 +106,15 @@ export function EditorTabs({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canJumpToEnd, setCanJumpToEnd] = useState(false);
 
   const checkScroll = useCallback(() => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      const hiddenRightWidth = scrollWidth - clientWidth - scrollLeft;
       setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      setCanScrollRight(hiddenRightWidth > 1);
+      setCanJumpToEnd(hiddenRightWidth > clientWidth * 0.75);
     }
   }, []);
 
@@ -126,6 +129,16 @@ export function EditorTabs({
       const scrollAmount = 200;
       scrollRef.current.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+      setTimeout(checkScroll, 300);
+    }
+  };
+
+  const scrollToEnd = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        left: scrollRef.current.scrollWidth,
         behavior: "smooth",
       });
       setTimeout(checkScroll, 300);
@@ -147,7 +160,7 @@ export function EditorTabs({
       <div
         ref={scrollRef}
         onScroll={checkScroll}
-        className="flex items-center overflow-x-auto scrollbar-hide"
+        className="flex min-w-0 flex-1 items-center overflow-x-auto scrollbar-hide"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {tabs.map((tab) => (
@@ -164,13 +177,25 @@ export function EditorTabs({
       </div>
 
       {canScrollRight ? (
-        <button
-          type="button"
-          onClick={() => scroll("right")}
-          className="shrink-0 px-2 py-2 hover:bg-muted/50 border-l border-border"
-        >
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => scroll("right")}
+            className="shrink-0 border-l border-border px-2 py-2 hover:bg-muted/50"
+          >
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {canJumpToEnd ? (
+            <button
+              type="button"
+              onClick={scrollToEnd}
+              className="shrink-0 border-l border-border px-2 py-2 hover:bg-muted/50"
+              title="Scroll tabs to end"
+            >
+              <ArrowRightToLine className="h-4 w-4 text-muted-foreground" />
+            </button>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
