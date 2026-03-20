@@ -39,7 +39,7 @@ export function ChallengerRow({ entry, rank }: { entry: LeaderboardEntry; rank: 
 					</Link>
 					<Link
 						href={`/game/${entry.gameId}`}
-						className="opacity-0 group-hover:opacity-100 transition-opacity"
+						className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
 					>
 						<Play className="h-4 w-4 text-[var(--primary)]" />
 					</Link>
@@ -88,7 +88,7 @@ export function ChallengerRow({ entry, rank }: { entry: LeaderboardEntry; rank: 
 				</div>
 			</div>
 
-			<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+			<div className="flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
 				<ShareDropdown
 					url={`${process.env.NEXT_PUBLIC_APP_URL}/game/${entry.gameId}`}
 					title={entry.gameName || "Play this game"}

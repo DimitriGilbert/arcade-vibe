@@ -35,6 +35,7 @@ import {
   GitFork,
   Code,
   FolderPlus,
+  MoreVertical,
 } from "lucide-react";
 import { trpcClient } from "@/utils/trpc";
 import { RatingForm } from "@/components/game/rating-form";
@@ -49,6 +50,13 @@ import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { generateEmbedCode } from "@/lib/embed-utils";
 import { ShareDropdown } from "@/components/shared/share-dropdown";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface GamePlayPageProps {
   gameId: string;
@@ -66,6 +74,7 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
+  const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -401,6 +410,46 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
           >
             <Flag className="size-4" />
           </button>
+          {/* Secondary actions: inline on desktop, overflow menu on mobile */}
+          {isMobile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-[var(--radius)] transition-colors"
+                aria-label="More actions"
+              >
+                <MoreVertical className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopyEmbed}>
+                  <Code className="size-4 mr-2" />
+                  Copy embed code
+                </DropdownMenuItem>
+                {session?.user && game?.promptId && (
+                  <DropdownMenuItem onClick={handleFork} disabled={forkMutation.isPending}>
+                    <GitFork className="size-4 mr-2" />
+                    Fork prompt
+                  </DropdownMenuItem>
+                )}
+                {session?.user && (
+                  <DropdownMenuItem onClick={() => setShowCollectionDialog(true)}>
+                    <FolderPlus className="size-4 mr-2" />
+                    Save to collection
+                  </DropdownMenuItem>
+                )}
+                {session?.user && (
+                  <DropdownMenuItem onClick={handleDownload} disabled={downloadMutation.isPending}>
+                    <Download className="size-4 mr-2" />
+                    Download
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-[var(--destructive)]">
+                  <Flag className="size-4 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
           {canRate && (
             <ArcadeButton
               variant="glow"
@@ -411,6 +460,8 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
               <Trophy className="size-3.5" />
               Rate
             </ArcadeButton>
+          )}
+            </>
           )}
           <button
             type="button"

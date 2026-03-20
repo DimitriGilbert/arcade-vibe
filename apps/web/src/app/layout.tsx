@@ -1,12 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
 import { Orbitron, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 
 import "../index.css";
-import Header from "@/components/header";
 import Providers from "@/components/providers";
-import { Footer } from "@/components/footer";
+import { AppShell } from "@/components/app-shell";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -67,6 +66,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -84,13 +89,9 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
-          <div className="grid grid-rows-[auto_minmax(0,1fr)_auto] min-h-svh">
-            <Header />
-            <main id="main-content" className="min-h-0 overflow-y-auto">
+          <AppShell>
               {children}
-            </main>
-            <Footer />
-          </div>
+          </AppShell>
         </Providers>
         <Script
           src="https://cdn.counter.dev/script.js"

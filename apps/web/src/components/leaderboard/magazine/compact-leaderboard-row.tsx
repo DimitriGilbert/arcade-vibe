@@ -44,7 +44,7 @@ export function CompactLeaderboardRow({ entry, rank }: { entry: LeaderboardEntry
 			/>
 
 			<Link href={`/game/${entry.gameId}`}>
-				<ArcadeButton variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+				<ArcadeButton variant="outline" size="sm" className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
 					<Play className="h-4 w-4" />
 				</ArcadeButton>
 			</Link>

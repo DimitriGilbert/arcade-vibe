@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 export function Footer() {
   const pathname = usePathname();
-  const isHidden = /^\/game\/[^/]+$/.test(pathname);
+  const isHidden = /^\/game\/[^/]+$/.test(pathname) || /^\/creator\/ide/.test(pathname);
 
   return (
     <footer className="border-t border-[var(--border)]/50 py-4 px-4" style={isHidden ? { display: "none" } : undefined}>

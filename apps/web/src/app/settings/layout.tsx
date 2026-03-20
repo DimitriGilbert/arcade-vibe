@@ -66,7 +66,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
             </div>
 
             {/* Tab Navigation */}
-            <nav className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted)]/40 p-1">
+            <nav className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--muted)]/40 p-1 overflow-x-auto flex-nowrap max-w-full">
               {navigationItems.map((item) => {
                 const isActive = getActiveTab() === item.href;
                 const Icon = item.icon;

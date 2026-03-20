@@ -38,7 +38,7 @@ async function Masthead() {
             <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-foreground)] mb-4">
               Make games with AI. Compete with friends.
             </p>
-            <h1 className="text-7xl sm:text-8xl md:text-9xl font-black tracking-tight leading-none">
+            <h1 className="text-4xl sm:text-7xl md:text-9xl font-black tracking-tight leading-none">
               <span className="block home-title-main">ARCADE</span>
               <span className="block text-[var(--muted-foreground)] home-title-sub">
                 VIBE
@@ -467,8 +467,8 @@ function LearnBento() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-12 gap-4 md:gap-5 auto-rows-[minmax(100px,auto)]">
-          <ArcadeCard className="col-span-12 md:col-span-6 row-span-2 p-6 flex flex-col">
+        <div className="grid grid-cols-6 sm:grid-cols-12 gap-4 md:gap-5 auto-rows-[minmax(100px,auto)]">
+          <ArcadeCard className="col-span-6 md:col-span-6 row-span-2 p-6 flex flex-col">
             <div className="flex-1">
               <div className="w-14 h-14 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-4">
                 <span className="text-[var(--primary)] text-2xl">🎓</span>
@@ -506,7 +506,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-6 md:col-span-6 p-5">
+          <ArcadeCard className="col-span-6 sm:col-span-6 md:col-span-6 p-5">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center shrink-0">
                 <span className="text-[var(--accent)] text-xl">⚖️</span>
@@ -523,7 +523,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 p-4 flex flex-col justify-between">
+          <ArcadeCard className="col-span-3 sm:col-span-3 md:col-span-3 p-4 flex flex-col justify-between">
             <div className="w-10 h-10 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center">
               <span className="text-[var(--primary)]">👥</span>
             </div>
@@ -535,7 +535,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-6 sm:col-span-3 md:col-span-3 row-span-3 p-5 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5 flex flex-col justify-center">
+          <ArcadeCard className="col-span-3 sm:col-span-3 md:col-span-3 row-span-3 p-5 bg-gradient-to-br from-[var(--card)] to-[var(--primary)]/5 flex flex-col justify-center">
             <div className="text-center">
               <p className="text-6xl font-black text-[var(--primary)] mb-2">
                 1
@@ -549,7 +549,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-7 md:col-span-7 p-4">
+          <ArcadeCard className="col-span-6 sm:col-span-7 md:col-span-7 p-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
                 <span className="text-yellow-500">📊</span>
@@ -568,7 +568,7 @@ function LearnBento() {
 
           <ArcadeCard
             variant="glow"
-            className="col-span-4 sm:col-span-2 md:col-span-2 p-4 flex items-center justify-center"
+            className="col-span-6 sm:col-span-2 md:col-span-2 p-4 flex items-center justify-center"
           >
             <div className="text-center">
               <span className="text-2xl">✨</span>
@@ -578,7 +578,7 @@ function LearnBento() {
             </div>
           </ArcadeCard>
 
-          <ArcadeCard className="col-span-12 sm:col-span-9 md:col-span-9 p-4">
+          <ArcadeCard className="col-span-6 sm:col-span-9 md:col-span-9 p-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
                 <span className="text-pink-500">❤️</span>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Loader2, PanelRightOpen } from "lucide-react";
+import { Copy, Loader2, PanelRightOpen, PanelLeftOpen, Settings2 } from "lucide-react";
 import { useIDEState } from "./use-ide-state";
 import { ExplorerSidebar } from "./explorer-sidebar";
 import { EditorArea } from "./editor-area";
@@ -18,6 +18,13 @@ import { editorFeedbackSchema, editorFeedbackFields } from "@/lib/feedback-schem
 import { useGeneration } from "@/hooks/creator/use-generation";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { Visibility, ModelSelection, IDETab } from "./types";
 import type { CreatorGuidanceStep } from "./creator-guidance";
 
@@ -535,8 +542,72 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     return <IDESkeleton />;
   }
 
+  const explorerPanel = (
+    <ExplorerSidebar
+      themes={themes ?? []}
+      selection={selection}
+      expandedThemes={expandedThemes}
+      expandedPrompts={expandedPrompts}
+      themesLoading={themesLoading}
+      isGenerating={isGenerating}
+      isDirty={isDirty}
+      isNewPrompt={isNewPrompt}
+      promptTitle={promptTitle}
+      prompts={prompts}
+      promptsLoading={promptsLoading}
+      games={games}
+      gamesLoading={gamesLoading}
+      gamesByPromptId={gamesByPromptId}
+      gamesLoadingByPromptId={gamesLoadingByPromptId}
+      onSelectTheme={handleSelectTheme}
+      onSelectPrompt={handleSelectPrompt}
+      onSelectGame={handleSelectGame}
+      onNewPrompt={handleNewPrompt}
+      onSave={handleSave}
+      onDiscardNewPrompt={handleDiscardNewPrompt}
+      onPromptTitleChange={setPromptTitle}
+      onCollapseAll={handleCollapseAll}
+      onExpandAll={handleExpandAll}
+      toggleThemeExpanded={handleToggleThemeExpand}
+      togglePromptExpanded={handleTogglePromptExpand}
+      showContextMenu={showContextMenu}
+      showConfirmDialog={showConfirmDialog}
+      updatePromptMutation={updatePromptMutation}
+      deletePromptMutation={deletePromptMutation}
+      updateGameMutation={updateGameMutation}
+      deleteGameMutation={deleteGameMutation}
+      toggleGamePublishedMutation={toggleGamePublishedMutation}
+      guidance={guidance}
+      onDismissGuidance={dismissGuidance}
+    />
+  );
+
+  const configPanel = (
+    <ConfigPanel
+      collapsed={false}
+      onCollapse={setConfigPanelCollapsed}
+      width={configWidth}
+      visibility={visibility}
+      onVisibilityChange={setVisibility}
+      gameName={gameName}
+      setGameName={setGameName}
+      selectedModels={selectedModels}
+      onModelToggle={handleModelToggle}
+      onModelRemove={handleModelRemove}
+      isGenerating={isGenerating}
+      canGenerate={canGenerate}
+      onGenerate={handleGenerate}
+      credits={credits}
+      versions={versions}
+      onSelectVersion={handleSelectVersion}
+      selection={selection}
+      guidance={guidance}
+      onDismissGuidance={dismissGuidance}
+    />
+  );
+
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {isForking && forkOriginalPromptId && (
         <ForkBanner
           originalPromptId={forkOriginalPromptId}
@@ -547,54 +618,17 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
       )}
 
       <div className="relative flex-1 min-h-0 flex">
+        {/* Explorer: inline on desktop, Sheet on mobile */}
         <aside
           style={{ width: `${explorerWidth}px` }}
-          className="h-full shrink-0 border-r border-border bg-sidebar"
+          className="h-full shrink-0 border-r border-border bg-sidebar hidden lg:block"
         >
-          <ExplorerSidebar
-            themes={themes ?? []}
-            selection={selection}
-            expandedThemes={expandedThemes}
-            expandedPrompts={expandedPrompts}
-            themesLoading={themesLoading}
-            isGenerating={isGenerating}
-            isDirty={isDirty}
-            isNewPrompt={isNewPrompt}
-            promptTitle={promptTitle}
-            prompts={prompts}
-            promptsLoading={promptsLoading}
-            games={games}
-            gamesLoading={gamesLoading}
-            gamesByPromptId={gamesByPromptId}
-            gamesLoadingByPromptId={gamesLoadingByPromptId}
-            onSelectTheme={handleSelectTheme}
-            onSelectPrompt={handleSelectPrompt}
-            onSelectGame={handleSelectGame}
-            onNewPrompt={handleNewPrompt}
-            onSave={handleSave}
-            onDiscardNewPrompt={handleDiscardNewPrompt}
-            onPromptTitleChange={setPromptTitle}
-            onCollapseAll={handleCollapseAll}
-            onExpandAll={handleExpandAll}
-            toggleThemeExpanded={handleToggleThemeExpand}
-            togglePromptExpanded={handleTogglePromptExpand}
-            showContextMenu={showContextMenu}
-            showConfirmDialog={showConfirmDialog}
-            updatePromptMutation={updatePromptMutation}
-            deletePromptMutation={deletePromptMutation}
-            updateGameMutation={updateGameMutation}
-            deleteGameMutation={deleteGameMutation}
-            toggleGamePublishedMutation={toggleGamePublishedMutation}
-            guidance={guidance}
-            onDismissGuidance={dismissGuidance}
-          />
+          {explorerPanel}
         </aside>
         <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize explorer sidebar"
+          aria-hidden="true"
           onPointerDown={(event) => startResize("explorer", event)}
-          className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)]"
+          className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)] hidden lg:block"
         />
         <EditorArea
           selection={selection}
@@ -617,34 +651,34 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
         />
         {!configPanelCollapsed && (
           <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize config panel"
+            aria-hidden="true"
             onPointerDown={(event) => startResize("config", event)}
-            className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)]"
+            className="w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--border)] hidden lg:block"
           />
         )}
-        <ConfigPanel
-          collapsed={configPanelCollapsed}
-          onCollapse={setConfigPanelCollapsed}
-          width={configWidth}
-          visibility={visibility}
-          onVisibilityChange={setVisibility}
-          gameName={gameName}
-          setGameName={setGameName}
-          selectedModels={selectedModels}
-          onModelToggle={handleModelToggle}
-          onModelRemove={handleModelRemove}
-          isGenerating={isGenerating}
-          canGenerate={canGenerate}
-          onGenerate={handleGenerate}
-          credits={credits}
-          versions={versions}
-          onSelectVersion={handleSelectVersion}
-          selection={selection}
-          guidance={guidance}
-          onDismissGuidance={dismissGuidance}
-        />
+        <div className="hidden lg:block">
+          <ConfigPanel
+            collapsed={configPanelCollapsed}
+            onCollapse={setConfigPanelCollapsed}
+            width={configWidth}
+            visibility={visibility}
+            onVisibilityChange={setVisibility}
+            gameName={gameName}
+            setGameName={setGameName}
+            selectedModels={selectedModels}
+            onModelToggle={handleModelToggle}
+            onModelRemove={handleModelRemove}
+            isGenerating={isGenerating}
+            canGenerate={canGenerate}
+            onGenerate={handleGenerate}
+            credits={credits}
+            versions={versions}
+            onSelectVersion={handleSelectVersion}
+            selection={selection}
+            guidance={guidance}
+            onDismissGuidance={dismissGuidance}
+          />
+        </div>
         {configPanelCollapsed ? (
           <button
             type="button"
@@ -659,16 +693,55 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
         ) : null}
       </div>
 
-      <StatusBar
-        credits={credits}
-        isGenerating={isGenerating}
-        completedCount={completedCount}
-        totalModels={totalModels}
-        cursorLine={cursorPosition.line}
-        cursorColumn={cursorPosition.column}
-        wordCount={wordCount}
-        activeTabType={activeTabType}
-      />
+      {/* Mobile floating toolbar with Sheet triggers */}
+      <div className="lg:hidden fixed bottom-4 left-4 z-50 flex gap-2">
+        <Sheet>
+          <SheetTrigger
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--foreground)] shadow-md hover:bg-[var(--muted)] transition-colors"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+            Explorer
+          </SheetTrigger>
+          <SheetContent side="left" showCloseButton>
+            <SheetHeader>
+              <SheetTitle>Explorer</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto">
+              {explorerPanel}
+            </div>
+          </SheetContent>
+        </Sheet>
+        <Sheet>
+          <SheetTrigger
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--foreground)] shadow-md hover:bg-[var(--muted)] transition-colors"
+          >
+            <Settings2 className="h-4 w-4" />
+            Config
+          </SheetTrigger>
+          <SheetContent side="right" showCloseButton>
+            <SheetHeader>
+              <SheetTitle>Config</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto">
+              {configPanel}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* StatusBar: hidden on mobile to avoid bottom nav conflict */}
+      <div className="hidden lg:block">
+        <StatusBar
+          credits={credits}
+          isGenerating={isGenerating}
+          completedCount={completedCount}
+          totalModels={totalModels}
+          cursorLine={cursorPosition.line}
+          cursorColumn={cursorPosition.column}
+          wordCount={wordCount}
+          activeTabType={activeTabType}
+        />
+      </div>
 
       {contextMenu.open && (
         <ContextMenu
@@ -693,7 +766,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
 
       <DiscoveryDialog {...discoveryDialog.dialogProps} />
 
-      <div className="fixed bottom-4 right-4 z-50">
+      <div className="fixed bottom-4 right-4 z-50 hidden lg:block">
         <FeedbackButton
           schema={editorFeedbackSchema}
           fields={editorFeedbackFields}

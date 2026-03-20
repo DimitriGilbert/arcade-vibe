@@ -59,7 +59,7 @@ export function EntryActions({
   // Determine visibility classes based on variant
   const containerClasses =
     variant === "hover"
-      ? "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+      ? "flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
       : "flex flex-wrap gap-2";
 
   const buttonSize = variant === "compact" ? "sm" : "sm";
