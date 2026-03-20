@@ -694,7 +694,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
       </div>
 
       {/* Mobile floating toolbar with Sheet triggers */}
-      <div className="lg:hidden fixed bottom-4 left-4 z-50 flex gap-2">
+      <div className="lg:hidden fixed bottom-20 left-4 z-50 flex gap-2">
         <Sheet>
           <SheetTrigger
             className="inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--foreground)] shadow-md hover:bg-[var(--muted)] transition-colors"
