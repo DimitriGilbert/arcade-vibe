@@ -44,6 +44,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Game ID mismatch" }, { status: 403 });
   }
 
+  if (session.userId.startsWith("anonymous:")) {
+    return NextResponse.json(
+      { error: "Authentication required for leaderboard submission. Please sign in to submit scores." },
+      { status: 401 },
+    );
+  }
+
   const wallClockElapsed = (Date.now() - session.startedAt) / 1000;
   const validatedPlaytime = Math.min(input.playtime, wallClockElapsed + 10);
 

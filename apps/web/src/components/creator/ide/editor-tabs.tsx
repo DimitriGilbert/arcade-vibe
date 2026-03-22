@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, FileText, Code, Save, X, ArrowRightToLine } from "lucide-react";
 import { StatusIcon } from "@/components/creator/shared";
 import { useGenerationStatus } from "@/stores/generations-store";
@@ -123,6 +123,11 @@ export function EditorTabs({
     window.addEventListener("resize", checkScroll);
     return () => window.removeEventListener("resize", checkScroll);
   }, [checkScroll]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: checkScroll is stable, tabs change requires re-check
+  useLayoutEffect(() => {
+    checkScroll();
+  }, [tabs]);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
