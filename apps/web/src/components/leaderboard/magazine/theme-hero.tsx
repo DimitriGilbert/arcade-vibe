@@ -57,7 +57,7 @@ export function ThemeHero({
 						</div>
 					</div>
 
-					<Link href="/creator">
+					<Link href="/creator/ide">
 						<ArcadeButton variant="primary">
 							<Gamepad2 className="h-4 w-4" />
 							Create Game

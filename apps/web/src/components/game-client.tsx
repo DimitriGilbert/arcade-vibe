@@ -215,7 +215,7 @@ export default function GamePlayPage({ gameId }: GamePlayPageProps) {
     },
     onSuccess: (data) => {
       toast.success("Prompt forked successfully");
-      window.location.href = `/editor?promptId=${data.promptId}`;
+      window.location.href = `/creator/ide?promptId=${data.promptId}`;
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to fork prompt");

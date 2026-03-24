@@ -27,7 +27,6 @@ import {
   TrendingUp,
   Sparkles,
   PanelsTopLeft,
-  WandSparkles,
   Loader2,
   Shield,
   Lightbulb,
@@ -494,6 +493,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
 
+              {/* Creator default setting - commented out: Creator menu now links directly to /creator/ide
               <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-cyan-400/10 rounded-lg">
@@ -526,6 +526,7 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              */}
 
               <div className="rounded-xl border border-white/8 bg-black/10 p-4 space-y-3">
                 <div className="flex items-center gap-3">

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (input.playtime >= 60) {
+  if (input.playtime >= 60 && !session.userId.startsWith("anonymous:")) {
     const existingScore = await db.query.gameScores.findFirst({
       where: and(
         eq(gameScores.userId, session.userId),

@@ -10,7 +10,7 @@ const BOTTOM_NAV_ITEMS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Board", href: "/leaderboard", icon: Trophy },
   { label: "Models", href: "/models", icon: Cpu },
-  { label: "Creator", href: "/creator", icon: Wand2 },
+  { label: "Creator", href: "/creator/ide", icon: Wand2 },
 ] as const;
 
 export function MobileBottomNav() {

@@ -154,7 +154,7 @@ export default function ArenaClient() {
 									<div className="text-sm text-[var(--muted-foreground)]">
 										<span className="font-bold text-[var(--foreground)]">{allEntries.length}</span> players
 									</div>
-									<Link href="/creator">
+									<Link href="/creator/ide">
 										<ArcadeButton variant="primary" size="sm" className="gap-1">
 											<Gamepad2 className="h-4 w-4" />
 											Create Game
@@ -211,7 +211,7 @@ export default function ArenaClient() {
 								}
 							/>
 							<div className="text-center mt-6">
-								<Link href="/creator">
+								<Link href="/creator/ide">
 									<ArcadeButton variant="primary" className="gap-2">
 										<Gamepad2 className="h-5 w-5" />
 										Start Creating

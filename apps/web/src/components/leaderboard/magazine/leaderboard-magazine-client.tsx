@@ -69,7 +69,7 @@ export default function LeaderboardMagazineClient({
 						<Calendar className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-6 opacity-50" />
 						<h1 className="text-2xl font-bold mb-4">No Active Theme</h1>
 						<p className="text-[var(--muted-foreground)] mb-8">Check back for the next theme.</p>
-						<Link href="/creator">
+						<Link href="/creator/ide">
 							<ArcadeButton variant="primary">
 								<Gamepad2 className="h-4 w-4" />
 								Browse Games
@@ -110,7 +110,7 @@ export default function LeaderboardMagazineClient({
 						<p className="text-[var(--muted-foreground)] mb-8">
 							Be the first to submit a game for this theme.
 						</p>
-						<Link href="/creator">
+						<Link href="/creator/ide">
 							<ArcadeButton variant="glow">
 								<Gamepad2 className="h-4 w-4" />
 								Create a Game
@@ -171,7 +171,7 @@ export default function LeaderboardMagazineClient({
 						<p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
 							Write a prompt, pick your AI model, and generate a game.
 						</p>
-						<Link href="/creator">
+						<Link href="/creator/ide">
 							<ArcadeButton variant="glow" size="lg">
 								<Gamepad2 className="h-5 w-5" />
 								Start Creating
