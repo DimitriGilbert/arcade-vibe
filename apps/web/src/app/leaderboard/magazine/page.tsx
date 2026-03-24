@@ -2,7 +2,6 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { Trophy, Calendar, Gamepad2, TrendingUp } from "lucide-react";
 import { ArcadeCard, ArcadeButton } from "@/components/arcade";
-import { getServerCaller } from "@/utils/trpc-server";
 import type { LeaderboardEntry, ThemeList } from "@/lib/trpc-types";
 import {
   CoverStoryCard,
@@ -10,6 +9,16 @@ import {
   ThemeHero,
   MagazineThemeSelector,
 } from "@/components/leaderboard/magazine";
+import { db } from "@arcade-vibe/db";
+import { themes } from "@arcade-vibe/db/schema/themes";
+import { games, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
+import { prompts } from "@arcade-vibe/db/schema/prompts";
+import { user } from "@arcade-vibe/db/schema/auth";
+import { tierCosts } from "@arcade-vibe/db/schema/credits";
+import { modelConfig } from "@arcade-vibe/db/schema/models";
+import { scores } from "@arcade-vibe/db/schema/scores";
+import { eq, and, desc, sql, isNull, isNotNull, count, sum } from "drizzle-orm";
+import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 250;
@@ -18,20 +27,22 @@ function serializeDate(value: Date | null): string | null {
   return value ? value.toISOString() : null;
 }
 
-function serializeTheme(theme: {
+function serializeThemeFromRow(theme: {
   id: string;
   title: string;
   description: string;
-  status: "upcoming" | "active" | "frozen" | "archived";
-  visibility: "private" | "public_on_freeze" | "public";
+  status: string;
+  visibility: string;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  mediaConfig: ThemeList["mediaConfig"];
+  mediaConfig: ThemeMediaConfig | null;
 }): ThemeList {
   return {
     ...theme,
+    status: theme.status as ThemeList["status"],
+    visibility: theme.visibility as ThemeList["visibility"],
     startDate: serializeDate(theme.startDate),
     endDate: serializeDate(theme.endDate),
     createdAt: theme.createdAt.toISOString(),
@@ -39,21 +50,80 @@ function serializeTheme(theme: {
   };
 }
 
-function serializeLeaderboardEntry(entry: {
+type RawLeaderboardRow = {
+  gameId: string;
+  gameName: string | null;
   createdAt: Date;
   submittedAt: Date | null;
+  isSubmitted: boolean;
+  finalScore: string;
   calculatedAt: Date | null;
-  theme: {
-    id: string;
-    title: string | null;
-  } | null;
-} & Omit<LeaderboardEntry, "createdAt" | "submittedAt" | "calculatedAt" | "theme">): LeaderboardEntry {
+  qualityScore: string | null;
+  engagementScore: string | null;
+  playersScore: string | null;
+  playsScore: string | null;
+  replayScore: string | null;
+  efficiencyScore: string | null;
+  tierFactor: string | null;
+  inputTokens: number | null;
+  modelProvider: string;
+  modelName: string;
+  modelId: string | null;
+  tierSlug: string | null;
+  tierName: string | null;
+  creatorId: string;
+  creatorName: string | null;
+  themeId: string | null;
+  themeTitle: string | null;
+  promptId: string;
+  promptVisibility: string | null;
+};
+
+function serializeLeaderboardEntry(entry: RawLeaderboardRow & {
+  playCount: number;
+  totalPlayTimeSeconds: number;
+}): LeaderboardEntry {
   return {
-    ...entry,
+    gameId: entry.gameId,
+    gameName: entry.gameName,
     createdAt: entry.createdAt.toISOString(),
     submittedAt: serializeDate(entry.submittedAt),
+    isSubmitted: entry.isSubmitted,
+    finalScore: entry.finalScore,
     calculatedAt: serializeDate(entry.calculatedAt),
-    theme: entry.theme,
+    modelProvider: entry.modelProvider,
+    modelName: entry.modelName,
+    modelId: entry.modelId,
+    tier: entry.tierSlug && entry.tierName
+      ? {
+          slug: entry.tierSlug,
+          name: entry.tierName,
+        }
+      : null,
+    creator: {
+      id: entry.creatorId,
+      name: entry.creatorName,
+    },
+    theme: entry.themeId
+      ? {
+          id: entry.themeId,
+          title: entry.themeTitle,
+        }
+      : null,
+    promptId: entry.promptId,
+    promptVisibility: entry.promptVisibility ?? "private",
+    playCount: entry.playCount,
+    totalPlayTimeSeconds: entry.totalPlayTimeSeconds,
+    scoreBreakdown: {
+      qualityScore: entry.qualityScore,
+      engagementScore: entry.engagementScore,
+      playersScore: entry.playersScore,
+      playsScore: entry.playsScore,
+      replayScore: entry.replayScore,
+      efficiencyScore: entry.efficiencyScore,
+      tierFactor: entry.tierFactor,
+      inputTokens: entry.inputTokens,
+    },
   };
 }
 
@@ -64,30 +134,152 @@ interface LeaderboardMagazinePageProps {
   }>;
 }
 
-async function getSelectedTheme(
-  themeId?: string,
-): Promise<ThemeList | null> {
-  const caller = await getServerCaller();
+async function getAllThemes() {
+  const allThemes = await db.query.themes.findMany({
+    orderBy: [desc(themes.createdAt)],
+  });
 
-  try {
-    if (themeId) {
-      const selectedTheme = await caller.themes.getById({ id: themeId });
+  return allThemes.map(serializeThemeFromRow);
+}
 
-      return serializeTheme(selectedTheme);
-    }
+async function getCurrentTheme() {
+  const now = new Date();
+  const currentTheme = await db.query.themes.findFirst({
+    where: and(
+      eq(themes.status, "active"),
+      sql`${themes.startDate} <= ${now} AND ${themes.endDate} >= ${now}`,
+    ),
+  });
 
-    const currentTheme = await caller.themes.getCurrent();
-    return currentTheme ? serializeTheme(currentTheme) : null;
-  } catch {
-    return null;
+  if (currentTheme) {
+    return serializeThemeFromRow(currentTheme);
   }
+
+  const freeTheme = await db.query.themes.findFirst({
+    where: eq(themes.isPermanent, true),
+  });
+
+  return freeTheme ? serializeThemeFromRow(freeTheme) : null;
+}
+
+async function getThemeById(themeId: string) {
+  const theme = await db.query.themes.findFirst({
+    where: eq(themes.id, themeId),
+  });
+
+  return theme ? serializeThemeFromRow(theme) : null;
+}
+
+async function getLeaderboardEntries(themeId: string, limit: number) {
+  const fetchLimit = limit + 1;
+
+  const conditions = [
+    isNull(games.deletedAt),
+    eq(games.isHidden, false),
+    eq(games.status, "completed"),
+    eq(games.isSubmitted, true),
+    eq(games.themeId, themeId),
+  ];
+
+  const result = await db
+    .select({
+      gameId: games.id,
+      gameName: games.name,
+      createdAt: games.createdAt,
+      submittedAt: games.submittedAt,
+      isSubmitted: games.isSubmitted,
+      finalScore: sql<string>`COALESCE(${scores.finalScore}, '0')`,
+      calculatedAt: scores.calculatedAt,
+      qualityScore: scores.qualityScore,
+      engagementScore: scores.engagementScore,
+      playersScore: scores.playersScore,
+      playsScore: scores.playsScore,
+      replayScore: scores.replayScore,
+      efficiencyScore: scores.efficiencyScore,
+      tierFactor: scores.tierFactor,
+      inputTokens: scores.inputTokens,
+      modelProvider: games.modelProvider,
+      modelName: games.modelName,
+      modelId: modelConfig.id,
+      tierSlug: tierCosts.slug,
+      tierName: tierCosts.name,
+      creatorId: user.id,
+      creatorName: user.name,
+      themeId: themes.id,
+      themeTitle: themes.title,
+      promptId: prompts.id,
+      promptVisibility: prompts.visibility,
+    })
+    .from(games)
+    .innerJoin(prompts, eq(games.promptId, prompts.id))
+    .innerJoin(user, eq(prompts.authorId, user.id))
+    .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+    .leftJoin(themes, eq(games.themeId, themes.id))
+    .leftJoin(scores, eq(games.id, scores.gameId))
+    .leftJoin(modelConfig, eq(games.modelName, modelConfig.modelName))
+    .where(and(...conditions))
+    .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`), desc(games.createdAt))
+    .limit(fetchLimit);
+
+  const gameIds = result.map((r) => r.gameId);
+
+  const playStats = gameIds.length > 0
+    ? await db
+        .select({
+          gameId: gameSessionMetrics.gameId,
+          playCount: count(),
+          totalPlayTime: sum(gameSessionMetrics.playtimeSeconds),
+        })
+        .from(gameSessionMetrics)
+        .where(
+          and(
+            sql`${gameSessionMetrics.gameId} IN ${gameIds}`,
+            isNotNull(gameSessionMetrics.endedAt),
+          ),
+        )
+        .groupBy(gameSessionMetrics.gameId)
+    : [];
+
+  const playStatsMap = new Map(
+    playStats.map((s) => [
+      s.gameId,
+      {
+        playCount: Number(s.playCount ?? 0),
+        totalPlayTimeSeconds: Number(s.totalPlayTime ?? 0),
+      },
+    ]),
+  );
+
+  const hasMore = result.length > limit;
+  const rows = hasMore ? result.slice(0, limit) : result;
+
+  const entries = rows.map((row) => {
+    const stats = playStatsMap.get(row.gameId) ?? {
+      playCount: 0,
+      totalPlayTimeSeconds: 0,
+    };
+
+    return serializeLeaderboardEntry({
+      ...row,
+      playCount: stats.playCount,
+      totalPlayTimeSeconds: stats.totalPlayTimeSeconds,
+    });
+  });
+
+  return { entries, hasMore };
 }
 
 export async function generateMetadata({
   searchParams,
 }: LeaderboardMagazinePageProps): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
-  const currentTheme = await getSelectedTheme(resolvedSearchParams?.themeId);
+
+  let currentTheme: ThemeList | null = null;
+  if (resolvedSearchParams?.themeId) {
+    currentTheme = await getThemeById(resolvedSearchParams.themeId);
+  } else {
+    currentTheme = await getCurrentTheme();
+  }
 
   if (!currentTheme) {
     return {
@@ -116,35 +308,29 @@ export async function generateMetadata({
 export default async function LeaderboardMagazinePage({
   searchParams,
 }: LeaderboardMagazinePageProps) {
-  const caller = await getServerCaller();
   const resolvedSearchParams = await searchParams;
-  const rawAllThemes = await caller.themes.list().catch(() => []);
-  const rawActiveTheme = await caller.themes.getCurrent().catch(() => null);
-  const rawSelectedTheme = resolvedSearchParams?.themeId
-    ? rawAllThemes.find((theme) => theme.id === resolvedSearchParams.themeId) ?? null
-    : null;
-  const rawCurrentTheme = rawSelectedTheme ?? rawActiveTheme;
-  const allThemes = rawAllThemes.map(serializeTheme);
-  const currentTheme = rawCurrentTheme ? serializeTheme(rawCurrentTheme) : null;
+  const allThemes = await getAllThemes();
+
+  let currentTheme: ThemeList | null = null;
+  if (resolvedSearchParams?.themeId) {
+    currentTheme = allThemes.find((t) => t.id === resolvedSearchParams.themeId) ?? null;
+    if (!currentTheme) {
+      currentTheme = await getThemeById(resolvedSearchParams.themeId);
+    }
+  }
+  if (!currentTheme) {
+    currentTheme = await getCurrentTheme();
+  }
 
   const parsedLimit = Number(resolvedSearchParams?.limit ?? DEFAULT_PAGE_SIZE);
   const limit = Number.isFinite(parsedLimit)
     ? Math.min(Math.max(Math.floor(parsedLimit), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE)
     : DEFAULT_PAGE_SIZE;
 
-  const rawLeaderboardResult = rawCurrentTheme
-    ? await caller.leaderboard.getTop({
-          themeId: rawCurrentTheme.id,
-          limit,
-        })
-        .catch(() => null)
-    : null;
-  const leaderboardResult = rawLeaderboardResult
-    ? {
-        ...rawLeaderboardResult,
-        entries: rawLeaderboardResult.entries.map(serializeLeaderboardEntry),
-      }
-    : null;
+  let leaderboardResult: { entries: LeaderboardEntry[]; hasMore: boolean } | null = null;
+  if (currentTheme) {
+    leaderboardResult = await getLeaderboardEntries(currentTheme.id, limit);
+  }
 
   const entries = leaderboardResult?.entries ?? [];
   const top3 = entries.slice(0, 3);
