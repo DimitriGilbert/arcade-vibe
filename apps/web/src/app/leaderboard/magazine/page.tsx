@@ -1,8 +1,9 @@
 import type { Metadata, Route } from "next";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
-import { Trophy, Calendar, Gamepad2, TrendingUp } from "lucide-react";
+import { Calendar, Gamepad2, ChevronLeft, ChevronRight } from "lucide-react";
 import { ArcadeCard, ArcadeButton } from "@/components/arcade";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { LeaderboardEntry, ThemeList } from "@/lib/trpc-types";
 import {
   CoverStoryCard,
@@ -23,8 +24,7 @@ import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
 
 export const revalidate = 60;
 
-const DEFAULT_PAGE_SIZE = 50;
-const MAX_PAGE_SIZE = 250;
+const PAGE_SIZE = 20;
 
 function serializeDate(value: Date | null): string | null {
   return value ? value.toISOString() : null;
@@ -133,7 +133,7 @@ function serializeLeaderboardEntry(entry: RawLeaderboardRow & {
 interface LeaderboardMagazinePageProps {
   searchParams?: Promise<{
     themeId?: string;
-    limit?: string;
+    page?: string;
   }>;
 }
 
@@ -184,7 +184,7 @@ const cachedGetThemeById = unstable_cache(
 );
 
 const cachedGetLeaderboardEntries = unstable_cache(
-  async (themeId: string, limit: number) => {
+  async (themeId: string, offset: number, limit: number) => {
     const fetchLimit = limit + 1;
 
     const conditions = [
@@ -233,7 +233,8 @@ const cachedGetLeaderboardEntries = unstable_cache(
       .leftJoin(modelConfig, eq(games.modelName, modelConfig.modelName))
       .where(and(...conditions))
       .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`), desc(games.createdAt))
-      .limit(fetchLimit);
+      .limit(fetchLimit)
+      .offset(offset);
 
     const gameIds = result.map((r) => r.gameId);
 
@@ -339,26 +340,27 @@ export default async function LeaderboardMagazinePage({
     currentTheme = await cachedGetCurrentTheme();
   }
 
-  const parsedLimit = Number(resolvedSearchParams?.limit ?? DEFAULT_PAGE_SIZE);
-  const limit = Number.isFinite(parsedLimit)
-    ? Math.min(Math.max(Math.floor(parsedLimit), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE)
-    : DEFAULT_PAGE_SIZE;
+  const parsedPage = Number(resolvedSearchParams?.page ?? 1);
+  const page = Number.isFinite(parsedPage) && parsedPage >= 1 ? Math.floor(parsedPage) : 1;
+  const offset = (page - 1) * PAGE_SIZE;
 
   let leaderboardResult: { entries: LeaderboardEntry[]; hasMore: boolean } | null = null;
   if (currentTheme) {
-    leaderboardResult = await cachedGetLeaderboardEntries(currentTheme.id, limit);
+    leaderboardResult = await cachedGetLeaderboardEntries(currentTheme.id, offset, PAGE_SIZE);
   }
 
   const entries = leaderboardResult?.entries ?? [];
-  const top3 = entries.slice(0, 3);
-  const rest = entries.slice(3);
+  const top3 = page === 1 ? entries.slice(0, 3) : [];
+  const rest = page === 1 ? entries.slice(3) : entries;
+  const hasMore = leaderboardResult?.hasMore ?? false;
 
-  const nextParams = new URLSearchParams();
-  if (currentTheme?.id) {
-    nextParams.set("themeId", currentTheme.id);
+  function buildPageUrl(pageNum: number): Route {
+    const params = new URLSearchParams();
+    if (currentTheme?.id) params.set("themeId", currentTheme.id);
+    if (pageNum > 1) params.set("page", String(pageNum));
+    const qs = params.toString();
+    return `/leaderboard/magazine${qs ? `?${qs}` : ""}` as Route;
   }
-  nextParams.set("limit", String(Math.min(limit + DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)));
-  const loadMoreHref = `/leaderboard/magazine?${nextParams.toString()}` as Route;
 
   if (!currentTheme) {
     return (
@@ -381,8 +383,8 @@ export default async function LeaderboardMagazinePage({
   }
 
   return (
-    <main className="min-h-screen bg-background py-12 px-4 md:px-6">
-      <div className="container mx-auto space-y-12">
+    <main className="min-h-screen bg-background py-4 md:py-6 px-4 md:px-6">
+      <div className="container mx-auto space-y-4 md:space-y-6">
         <ThemeHero
           title={currentTheme.title}
           description={currentTheme.description}
@@ -399,10 +401,10 @@ export default async function LeaderboardMagazinePage({
         />
 
         {entries.length === 0 ? (
-          <ArcadeCard className="p-12 text-center">
-            <Trophy className="h-16 w-16 mx-auto text-[var(--muted-foreground)] mb-6 opacity-50" />
-            <h2 className="text-2xl font-bold mb-4">No Games Yet</h2>
-            <p className="text-[var(--muted-foreground)] mb-8">
+          <ArcadeCard className="p-8 text-center">
+            <Calendar className="h-12 w-12 mx-auto text-[var(--muted-foreground)] mb-4 opacity-50" />
+            <h2 className="text-2xl font-bold mb-3">No Games Yet</h2>
+            <p className="text-[var(--muted-foreground)] mb-4">
               Be the first to submit a game for this theme.
             </p>
             <Link href="/creator/ide">
@@ -414,59 +416,63 @@ export default async function LeaderboardMagazinePage({
           </ArcadeCard>
         ) : (
           <>
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <Trophy className="h-6 w-6 text-[var(--accent)]" />
-                <h2 className="text-2xl font-bold">Top 3</h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {top3.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 {top3.map((entry, idx) => (
                   <CoverStoryCard key={entry.gameId} entry={entry} rank={idx + 1} />
                 ))}
               </div>
-            </section>
-
-            {rest.length > 0 && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <TrendingUp className="h-5 w-5 text-[var(--muted-foreground)]" />
-                  <h2 className="text-xl font-bold">Rankings</h2>
-                </div>
-
-                <ArcadeCard>
-                  <div className="max-h-[600px] overflow-auto">
-                    <div className="divide-y divide-[var(--border)]">
-                      {rest.map((entry, idx) => (
-                        <CompactLeaderboardRow key={entry.gameId} entry={entry} rank={idx + 4} />
-                      ))}
-                    </div>
-                  </div>
-                </ArcadeCard>
-
-                {leaderboardResult?.hasMore && limit < MAX_PAGE_SIZE && (
-                  <div className="flex justify-center mt-6">
-                    <Link href={loadMoreHref}>
-                      <ArcadeButton variant="outline">
-                        Load More
-                      </ArcadeButton>
-                    </Link>
-                  </div>
-                )}
-              </section>
             )}
+
+            <section>
+              <ArcadeCard>
+                <ScrollArea className="h-[50vh] md:h-[60vh] lg:h-[70vh]">
+                  <div className="divide-y divide-[var(--border)]">
+                    {rest.map((entry, idx) => (
+                      <CompactLeaderboardRow key={entry.gameId} entry={entry} rank={offset + idx + (page === 1 ? 4 : 1)} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </ArcadeCard>
+
+              {(page > 1 || hasMore) && (
+              <div className="flex items-center justify-between mt-3">
+                {page > 1 ? (
+                  <Link href={buildPageUrl(page - 1)}>
+                    <ArcadeButton variant="outline">
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </ArcadeButton>
+                  </Link>
+                ) : <div />}
+
+                <span className="text-sm text-[var(--muted-foreground)]">
+                  Page {page}{hasMore ? "..." : ""}
+                </span>
+
+                {hasMore ? (
+                  <Link href={buildPageUrl(page + 1)}>
+                    <ArcadeButton variant="outline">
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </ArcadeButton>
+                  </Link>
+                ) : <div />}
+              </div>
+            )}
+          </section>
           </>
         )}
 
-        <section className="pb-12">
-          <ArcadeCard className="p-8 text-center bg-gradient-to-br from-[var(--primary)]/5 to-transparent">
-            <h3 className="text-xl font-bold mb-3">Create a Game</h3>
-            <p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
+        <section className="pb-4">
+          <ArcadeCard className="p-6 text-center bg-gradient-to-br from-[var(--primary)]/5 to-transparent">
+            <h3 className="text-lg font-bold mb-2">Create a Game</h3>
+            <p className="text-sm text-[var(--muted-foreground)] mb-4 max-w-md mx-auto">
               Write a prompt, pick your AI model, and generate a game.
             </p>
             <Link href="/creator/ide">
-              <ArcadeButton variant="glow" size="lg">
-                <Gamepad2 className="h-5 w-5" />
+              <ArcadeButton variant="glow">
+                <Gamepad2 className="h-4 w-4" />
                 Start Creating
               </ArcadeButton>
             </Link>
