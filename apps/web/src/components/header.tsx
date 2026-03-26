@@ -92,8 +92,7 @@ export default function Header() {
   // Determine active tab for main navigation
   const getActiveTab = () => {
     if (pathname === "/") return "/";
-    const firstSegment = `/${pathname.split("/")[1]}`;
-    return MAIN_NAV_ITEMS.some((item) => item.href === firstSegment) ? firstSegment : "/";
+    return MAIN_NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(item.href + "/"))?.href ?? "/";
   };
 
   return (

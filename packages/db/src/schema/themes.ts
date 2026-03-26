@@ -6,6 +6,7 @@ import {
   unique,
   jsonb,
   boolean,
+  index,
 } from "drizzle-orm/pg-core";
 import { themeStatusEnum, visibilityEnum } from "./enums";
 import type { ThemeMediaConfig } from "./media-types";
@@ -31,5 +32,9 @@ export const themes = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [unique("themes_title_key").on(table.title)],
+  (table) => [
+    unique("themes_title_key").on(table.title),
+    index("idx_themes_status_dates").on(table.status, table.startDate, table.endDate),
+    index("idx_themes_is_permanent").on(table.isPermanent),
+  ],
 );

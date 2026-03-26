@@ -1,4 +1,5 @@
 import type { Metadata, Route } from "next";
+import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import { Trophy, Calendar, Gamepad2, TrendingUp } from "lucide-react";
 import { ArcadeCard, ArcadeButton } from "@/components/arcade";
@@ -19,6 +20,8 @@ import { modelConfig } from "@arcade-vibe/db/schema/models";
 import { scores } from "@arcade-vibe/db/schema/scores";
 import { eq, and, desc, sql, isNull, isNotNull, count, sum } from "drizzle-orm";
 import type { ThemeMediaConfig } from "@arcade-vibe/db/schema/media-types";
+
+export const revalidate = 60;
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 250;
@@ -134,140 +137,154 @@ interface LeaderboardMagazinePageProps {
   }>;
 }
 
-async function getAllThemes() {
-  const allThemes = await db.query.themes.findMany({
-    orderBy: [desc(themes.createdAt)],
-  });
-
-  return allThemes.map(serializeThemeFromRow);
-}
-
-async function getCurrentTheme() {
-  const now = new Date();
-  const currentTheme = await db.query.themes.findFirst({
-    where: and(
-      eq(themes.status, "active"),
-      sql`${themes.startDate} <= ${now} AND ${themes.endDate} >= ${now}`,
-    ),
-  });
-
-  if (currentTheme) {
-    return serializeThemeFromRow(currentTheme);
-  }
-
-  const freeTheme = await db.query.themes.findFirst({
-    where: eq(themes.isPermanent, true),
-  });
-
-  return freeTheme ? serializeThemeFromRow(freeTheme) : null;
-}
-
-async function getThemeById(themeId: string) {
-  const theme = await db.query.themes.findFirst({
-    where: eq(themes.id, themeId),
-  });
-
-  return theme ? serializeThemeFromRow(theme) : null;
-}
-
-async function getLeaderboardEntries(themeId: string, limit: number) {
-  const fetchLimit = limit + 1;
-
-  const conditions = [
-    isNull(games.deletedAt),
-    eq(games.isHidden, false),
-    eq(games.status, "completed"),
-    eq(games.isSubmitted, true),
-    eq(games.themeId, themeId),
-  ];
-
-  const result = await db
-    .select({
-      gameId: games.id,
-      gameName: games.name,
-      createdAt: games.createdAt,
-      submittedAt: games.submittedAt,
-      isSubmitted: games.isSubmitted,
-      finalScore: sql<string>`COALESCE(${scores.finalScore}, '0')`,
-      calculatedAt: scores.calculatedAt,
-      qualityScore: scores.qualityScore,
-      engagementScore: scores.engagementScore,
-      playersScore: scores.playersScore,
-      playsScore: scores.playsScore,
-      replayScore: scores.replayScore,
-      efficiencyScore: scores.efficiencyScore,
-      tierFactor: scores.tierFactor,
-      inputTokens: scores.inputTokens,
-      modelProvider: games.modelProvider,
-      modelName: games.modelName,
-      modelId: modelConfig.id,
-      tierSlug: tierCosts.slug,
-      tierName: tierCosts.name,
-      creatorId: user.id,
-      creatorName: user.name,
-      themeId: themes.id,
-      themeTitle: themes.title,
-      promptId: prompts.id,
-      promptVisibility: prompts.visibility,
-    })
-    .from(games)
-    .innerJoin(prompts, eq(games.promptId, prompts.id))
-    .innerJoin(user, eq(prompts.authorId, user.id))
-    .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
-    .leftJoin(themes, eq(games.themeId, themes.id))
-    .leftJoin(scores, eq(games.id, scores.gameId))
-    .leftJoin(modelConfig, eq(games.modelName, modelConfig.modelName))
-    .where(and(...conditions))
-    .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`), desc(games.createdAt))
-    .limit(fetchLimit);
-
-  const gameIds = result.map((r) => r.gameId);
-
-  const playStats = gameIds.length > 0
-    ? await db
-        .select({
-          gameId: gameSessionMetrics.gameId,
-          playCount: count(),
-          totalPlayTime: sum(gameSessionMetrics.playtimeSeconds),
-        })
-        .from(gameSessionMetrics)
-        .where(
-          and(
-            sql`${gameSessionMetrics.gameId} IN ${gameIds}`,
-            isNotNull(gameSessionMetrics.endedAt),
-          ),
-        )
-        .groupBy(gameSessionMetrics.gameId)
-    : [];
-
-  const playStatsMap = new Map(
-    playStats.map((s) => [
-      s.gameId,
-      {
-        playCount: Number(s.playCount ?? 0),
-        totalPlayTimeSeconds: Number(s.totalPlayTime ?? 0),
-      },
-    ]),
-  );
-
-  const hasMore = result.length > limit;
-  const rows = hasMore ? result.slice(0, limit) : result;
-
-  const entries = rows.map((row) => {
-    const stats = playStatsMap.get(row.gameId) ?? {
-      playCount: 0,
-      totalPlayTimeSeconds: 0,
-    };
-
-    return serializeLeaderboardEntry({
-      ...row,
-      playCount: stats.playCount,
-      totalPlayTimeSeconds: stats.totalPlayTimeSeconds,
+const cachedGetAllThemes = unstable_cache(
+  async () => {
+    const allThemes = await db.query.themes.findMany({
+      orderBy: [desc(themes.createdAt)],
     });
-  });
+    return allThemes.map(serializeThemeFromRow);
+  },
+  ["leaderboard-all-themes"],
+  { revalidate: 60, tags: ["themes"] },
+);
 
-  return { entries, hasMore };
-}
+const cachedGetCurrentTheme = unstable_cache(
+  async () => {
+    const now = new Date();
+    const currentTheme = await db.query.themes.findFirst({
+      where: and(
+        eq(themes.status, "active"),
+        sql`${themes.startDate} <= ${now} AND ${themes.endDate} >= ${now}`,
+      ),
+    });
+
+    if (currentTheme) {
+      return serializeThemeFromRow(currentTheme);
+    }
+
+    const freeTheme = await db.query.themes.findFirst({
+      where: eq(themes.isPermanent, true),
+    });
+
+    return freeTheme ? serializeThemeFromRow(freeTheme) : null;
+  },
+  ["leaderboard-current-theme"],
+  { revalidate: 60, tags: ["themes"] },
+);
+
+const cachedGetThemeById = unstable_cache(
+  async (themeId: string) => {
+    const theme = await db.query.themes.findFirst({
+      where: eq(themes.id, themeId),
+    });
+    return theme ? serializeThemeFromRow(theme) : null;
+  },
+  ["leaderboard-theme-by-id"],
+  { revalidate: 60, tags: ["themes"] },
+);
+
+const cachedGetLeaderboardEntries = unstable_cache(
+  async (themeId: string, limit: number) => {
+    const fetchLimit = limit + 1;
+
+    const conditions = [
+      isNull(games.deletedAt),
+      eq(games.isHidden, false),
+      eq(games.status, "completed"),
+      eq(games.isSubmitted, true),
+      eq(games.themeId, themeId),
+    ];
+
+    const result = await db
+      .select({
+        gameId: games.id,
+        gameName: games.name,
+        createdAt: games.createdAt,
+        submittedAt: games.submittedAt,
+        isSubmitted: games.isSubmitted,
+        finalScore: sql<string>`COALESCE(${scores.finalScore}, '0')`,
+        calculatedAt: scores.calculatedAt,
+        qualityScore: scores.qualityScore,
+        engagementScore: scores.engagementScore,
+        playersScore: scores.playersScore,
+        playsScore: scores.playsScore,
+        replayScore: scores.replayScore,
+        efficiencyScore: scores.efficiencyScore,
+        tierFactor: scores.tierFactor,
+        inputTokens: scores.inputTokens,
+        modelProvider: games.modelProvider,
+        modelName: games.modelName,
+        modelId: modelConfig.id,
+        tierSlug: tierCosts.slug,
+        tierName: tierCosts.name,
+        creatorId: user.id,
+        creatorName: user.name,
+        themeId: themes.id,
+        themeTitle: themes.title,
+        promptId: prompts.id,
+        promptVisibility: prompts.visibility,
+      })
+      .from(games)
+      .innerJoin(prompts, eq(games.promptId, prompts.id))
+      .innerJoin(user, eq(prompts.authorId, user.id))
+      .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+      .leftJoin(themes, eq(games.themeId, themes.id))
+      .leftJoin(scores, eq(games.id, scores.gameId))
+      .leftJoin(modelConfig, eq(games.modelName, modelConfig.modelName))
+      .where(and(...conditions))
+      .orderBy(desc(sql`COALESCE(${scores.finalScore}::numeric, 0)`), desc(games.createdAt))
+      .limit(fetchLimit);
+
+    const gameIds = result.map((r) => r.gameId);
+
+    const playStats = gameIds.length > 0
+      ? await db
+          .select({
+            gameId: gameSessionMetrics.gameId,
+            playCount: count(),
+            totalPlayTime: sum(gameSessionMetrics.playtimeSeconds),
+          })
+          .from(gameSessionMetrics)
+          .where(
+            and(
+              sql`${gameSessionMetrics.gameId} IN ${gameIds}`,
+              isNotNull(gameSessionMetrics.endedAt),
+            ),
+          )
+          .groupBy(gameSessionMetrics.gameId)
+      : [];
+
+    const playStatsMap = new Map(
+      playStats.map((s) => [
+        s.gameId,
+        {
+          playCount: Number(s.playCount ?? 0),
+          totalPlayTimeSeconds: Number(s.totalPlayTime ?? 0),
+        },
+      ]),
+    );
+
+    const hasMore = result.length > limit;
+    const rows = hasMore ? result.slice(0, limit) : result;
+
+    const entries = rows.map((row) => {
+      const stats = playStatsMap.get(row.gameId) ?? {
+        playCount: 0,
+        totalPlayTimeSeconds: 0,
+      };
+
+      return serializeLeaderboardEntry({
+        ...row,
+        playCount: stats.playCount,
+        totalPlayTimeSeconds: stats.totalPlayTimeSeconds,
+      });
+    });
+
+    return { entries, hasMore };
+  },
+  ["leaderboard-entries"],
+  { revalidate: 60, tags: ["leaderboard", "scores", "game-sessions"] },
+);
 
 export async function generateMetadata({
   searchParams,
@@ -276,9 +293,9 @@ export async function generateMetadata({
 
   let currentTheme: ThemeList | null = null;
   if (resolvedSearchParams?.themeId) {
-    currentTheme = await getThemeById(resolvedSearchParams.themeId);
+    currentTheme = await cachedGetThemeById(resolvedSearchParams.themeId);
   } else {
-    currentTheme = await getCurrentTheme();
+    currentTheme = await cachedGetCurrentTheme();
   }
 
   if (!currentTheme) {
@@ -309,17 +326,17 @@ export default async function LeaderboardMagazinePage({
   searchParams,
 }: LeaderboardMagazinePageProps) {
   const resolvedSearchParams = await searchParams;
-  const allThemes = await getAllThemes();
+  const allThemes = await cachedGetAllThemes();
 
   let currentTheme: ThemeList | null = null;
   if (resolvedSearchParams?.themeId) {
     currentTheme = allThemes.find((t) => t.id === resolvedSearchParams.themeId) ?? null;
     if (!currentTheme) {
-      currentTheme = await getThemeById(resolvedSearchParams.themeId);
+      currentTheme = await cachedGetThemeById(resolvedSearchParams.themeId);
     }
   }
   if (!currentTheme) {
-    currentTheme = await getCurrentTheme();
+    currentTheme = await cachedGetCurrentTheme();
   }
 
   const parsedLimit = Number(resolvedSearchParams?.limit ?? DEFAULT_PAGE_SIZE);
@@ -329,7 +346,7 @@ export default async function LeaderboardMagazinePage({
 
   let leaderboardResult: { entries: LeaderboardEntry[]; hasMore: boolean } | null = null;
   if (currentTheme) {
-    leaderboardResult = await getLeaderboardEntries(currentTheme.id, limit);
+    leaderboardResult = await cachedGetLeaderboardEntries(currentTheme.id, limit);
   }
 
   const entries = leaderboardResult?.entries ?? [];

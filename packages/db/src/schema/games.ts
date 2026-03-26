@@ -72,6 +72,13 @@ export const games = pgTable(
     index("idx_games_status_hidden").on(table.status, table.hiddenAt),
     index("idx_games_deleted_at").on(table.deletedAt),
     index("idx_games_status_created").on(table.status, table.createdAt),
+    index("idx_games_leaderboard_filter").on(
+      table.themeId,
+      table.isSubmitted,
+      table.status,
+      table.isHidden,
+      table.deletedAt,
+    ),
   ],
 );
 
@@ -147,5 +154,6 @@ export const gameSessionMetrics = pgTable(
     index("game_session_metrics_gameId_idx").on(table.gameId),
     index("game_session_metrics_userId_idx").on(table.userId),
     index("game_session_metrics_endedAt_idx").on(table.endedAt),
+    index("idx_game_session_metrics_game_ended").on(table.gameId, table.endedAt),
   ],
 );
