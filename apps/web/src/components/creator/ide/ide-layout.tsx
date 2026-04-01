@@ -193,7 +193,11 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     clearFork,
   } = state;
 
-  const addGenerationTabs = useCallback((models: ModelSelection[]) => {
+  const addGenerationTabs = useCallback((context: {
+    promptId: string;
+    generationSessionId: string;
+    models: ModelSelection[];
+  }) => {
     setSelection((prev) => {
       const promptTab =
         prev.openTabs.find((tab) => tab.type === "prompt") ?? {
@@ -201,19 +205,23 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
           type: "prompt" as const,
           label: "prompt.md",
         };
-      const newTabs: IDETab[] = models
+      const newTabs: IDETab[] = context.models
         .map((m) => ({
           id: m.id,
           type: "game" as const,
           label: m.modelName,
-          modelKey: m.id,
+          promptId: context.promptId,
+          generationSessionId: context.generationSessionId,
+          modelKey: m.modelKey,
           modelName: m.modelName,
           isSubmitted: false,
+          modelSelectionId: m.id,
           viewMode: "code" as const,
         }));
 
       return {
         ...prev,
+        promptId: context.promptId,
         openTabs: [promptTab, ...newTabs],
         activeTabId: newTabs[0]?.id ?? prev.activeTabId,
       };

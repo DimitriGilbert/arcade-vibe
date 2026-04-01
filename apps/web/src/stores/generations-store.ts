@@ -15,10 +15,16 @@ import type {
 export interface GenerationEntry {
   modelSelectionId: string;
   modelKey: string;
+  modelName?: string;
   status: GenerationStatus;
   code: string;
   reasoning?: string;
   gameId: string | null;
+  promptId?: string | null;
+  themeId?: string | null;
+  generationSessionId?: string;
+  promptTitle?: string;
+  gameName?: string;
   usage?: GenerationUsageMetrics;
   error?: string;
 }

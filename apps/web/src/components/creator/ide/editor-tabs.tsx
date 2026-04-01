@@ -50,10 +50,14 @@ function EditorTabButton({
   const status = liveStatus ?? fallbackStatus;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       key={tab.id}
       onClick={() => onTabClick(tab.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onTabClick(tab.id);
+      }}
       className={cn(
         "flex shrink-0 items-center gap-2 px-4 py-2 text-sm border-r border-border",
         "hover:bg-muted/50 transition-colors whitespace-nowrap",
@@ -83,15 +87,25 @@ function EditorTabButton({
       ) : null}
 
       {tab.type === "game" ? (
-        <X
-          className="h-3 w-3 hover:text-destructive cursor-pointer"
+        <span
+          role="button"
+          tabIndex={0}
           onClick={(event) => {
             event.stopPropagation();
             onTabClose(tab.id);
           }}
-        />
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.stopPropagation();
+              onTabClose(tab.id);
+            }
+          }}
+          className="cursor-pointer"
+        >
+          <X className="h-3 w-3 hover:text-destructive" />
+        </span>
       ) : null}
-    </button>
+    </div>
   );
 }
 

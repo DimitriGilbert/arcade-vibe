@@ -37,6 +37,8 @@ export interface IDETab {
   id: string;
   type: "prompt" | "game";
   label: string;
+  promptId?: string;
+  generationSessionId?: string;
   modelKey?: string;
   modelName?: string;
   gameStatus?: GameStatus;

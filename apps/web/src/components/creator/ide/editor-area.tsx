@@ -72,6 +72,7 @@ export function EditorArea({
         ) : activeTab?.type === "game" ? (
           <GameContent 
             gameId={activeTabId} 
+            generationId={activeTab.modelSelectionId}
             modelKey={activeTab.modelKey} 
             modelName={activeTab.modelName}
             title={activeTab.label}

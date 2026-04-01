@@ -14,6 +14,7 @@ import type { CreatorGuidanceState } from "./creator-guidance";
 
 export interface GameContentProps {
   gameId: string;
+  generationId?: string;
   modelKey: string | undefined;
   title?: string;
   modelName?: string;
@@ -44,6 +45,7 @@ function mapGameStatusToGenerationStatus(status: GameStatus | undefined): Genera
 
 export function GameContent({
   gameId,
+  generationId,
   modelKey,
   title,
   modelName,
@@ -58,7 +60,7 @@ export function GameContent({
   guidance,
   onDismissGuidance,
 }: GameContentProps) {
-  const generation = useGenerationById(modelKey);
+  const generation = useGenerationById(generationId);
   const isStreaming =
     generation?.status === "reasoning" || generation?.status === "generating";
   const hasGenerationInStore = !!generation;
@@ -250,18 +252,18 @@ export function GameContent({
           <div className="h-full flex items-center justify-center text-[var(--muted-foreground)]">
             Loading...
           </div>
-        ) : !code && status === "reasoning" ? (
+        ) : status === "reasoning" && !generation?.reasoning ? (
           <WaitingState status="reasoning" modelName={displayModelName} />
-        ) : !code && status === "generating" ? (
+        ) : status === "generating" && !code ? (
           <WaitingState status="generating" modelName={displayModelName} />
         ) : status === "error" ? (
           <OutputStatusCard
             type="error"
             error={generation?.error ?? "An unknown error occurred during generation."}
           />
-        ) : !code ? (
+        ) : !code && !generation?.reasoning ? (
           <OutputStatusCard type="empty" />
-        ) : viewMode === "game" ? (
+        ) : viewMode === "game" && code ? (
           canRenderGame ? (
             <div className="h-full bg-black/5">
               <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 text-xs text-[var(--muted-foreground)]">

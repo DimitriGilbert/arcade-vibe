@@ -53,6 +53,7 @@ function createGameTab(game: GameNode): IDETab {
     id: game.id,
     type: "game",
     label: game.name ?? `Game ${game.id.slice(0, 8)}`,
+    promptId: game.promptId,
     modelKey: game.modelSelectionId ?? game.modelName ?? undefined,
     modelName: game.modelName ?? undefined,
     gameStatus: game.status,
@@ -286,32 +287,25 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
   const gamesByPromptId = useMemo(() => {
     const mergedGamesByPromptId: Record<string, GameNode[]> = { ...persistedGamesByPromptId };
 
-    const promptId = selection.promptId;
-    if (!promptId) {
-      return mergedGamesByPromptId;
-    }
-
-    const persistedGames = persistedGamesByPromptId[promptId] ?? [];
-    const persistedGameIds = new Set(persistedGames.map((game) => game.id));
-
-    const liveGames = allGenerations
-      .filter((generation) => generation.status !== "idle")
-      .map((generation): GameNode | null => {
-        const id = generation.gameId ?? generation.modelSelectionId;
-        if (!id) {
-          return null;
+    allGenerations
+      .filter((generation) => generation.status !== "idle" && !!generation.promptId)
+      .forEach((generation) => {
+        const promptId = generation.promptId;
+        if (!promptId) {
+          return;
         }
+
+        const persistedGames = mergedGamesByPromptId[promptId] ?? [];
+        const persistedGameIds = new Set(persistedGames.map((game) => game.id));
 
         if (generation.gameId && persistedGameIds.has(generation.gameId)) {
-          return null;
+          return;
         }
 
-        return {
-          id,
-          name: gameName.trim() || null,
-          modelName:
-            selectedModels.find((model) => model.id === generation.modelSelectionId)?.modelName ??
-            generation.modelKey,
+        const liveGame: GameNode = {
+          id: generation.gameId ?? generation.modelSelectionId,
+          name: generation.gameName?.trim() || null,
+          modelName: generation.modelName ?? generation.modelKey,
           modelProvider: null,
           status: mapGenerationStatusToGameStatus(generation.status),
           createdAt: new Date().toISOString(),
@@ -321,30 +315,25 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
           isTransient: generation.status !== "complete",
           modelSelectionId: generation.modelSelectionId,
         };
-      })
-      .filter((game): game is GameNode => game !== null);
 
-    const liveModelNames = new Set(
-      liveGames
-        .map((game) => game.modelName)
-        .filter((modelName): modelName is string => typeof modelName === "string"),
-    );
+        const liveModelName = liveGame.modelName;
+        const dedupedPersistedGames = persistedGames.filter((game) => {
+          if (game.status !== "generating") {
+            return true;
+          }
 
-    const dedupedPersistedGames = persistedGames.filter((game) => {
-      if (game.status !== "generating") {
-        return true;
-      }
+          if (!game.modelName || !liveModelName) {
+            return true;
+          }
 
-      if (!game.modelName) {
-        return true;
-      }
+          return game.modelName !== liveModelName;
+        });
 
-      return !liveModelNames.has(game.modelName);
-    });
+        mergedGamesByPromptId[promptId] = [liveGame, ...dedupedPersistedGames];
+      });
 
-    mergedGamesByPromptId[promptId] = [...liveGames, ...dedupedPersistedGames];
     return mergedGamesByPromptId;
-  }, [allGenerations, gameName, persistedGamesByPromptId, selectedModels, selection.promptId]);
+  }, [allGenerations, persistedGamesByPromptId]);
 
   const games = useMemo(() => {
     if (!selection.promptId) return [];
@@ -530,8 +519,8 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
   ]);
 
   const openPromptTabs = useCallback((promptId: string, gamesList: GameNode[]) => {
-      const promptTab = createPromptTab();
-      const gameTabs = gamesList.map(createGameTab);
+    const promptTab = createPromptTab();
+    const gameTabs = gamesList.map(createGameTab);
     
     setSelection((prev) => ({
       ...prev,
@@ -655,7 +644,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       setSelection((prev) => {
         const promptTab = createPromptTab();
         const preservedGameTabs = options?.preserveOpenGameTabs
-          ? prev.openTabs.filter((tab) => tab.type === "game")
+          ? prev.openTabs.filter((tab) => tab.type === "game" && tab.promptId === prompt.id)
           : [];
         const mergedGameTabs = options?.preserveOpenGameTabs
           ? preservedGameTabs
@@ -698,7 +687,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     }
   }, []);
 
-  const handleSelectGame = useCallback((gameId: string) => {
+  const handleSelectGame = useCallback(async (gameId: string) => {
     const selectedGame = Object.values(gamesByPromptId)
       .flat()
       .find((game) => game.id === gameId);
@@ -707,26 +696,54 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       return;
     }
 
-    const promptGames = gamesByPromptId[selectedGame.promptId] ?? [selectedGame];
-
-    setSelection((prev) => {
-      const promptTab = createPromptTab();
-      const gameTabs = promptGames.map(createGameTab);
-
-      return {
-        ...prev,
-        promptId: selectedGame.promptId,
-        openTabs: [promptTab, ...gameTabs],
-        activeTabId: gameId,
-      };
-    });
-
-    setExpandedPrompts((prev) => {
-      if (prev.includes(selectedGame.promptId)) {
-        return prev;
+    try {
+      const prompt = await trpcClient.prompts.getById.query({ id: selectedGame.promptId });
+      if (!prompt) {
+        toast.error("Prompt not found");
+        return;
       }
-      return [...prev, selectedGame.promptId];
-    });
+
+      const promptGames = gamesByPromptId[selectedGame.promptId] ?? [selectedGame];
+
+      setIsNewPrompt(false);
+      setPromptContentState(prompt.content);
+      setPromptTitleState(prompt.title ?? "");
+      setOriginalContent(prompt.content);
+      setOriginalTitle(prompt.title ?? "");
+
+      const promptVisibility = prompt.visibility ?? "private";
+      setVisibilityState(promptVisibility);
+      setOriginalVisibility(promptVisibility);
+
+      setSelection((prev) => {
+        const promptTab = createPromptTab();
+        const gameTabs = promptGames.map(createGameTab);
+
+        return {
+          ...prev,
+          themeId: prompt.themeId,
+          promptId: prompt.id,
+          openTabs: [promptTab, ...gameTabs],
+          activeTabId: gameId,
+        };
+      });
+
+      setExpandedThemes((prev) => {
+        if (!prev.includes(prompt.themeId)) {
+          return [...prev, prompt.themeId];
+        }
+        return prev;
+      });
+
+      setExpandedPrompts((prev) => {
+        if (!prev.includes(prompt.id)) {
+          return [...prev, prompt.id];
+        }
+        return prev;
+      });
+    } catch {
+      toast.error("Failed to load game context");
+    }
   }, [gamesByPromptId]);
 
   const handleNewPrompt = useCallback(() => {

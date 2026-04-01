@@ -19,7 +19,11 @@ export interface UseGenerationOptions {
   existingPromptId?: string | null;
   visibility?: Visibility;
   onPromptCreated?: (promptId: string) => void;
-  onGenerationStart?: (models: ModelSelection[]) => void;
+  onGenerationStart?: (context: {
+    promptId: string;
+    generationSessionId: string;
+    models: ModelSelection[];
+  }) => void;
   onGenerationComplete?: (gameId: string, modelId: string) => void;
   setActiveOutputTab?: (id: string | null) => void;
 }
@@ -83,6 +87,13 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     generationAbortedRef.current = true;
   }, []);
 
+  const createGenerationSessionId = useCallback(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `generation-${Date.now()}`;
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     if (generationInFlightRef.current) {
       return;
@@ -107,21 +118,6 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
 
     const completionStats = { completed: 0, errors: 0, total: selectedModels.length };
 
-    const initialGenerations: Record<string, GenerationEntry> = {};
-    for (const model of selectedModels) {
-      initialGenerations[model.id] = {
-        modelSelectionId: model.id,
-        modelKey: model.modelKey,
-        status: "idle",
-        code: "",
-        gameId: null,
-      };
-    }
-    setMultipleGenerations(initialGenerations);
-    onGenerationStart?.(selectedModels);
-
-    discoveryDialog.open();
-
     try {
       let promptId = existingPromptId ?? null;
       if (!promptId) {
@@ -137,6 +133,32 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
         toast.error("Failed to create prompt");
         return;
       }
+
+      const generationSessionId = createGenerationSessionId();
+      const initialGenerations: Record<string, GenerationEntry> = {};
+      for (const model of selectedModels) {
+        initialGenerations[model.id] = {
+          modelSelectionId: model.id,
+          modelKey: model.modelKey,
+          modelName: model.modelName,
+          status: "idle",
+          code: "",
+          gameId: null,
+          promptId,
+          themeId: selectedTheme,
+          generationSessionId,
+          promptTitle: promptTitle.trim(),
+          gameName: gameName.trim(),
+        };
+      }
+      setMultipleGenerations(initialGenerations);
+      onGenerationStart?.({
+        promptId,
+        generationSessionId,
+        models: selectedModels,
+      });
+
+      discoveryDialog.open();
 
       const runGenerationForModel = async (model: ModelSelection): Promise<void> => {
         if (generationAbortedRef.current || !promptId) return;
@@ -254,6 +276,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     onGenerationStart,
     onGenerationComplete,
     setActiveOutputTab,
+    createGenerationSessionId,
   ]);
 
   return {

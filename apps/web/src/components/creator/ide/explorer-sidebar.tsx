@@ -164,8 +164,9 @@ function GameNodeComponent({
   };
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
         "group flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer w-full text-left",
         isSelected && "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -174,6 +175,11 @@ function GameNodeComponent({
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={handleContextMenuInternal}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onSelect();
+        }
+      }}
     >
       <FileCode className="h-4 w-4 shrink-0 text-muted-foreground" />
 
@@ -235,7 +241,7 @@ function GameNodeComponent({
           )}
         </>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -341,10 +347,16 @@ function PromptFolderComponent({
             className={cn("h-4 w-4 shrink-0 text-muted-foreground", isExpanded && "rotate-90")}
           />
         </button>
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           className="flex items-center gap-2 flex-1 min-w-0 text-left"
           onClick={onSelect}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              onSelect();
+            }
+          }}
         >
           {isExpanded ? (
             <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -396,7 +408,7 @@ function PromptFolderComponent({
           <span className="text-xs text-muted-foreground shrink-0">
             v{prompt.version}
           </span>
-        </button>
+        </div>
       </div>
       {isExpanded && (
         <div className="ml-4 border-l border-border pl-1">
