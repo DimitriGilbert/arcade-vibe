@@ -1,5 +1,6 @@
 import type { Route } from "next";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 
 import { db } from "@arcade-vibe/db";
 import { modelConfig } from "@arcade-vibe/db/schema/models";
@@ -15,7 +16,7 @@ import Link from "next/link";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
@@ -216,6 +217,12 @@ async function getHomepageData() {
     tiersWithModels,
   };
 }
+
+const getCachedHomepageData = unstable_cache(
+  getHomepageData,
+  ["homepage-data"],
+  { revalidate: 60 },
+);
 
 async function FeaturedArticle(props: Pick<Awaited<ReturnType<typeof getHomepageData>>, "currentTheme" | "leaderboard">) {
   const { currentTheme, leaderboard } = props;
@@ -706,7 +713,7 @@ function Outro() {
 }
 
 async function HomepageData() {
-  const homepageData = await getHomepageData();
+  const homepageData = await getCachedHomepageData();
   return (
     <>
       <QuickStats gamesCount={homepageData.gamesCount} uniqueCreators={homepageData.uniqueCreators} themesCount={homepageData.themesCount} />
