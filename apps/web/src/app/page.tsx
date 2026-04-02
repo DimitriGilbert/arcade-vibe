@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import { Suspense } from "react";
 
 import { db } from "@arcade-vibe/db";
 import { modelConfig } from "@arcade-vibe/db/schema/models";
@@ -704,8 +705,18 @@ function Outro() {
   );
 }
 
-export default async function HomeMagazine() {
+async function HomepageData() {
   const homepageData = await getHomepageData();
+  return (
+    <>
+      <QuickStats gamesCount={homepageData.gamesCount} uniqueCreators={homepageData.uniqueCreators} themesCount={homepageData.themesCount} />
+      <FeaturedArticle currentTheme={homepageData.currentTheme} leaderboard={homepageData.leaderboard} />
+      <FeatureSplit tiersWithModels={homepageData.tiersWithModels} />
+    </>
+  );
+}
+
+export default function HomeMagazine() {
   return (
     <main className="home-shell bg-[var(--background)] text-[var(--foreground)]">
       <div className="home-backdrop">
@@ -721,9 +732,9 @@ export default async function HomeMagazine() {
       </div>
       <div className="home-content">
         <Masthead />
-        <QuickStats gamesCount={homepageData.gamesCount} uniqueCreators={homepageData.uniqueCreators} themesCount={homepageData.themesCount} />
-        <FeaturedArticle currentTheme={homepageData.currentTheme} leaderboard={homepageData.leaderboard} />
-        <FeatureSplit tiersWithModels={homepageData.tiersWithModels} />
+        <Suspense fallback={<div className="py-20" />}>
+          <HomepageData />
+        </Suspense>
         <LearnBento />
         <Outro />
         <CreatorCards />
