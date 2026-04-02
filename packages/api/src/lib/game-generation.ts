@@ -478,11 +478,19 @@ const fetchAllowedPatterns = async (themeId: string) => {
   const additionalPatterns =
     themePatternIds.length > 0
       ? await db.query.allowedLibraryPatterns.findMany({
-          where: inArray(allowedLibraryPatterns.id, themePatternIds),
+          where: and(
+            inArray(allowedLibraryPatterns.id, themePatternIds),
+            eq(allowedLibraryPatterns.status, "active"),
+          ),
         })
       : [];
 
-  return [...globalPatterns, ...additionalPatterns];
+  const seen = new Set<string>();
+  return [...globalPatterns, ...additionalPatterns].filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
 };
 
 // ============================================================================

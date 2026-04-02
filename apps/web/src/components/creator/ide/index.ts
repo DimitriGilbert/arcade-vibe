@@ -9,6 +9,7 @@ export { ConfigPanel } from "./config-panel";
 export { StatusBar } from "./status-bar";
 export { ContextMenu } from "./context-menu";
 export { ConfirmDialog } from "./confirm-dialog";
+export { LibrariesDialog } from "./libraries-dialog";
 
 export { useIDEState } from "./use-ide-state";
 

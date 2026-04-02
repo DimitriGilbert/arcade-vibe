@@ -9,11 +9,12 @@ import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { scores } from "@arcade-vibe/db/schema/scores";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { desc, eq, asc, and, isNull, sql, count, isNotNull, sum } from "drizzle-orm";
+import Image from "next/image";
 import Link from "next/link";
 
 import { ArcadeCard, ArcadeButton, ArcadeBadge } from "@/components/arcade";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
@@ -215,8 +216,8 @@ async function getHomepageData() {
   };
 }
 
-async function FeaturedArticle() {
-  const { currentTheme, leaderboard } = await getHomepageData();
+async function FeaturedArticle(props: Pick<Awaited<ReturnType<typeof getHomepageData>>, "currentTheme" | "leaderboard">) {
+  const { currentTheme, leaderboard } = props;
 
   const themeTitle = currentTheme?.title ?? "No Active Theme";
   const themeDescription =
@@ -307,15 +308,15 @@ async function FeaturedArticle() {
                           {rank}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <Link href={`/game/${entry.gameId}` as Route} className="font-medium text-sm truncate hover:text-[var(--primary)] block">
+                          <Link href={`/game/${entry.gameId}` as Route} prefetch={false} className="font-medium text-sm truncate hover:text-[var(--primary)] block">
                             {entry.gameName ?? "Untitled"}
                           </Link>
                           <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-                            <Link href={`/profile/${entry.creatorName ?? "anonymous"}` as Route} className="truncate hover:text-[var(--primary)]">
+                            <Link href={`/profile/${entry.creatorName ?? "anonymous"}` as Route} prefetch={false} className="truncate hover:text-[var(--primary)]">
                               {entry.creatorName ?? "Anonymous"}
                             </Link>
                             <span className="text-[var(--border)]">·</span>
-                            <Link href={`/models?model=${encodeURIComponent(entry.modelName)}` as Route} className="truncate hover:text-[var(--primary)]">
+                            <Link href={`/models?model=${encodeURIComponent(entry.modelName)}` as Route} prefetch={false} className="truncate hover:text-[var(--primary)]">
                               {entry.modelName}
                             </Link>
                           </div>
@@ -342,8 +343,8 @@ async function FeaturedArticle() {
   );
 }
 
-async function QuickStats() {
-  const { gamesCount, uniqueCreators, themesCount } = await getHomepageData();
+async function QuickStats(props: Pick<Awaited<ReturnType<typeof getHomepageData>>, "gamesCount" | "uniqueCreators" | "themesCount">) {
+  const { gamesCount, uniqueCreators, themesCount } = props;
 
   const stats = [
     { value: gamesCount.toLocaleString(), label: "Games" },
@@ -371,8 +372,8 @@ async function QuickStats() {
   );
 }
 
-async function FeatureSplit() {
-  const { tiersWithModels } = await getHomepageData();
+async function FeatureSplit(props: Pick<Awaited<ReturnType<typeof getHomepageData>>, "tiersWithModels">) {
+  const { tiersWithModels } = props;
 
   return (
     <section className="py-12">
@@ -653,9 +654,11 @@ function CreatorCards() {
           >
             <ArcadeCard className="h-full p-5 hover:border-[var(--primary)]/50 transition-colors cursor-pointer">
               <div className="flex flex-col items-center text-center gap-3">
-                <img
-                  src="https://dbuild.dev/images/og-image.png"
+                <Image
+                  src="/images/dbuild-og.png"
                   alt="dbuild.dev"
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-full object-cover"
                 />
                 <div>
@@ -702,6 +705,7 @@ function Outro() {
 }
 
 export default async function HomeMagazine() {
+  const homepageData = await getHomepageData();
   return (
     <main className="home-shell bg-[var(--background)] text-[var(--foreground)]">
       <div className="home-backdrop">
@@ -717,9 +721,9 @@ export default async function HomeMagazine() {
       </div>
       <div className="home-content">
         <Masthead />
-        <QuickStats />
-        <FeaturedArticle />
-        <FeatureSplit />
+        <QuickStats gamesCount={homepageData.gamesCount} uniqueCreators={homepageData.uniqueCreators} themesCount={homepageData.themesCount} />
+        <FeaturedArticle currentTheme={homepageData.currentTheme} leaderboard={homepageData.leaderboard} />
+        <FeatureSplit tiersWithModels={homepageData.tiersWithModels} />
         <LearnBento />
         <Outro />
         <CreatorCards />

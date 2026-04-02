@@ -14,12 +14,7 @@ Unless overriden by user :
 
 Implement both:
 - **Keyboard** — whichever keys fit the game (arrows, WASD, spacebar, etc.)
-- **Touch/pointer** — tap, swipe, or drag equivalents so the game is fully playable on mobile
-
-## Authorized Libraries
-
-The following libraries are available via CDN and may be used if they genuinely improve the game.
-Only import what you actually use.`;
+- **Touch/pointer** — tap, swipe, or drag equivalents so the game is fully playable on mobile`;
 
 const freeThemeData = {
   title: FREE_THEME_SLUG,

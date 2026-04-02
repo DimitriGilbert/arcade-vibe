@@ -66,6 +66,7 @@ export function EditorArea({
             readOnly={isGenerating || isForking}
             onCursorChange={onCursorChange}
             theme={editorTheme}
+            themeId={selection.themeId}
             guidance={guidance}
             onDismissGuidance={onDismissGuidance}
           />

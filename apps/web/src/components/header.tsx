@@ -69,6 +69,7 @@ function NavDropdown({ item, isActive }: NavDropdownProps) {
               <Link
                 key={child.href}
                 href={child.href as Route}
+                prefetch={false}
                 className={cn(
                   "flex items-center rounded-sm px-3 py-2 text-sm transition-colors",
                   childIsActive

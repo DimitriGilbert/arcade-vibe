@@ -128,19 +128,20 @@ export function sanitizeGameCode(
 export function buildLibraryListForSystemPrompt(
   patterns: AllowedLibraryPattern[],
 ): string {
-  if (patterns.length === 0) {
+  const activePatterns = patterns.filter((p) => p.status === "active");
+
+  if (activePatterns.length === 0) {
     return "";
   }
 
-  const libraryList = patterns
+  const libraryList = activePatterns
     .map((p) => {
-      const status = p.status === "active" ? "" : "(disabled)";
-      const scope = p.isGlobal ? "" : "(theme-specific)";
-      return `- ${p.name} ${status} ${scope}`;
+      const desc = p.description ? ` — ${p.description}` : "";
+      return `- ${p.name}${desc}`;
     })
     .join("\n");
 
-  return `Available libraries for this theme:\n${libraryList}\n\nUse only these libraries in your generated code. Include proper script tags for any external libraries you use.`;
+  return `## Authorized Libraries\n\nThe following libraries are available via CDN and may be used if they genuinely improve the game.\nOnly import what you actually use.\n\n${libraryList}\n\nUse only these libraries in your generated code. Include proper script tags for any external libraries you use.`;
 }
 
 export function validateRegexPattern(pattern: string): {

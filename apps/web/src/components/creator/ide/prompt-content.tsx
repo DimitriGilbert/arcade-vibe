@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Editor } from "@monaco-editor/react";
+import { HelpCircle } from "lucide-react";
 import { GuidanceBubble } from "./creator-guidance";
+import { LibrariesDialog } from "./libraries-dialog";
 import type { EditorTheme } from "./types";
 import type { CreatorGuidanceState } from "./creator-guidance";
 
@@ -30,6 +32,7 @@ export interface PromptContentProps {
   readOnly: boolean;
   onCursorChange?: (line: number, column: number) => void;
   theme: EditorTheme;
+  themeId: string | null;
   guidance: CreatorGuidanceState | null;
   onDismissGuidance: () => void;
 }
@@ -40,11 +43,13 @@ export function PromptContent({
   readOnly,
   onCursorChange,
   theme,
+  themeId,
   guidance,
   onDismissGuidance,
 }: PromptContentProps) {
   const editorRef = useRef<MonacoEditor | null>(null);
   const monacoTheme = theme === "github-light" ? "arcade-github-light" : "arcade-github-dark";
+  const [librariesOpen, setLibrariesOpen] = useState(false);
 
   const handleEditorDidMount = (editorInstance: MonacoEditor) => {
     editorRef.current = editorInstance;
@@ -89,6 +94,11 @@ export function PromptContent({
     });
   }, []);
 
+  const handleAddToPrompt = useCallback((text: string) => {
+    const separator = content.trimEnd().length > 0 ? "\n\n" : "";
+    onChange(content.trimEnd() + separator + text);
+  }, [content, onChange]);
+
   return (
     <div
       className="relative h-full [&_.monaco-editor_.margin]:!pl-4 [&_.monaco-editor_.lines-content]:!pl-4"
@@ -102,6 +112,14 @@ export function PromptContent({
           />
         </div>
       ) : null}
+      <button
+        type="button"
+        onClick={() => setLibrariesOpen(true)}
+        className="absolute right-3 top-3 z-10 size-7 inline-flex items-center justify-center rounded border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] shadow-sm transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+        title="View available libraries"
+      >
+        <HelpCircle className="size-4" />
+      </button>
       <Editor
         height="100%"
         defaultLanguage="markdown"
@@ -121,6 +139,12 @@ export function PromptContent({
           readOnly,
           fontFamily: "var(--font-mono)",
         }}
+      />
+      <LibrariesDialog
+        themeId={themeId}
+        open={librariesOpen}
+        onOpenChange={setLibrariesOpen}
+        onAddToPrompt={handleAddToPrompt}
       />
     </div>
   );

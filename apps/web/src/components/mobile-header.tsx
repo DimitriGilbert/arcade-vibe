@@ -119,6 +119,7 @@ export function MobileHeader() {
                               render={
                                 <Link
                                   href={child.href as Route}
+                                  prefetch={false}
                                   className={cn(
                                     "block px-3 py-2 rounded-[var(--radius)] text-sm transition-colors",
                                     isActive(child.href)
@@ -161,6 +162,7 @@ export function MobileHeader() {
                       render={
                         <Link
                           href={`/profile/${session.user.name}` as Route}
+                          prefetch={false}
                           className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius)] text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
                         />
                       }
@@ -173,6 +175,7 @@ export function MobileHeader() {
                       render={
                         <Link
                           href={"/settings" as Route}
+                          prefetch={false}
                           className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius)] text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
                         />
                       }
@@ -185,6 +188,7 @@ export function MobileHeader() {
                       render={
                         <Link
                           href={"/collections" as Route}
+                          prefetch={false}
                           className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius)] text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
                         />
                       }

@@ -97,13 +97,13 @@ interface ExplorerSidebarProps {
 function getStatusIcon(status: GameStatus) {
   switch (status) {
     case "generating":
-      return <Sparkles className="h-3 w-3 text-cyan-400 animate-spin" />;
+      return <Sparkles className="h-3 w-3 text-blue-400 animate-spin" />;
     case "completed":
       return <CheckCircle className="h-3 w-3 text-green-400" />;
     case "failed":
       return <AlertCircle className="h-3 w-3 text-red-400" />;
     default:
-      return <Clock className="h-3 w-3 text-muted-foreground" />;
+      return <Clock className="h-3 w-3 text-[var(--muted-foreground)]" />;
   }
 }
 
@@ -169,7 +169,7 @@ function GameNodeComponent({
       tabIndex={0}
       className={cn(
         "group flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer w-full text-left",
-        isSelected && "bg-sidebar-accent text-sidebar-accent-foreground"
+        isSelected ? "bg-[var(--primary)]/15 text-[var(--foreground)]" : "hover:bg-[var(--muted)]/50"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -181,7 +181,7 @@ function GameNodeComponent({
         }
       }}
     >
-      <FileCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <FileCode className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
 
       {isEditing ? (
         <input
@@ -201,7 +201,7 @@ function GameNodeComponent({
             }
           }}
           onClick={(e) => e.stopPropagation()}
-          className="flex-1 bg-transparent border-b border-primary outline-none text-sm"
+          className="flex-1 bg-transparent border-b border-[var(--primary)] outline-none text-sm"
         />
       ) : (
         <>
@@ -217,10 +217,10 @@ function GameNodeComponent({
                   e.stopPropagation();
                   window.open(`/game/${game.gameId}`, "_blank");
                 }}
-                className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+                className="p-0.5 hover:bg-[var(--muted)] rounded shrink-0"
                 title="Play"
               >
-                <Play className="h-3 w-3 text-muted-foreground" />
+                <Play className="h-3 w-3 text-[var(--muted-foreground)]" />
               </button>
               <button
                 type="button"
@@ -228,13 +228,13 @@ function GameNodeComponent({
                   e.stopPropagation();
                   handleTogglePublish();
                 }}
-                className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+                className="p-0.5 hover:bg-[var(--muted)] rounded shrink-0"
                 title={game.isSubmitted ? "Unpublish" : "Publish"}
               >
                 {game.isSubmitted ? (
-                  <EyeOff className="h-3 w-3 text-muted-foreground" />
+                  <EyeOff className="h-3 w-3 text-[var(--muted-foreground)]" />
                 ) : (
-                  <Eye className="h-3 w-3 text-muted-foreground" />
+                  <Eye className="h-3 w-3 text-[var(--muted-foreground)]" />
                 )}
               </button>
             </>
@@ -328,8 +328,8 @@ function PromptFolderComponent({
     <div className="ml-2">
       <div
         className={cn(
-          "group flex items-center gap-2 px-2 py-1 cursor-pointer",
-          isSelected && "bg-sidebar-accent text-sidebar-accent-foreground"
+          "group flex items-center gap-2 px-2 py-1 cursor-pointer rounded transition-colors",
+          isSelected ? "bg-[var(--primary)]/15 text-[var(--foreground)]" : "hover:bg-[var(--muted)]/50"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -341,10 +341,10 @@ function PromptFolderComponent({
             e.stopPropagation();
             onToggle();
           }}
-          className="p-0.5 hover:bg-sidebar-accent rounded"
+          className="p-0.5 hover:bg-[var(--muted)] rounded"
         >
           <ChevronRight
-            className={cn("h-4 w-4 shrink-0 text-muted-foreground", isExpanded && "rotate-90")}
+            className={cn("h-4 w-4 shrink-0 text-[var(--muted-foreground)]", isExpanded && "rotate-90")}
           />
         </button>
         <div
@@ -359,9 +359,9 @@ function PromptFolderComponent({
           }}
         >
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <FolderOpen className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
           ) : (
-            <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Folder className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
           )}
 
           {isEditing ? (
@@ -382,7 +382,7 @@ function PromptFolderComponent({
                 }
               }}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-transparent border-b border-primary outline-none text-sm"
+              className="flex-1 bg-transparent border-b border-[var(--primary)] outline-none text-sm"
             />
           ) : (
             <>
@@ -396,26 +396,26 @@ function PromptFolderComponent({
                     e.stopPropagation();
                     setIsEditing(true);
                   }}
-                  className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+                  className="p-0.5 hover:bg-[var(--muted)] rounded shrink-0"
                   title="Edit name"
                 >
-                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                  <Pencil className="h-3 w-3 text-[var(--muted-foreground)]" />
                 </button>
               )}
             </>
           )}
 
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className="text-xs text-[var(--muted-foreground)] shrink-0">
             v{prompt.version}
           </span>
         </div>
       </div>
       {isExpanded && (
-        <div className="ml-4 border-l border-border pl-1">
+        <div className="ml-4 border-l border-[var(--border)] pl-1">
           {gamesLoading ? (
             <div className="flex items-center gap-2 px-2 py-1">
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Loading games...</span>
+              <Loader2 className="h-3 w-3 animate-spin text-[var(--muted-foreground)]" />
+              <span className="text-xs text-[var(--muted-foreground)]">Loading games...</span>
             </div>
           ) : games.length > 0 ? (
             games.map((game) => (
@@ -482,7 +482,7 @@ function PromptFolderComponent({
             ))
           ) : (
             <div className="px-2 py-1">
-              <span className="text-xs text-muted-foreground">No games yet</span>
+              <span className="text-xs text-[var(--muted-foreground)]">No games yet</span>
             </div>
           )}
         </div>
@@ -534,26 +534,26 @@ function NewPromptComponent({
           />
         </div>
       ) : null}
-      <div className="group flex items-center gap-2 px-2 py-1 bg-primary/5 border border-primary/20 rounded">
-        <FileText className="h-4 w-4 shrink-0 text-primary animate-pulse" />
+      <div className="group flex items-center gap-2 px-2 py-1 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded">
+        <FileText className="h-4 w-4 shrink-0 text-[var(--primary)] animate-pulse" />
         <input
           ref={inputRef}
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Enter prompt title..."
-          className="flex-1 bg-transparent outline-none text-sm italic placeholder:text-muted-foreground/50"
+          className="flex-1 bg-transparent outline-none text-sm italic placeholder:text-[var(--muted-foreground)]"
         />
-        <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded shrink-0 animate-pulse">
+        <span className="text-[10px] px-1.5 py-0.5 bg-[var(--primary)]/20 text-[var(--primary)] rounded shrink-0 animate-pulse">
           new
         </span>
         <button
           type="button"
           onClick={onDiscard}
-          className="p-0.5 hover:bg-sidebar-accent rounded shrink-0"
+          className="p-0.5 hover:bg-[var(--muted)] rounded shrink-0"
           title="Discard (Esc)"
         >
-          <X className="h-3 w-3 text-muted-foreground" />
+          <X className="h-3 w-3 text-[var(--muted-foreground)]" />
         </button>
       </div>
     </div>
@@ -624,11 +624,11 @@ function ThemeNodeComponent({
   onDismissGuidance: () => void;
 }) {
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div className="border-b border-[var(--border)] last:border-b-0">
       <div
         className={cn(
-          "group flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors",
-          isSelected && "bg-sidebar-accent/50"
+          "group flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors rounded",
+          isSelected ? "bg-[var(--primary)]/10" : "hover:bg-[var(--muted)]/30"
         )}
       >
         <button
@@ -637,10 +637,10 @@ function ThemeNodeComponent({
             e.stopPropagation();
             onToggle();
           }}
-          className="p-0.5 hover:bg-sidebar-accent rounded"
+          className="p-0.5 hover:bg-[var(--muted)] rounded"
         >
           <ChevronRight
-            className={cn("h-4 w-4 shrink-0 text-muted-foreground", isExpanded && "rotate-90")}
+            className={cn("h-4 w-4 shrink-0 text-[var(--muted-foreground)]", isExpanded && "rotate-90")}
           />
         </button>
         <button
@@ -649,13 +649,13 @@ function ThemeNodeComponent({
           onClick={onSelect}
         >
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
+            <FolderOpen className="h-4 w-4 shrink-0 text-[var(--primary)]" />
           ) : (
-            <Folder className="h-4 w-4 shrink-0 text-blue-500" />
+            <Folder className="h-4 w-4 shrink-0 text-[var(--primary)]" />
           )}
           <span className="text-sm font-medium truncate flex-1">{theme.title}</span>
           {theme.isActive && (
-            <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 bg-[var(--primary)]/20 text-[var(--primary)] rounded shrink-0">
               Active
             </span>
           )}
@@ -675,8 +675,8 @@ function ThemeNodeComponent({
           )}
           {promptsLoading ? (
             <div className="flex items-center gap-2 px-2 py-1">
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Loading prompts...</span>
+              <Loader2 className="h-3 w-3 animate-spin text-[var(--muted-foreground)]" />
+              <span className="text-xs text-[var(--muted-foreground)]">Loading prompts...</span>
             </div>
           ) : prompts && prompts.length > 0 ? (
             prompts.map((prompt) => (
@@ -703,7 +703,7 @@ function ThemeNodeComponent({
             ))
           ) : !isNewPrompt ? (
             <div className="px-2 py-1">
-              <span className="text-xs text-muted-foreground">No prompts yet</span>
+              <span className="text-xs text-[var(--muted-foreground)]">No prompts yet</span>
             </div>
           ) : null}
         </div>
@@ -757,12 +757,12 @@ export function ExplorerSidebar({
   }, [themes]);
 
   return (
-    <div className="flex flex-col h-full bg-sidebar">
-      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-border shrink-0">
+    <div className="flex flex-col h-full bg-[var(--card)]">
+      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-[var(--border)] shrink-0">
         <button
           type="button"
           onClick={onNewPrompt}
-          className="p-1.5 rounded hover:bg-sidebar-accent text-sidebar-foreground disabled:opacity-50"
+          className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--foreground)] disabled:opacity-50"
           title="New Prompt (Ctrl+N)"
           disabled={isGenerating}
         >
@@ -772,19 +772,19 @@ export function ExplorerSidebar({
         <button
           type="button"
           onClick={onSave}
-          className="p-1.5 rounded hover:bg-sidebar-accent text-sidebar-foreground disabled:opacity-50"
+          className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--foreground)] disabled:opacity-50"
           title="Save (Ctrl+S)"
           disabled={(!isDirty && !isNewPrompt) || isGenerating}
         >
           <Save className="h-4 w-4" />
         </button>
 
-        <div className="w-px h-4 bg-sidebar-border mx-1" />
+        <div className="w-px h-4 bg-[var(--border)] mx-1" />
 
         <button
           type="button"
           onClick={onCollapseAll}
-          className="p-1.5 rounded hover:bg-sidebar-accent text-sidebar-foreground disabled:opacity-50"
+          className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--foreground)] disabled:opacity-50"
           title="Collapse All"
           disabled={!hasExpandedItems}
         >
@@ -794,7 +794,7 @@ export function ExplorerSidebar({
         <button
           type="button"
           onClick={onExpandAll}
-          className="p-1.5 rounded hover:bg-sidebar-accent text-sidebar-foreground"
+          className="p-1.5 rounded hover:bg-[var(--muted)] text-[var(--foreground)]"
           title="Expand All"
         >
           <ChevronsUpDown className="h-4 w-4" />
@@ -817,10 +817,10 @@ export function ExplorerSidebar({
       <ScrollArea className="flex-1">
         {themesLoading ? (
           <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
           </div>
         ) : themesForDisplay.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center h-32 text-sm text-[var(--muted-foreground)]">
             No themes available
           </div>
         ) : (
