@@ -351,6 +351,103 @@ export const modelConfigRouter = router({
       };
     }),
 
+  updateModel: adminProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        providers: z.array(
+          z.enum([
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "deepseek",
+            "glm",
+            "glm-coding-plan",
+            "moonshot",
+            "custom",
+          ]),
+        ),
+        modelName: z.string().min(1).max(100),
+        tierCostId: z.string().uuid(),
+        costPer1kTokens: z.string().min(1),
+        maxTokens: z.number().int().positive(),
+        supportsImages: z.boolean().default(false),
+        isActive: z.boolean().default(true),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const model = await db.query.modelConfig.findFirst({
+        where: eq(modelConfig.id, input.id),
+      });
+
+      if (!model) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Model not found",
+        });
+      }
+
+      const tierCost = await db.query.tierCosts.findFirst({
+        where: eq(tierCosts.id, input.tierCostId),
+      });
+
+      if (!tierCost) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tier cost not found",
+        });
+      }
+
+      await db
+        .update(modelConfig)
+        .set({
+          modelName: input.modelName,
+          tierCostId: input.tierCostId,
+          costPer1kTokens: input.costPer1kTokens,
+          maxTokens: input.maxTokens,
+          supportsImages: input.supportsImages,
+          isActive: input.isActive,
+        })
+        .where(eq(modelConfig.id, input.id));
+
+      await db
+        .delete(modelProviders)
+        .where(eq(modelProviders.modelConfigId, input.id));
+
+      if (input.providers.length > 0) {
+        await db.insert(modelProviders).values(
+          input.providers.map((provider) => ({
+            modelConfigId: input.id,
+            provider,
+          })),
+        );
+      }
+
+      await db.insert(adminActions).values({
+        adminId: ctx.user.id,
+        actionType: "update_model",
+        targetType: "model",
+        targetId: input.id,
+        reason: `Updated model: ${input.modelName}`,
+        metadata: JSON.stringify({
+          providers: input.providers,
+          tierCostId: input.tierCostId,
+          tierSlug: tierCost.slug,
+          costPer1kTokens: input.costPer1kTokens,
+          maxTokens: input.maxTokens,
+          supportsImages: input.supportsImages,
+          isActive: input.isActive,
+        }),
+      });
+
+      return {
+        success: true,
+        modelId: input.id,
+        tierSlug: tierCost.slug,
+      };
+    }),
+
   addModel: adminProcedure
     .input(
       z.object({

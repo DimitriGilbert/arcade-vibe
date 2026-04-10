@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Cpu, Gamepad2, Search, Star } from "lucide-react";
+import { ArrowUpRight, Cpu, Gamepad2, LayoutGrid, Newspaper, Search, Star, Trophy } from "lucide-react";
 
 import {
   ArcadeBadge,
@@ -101,6 +101,21 @@ export default function ModelsPage() {
   return (
     <div className="min-h-screen bg-background pb-10">
       <div className="container mx-auto px-4 pt-8 space-y-6">
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] mr-2">View as:</span>
+          <Link href="/models/v1" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--primary)]/50 transition-colors">
+            <Trophy className="h-3.5 w-3.5" />
+            Arena
+          </Link>
+          <Link href="/models/v2" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--primary)]/50 transition-colors">
+            <Newspaper className="h-3.5 w-3.5" />
+            Magazine
+          </Link>
+          <Link href="/models/v3" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--primary)]/50 transition-colors">
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Matrix
+          </Link>
+        </div>
         <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
           <ArcadeCard className="overflow-hidden">
             <div className="p-6 border-b border-[var(--border)] bg-[var(--muted)]/20">

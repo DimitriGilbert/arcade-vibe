@@ -99,17 +99,26 @@ export default function AdminModelsPage() {
     },
   });
 
-  const updatePricingMutation = useMutation({
-    mutationFn: async (input: { id: string; costPer1kTokens: string }) => {
-      return await trpcClient.admin.models.updateModelPricing.mutate(input);
+  const updateModelMutation = useMutation({
+    mutationFn: async (input: {
+      id: string;
+      providers: Provider[];
+      modelName: string;
+      tierCostId: string;
+      costPer1kTokens: string;
+      maxTokens: number;
+      supportsImages: boolean;
+      isActive: boolean;
+    }) => {
+      return await trpcClient.admin.models.updateModel.mutate(input);
     },
-    onSuccess: () => {
-      toast.success("Pricing updated successfully!");
+    onSuccess: (data) => {
+      toast.success(`Model updated to ${data.tierSlug} tier!`);
       refetch();
       setEditingModel(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to update pricing");
+      toast.error(error.message || "Failed to update model");
     },
   });
 
@@ -400,9 +409,15 @@ export default function AdminModelsPage() {
             });
           } else {
             if (value.id) {
-              await updatePricingMutation.mutateAsync({
+              await updateModelMutation.mutateAsync({
                 id: value.id,
+                providers: value.providers as Provider[],
+                modelName: value.modelName,
+                tierCostId: value.tierCostId,
                 costPer1kTokens: value.costPer1kTokens,
+                maxTokens: value.maxTokens,
+                supportsImages: value.supportsImages || false,
+                isActive: value.isActive || false,
               });
             }
           }
