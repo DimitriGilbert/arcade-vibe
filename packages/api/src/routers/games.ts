@@ -1184,10 +1184,10 @@ export const gamesRouter = router({
       // Inject SDK script into game HTML (token NOT embedded - passed via postMessage)
       const gameHtml = SDK_TEMPLATE.replace(
         "__ARCADE_VIBE_API_ENDPOINT__",
-        apiEndpoint,
+        () => apiEndpoint,
       )
-        .replace("__ARCADE_VIBE_GAME_ID__", game.id)
-        .replace("__GAME_CODE__", game.gameData);
+        .replace("__ARCADE_VIBE_GAME_ID__", () => game.id)
+        .replace("__GAME_CODE__", () => game.gameData!);
 
       /**
        * @security Session token is returned ONLY in response body - NOT embedded in HTML

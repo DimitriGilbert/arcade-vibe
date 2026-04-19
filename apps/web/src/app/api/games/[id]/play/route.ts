@@ -220,11 +220,11 @@ export async function GET(
   // Inject SDK script into game HTML
   const gameHtml = SDK_TEMPLATE.replace(
     "__ARCADE_VIBE_SESSION_TOKEN__",
-    sessionToken,
+    () => sessionToken,
   )
-    .replace("__ARCADE_VIBE_API_ENDPOINT__", apiEndpoint)
-    .replace("__ARCADE_VIBE_GAME_ID__", game.id)
-    .replace("__GAME_CODE__", game.gameData);
+    .replace("__ARCADE_VIBE_API_ENDPOINT__", () => apiEndpoint)
+    .replace("__ARCADE_VIBE_GAME_ID__", () => game.id)
+    .replace("__GAME_CODE__", () => game.gameData!);
 
   const cspDirectives = [
     "default-src *",
