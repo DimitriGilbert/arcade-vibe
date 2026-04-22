@@ -267,6 +267,7 @@ export function GamePlayer({
             title={`Game: ${gameId}`}
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin"
+            allow="microphone *; camera *"
             referrerPolicy="no-referrer"
             onLoad={handleIframeLoad}
             onError={handleIframeError}

@@ -282,6 +282,7 @@ export function GameContent({
                 srcDoc={iframeDocument}
                 className="h-[calc(100%-41px)] w-full border-0 bg-white"
                 sandbox="allow-scripts allow-same-origin"
+                allow="microphone *; camera *"
                 allowFullScreen
               />
             </div>
