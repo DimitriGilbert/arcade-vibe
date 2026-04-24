@@ -135,7 +135,7 @@ function ModelChart({
         </span>
       </div>
       <ChartContainer config={config} className="h-[200px] w-full">
-        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid horizontal={false} strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={formatter} />
           <YAxis

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
 import type { Visibility, ModelSelection, IDESelection } from "./types";
-import { MAX_MODELS } from "@/lib/model-types";
+import { DEFAULT_MAX_MODELS } from "@/lib/model-types";
 
 import {
   Select,
@@ -43,6 +43,7 @@ interface ConfigPanelProps {
   selection: IDESelection;
   guidance: CreatorGuidanceState | null;
   onDismissGuidance: () => void;
+  maxModels?: number;
 }
 
 const modelSelectionSchema = z.object({
@@ -76,6 +77,7 @@ export function ConfigPanel({
   selection,
   guidance,
   onDismissGuidance,
+  maxModels = DEFAULT_MAX_MODELS,
 }: ConfigPanelProps) {
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
@@ -226,7 +228,7 @@ export function ConfigPanel({
       onSubmit: async ({ value }) => {
         if (!modelMetadata) return;
         if (selectedModels.some((m) => m.modelKey === value.selectedModel)) return;
-        if (selectedModels.length >= MAX_MODELS) return;
+        if (selectedModels.length >= maxModels) return;
 
         const modelData = modelMetadata.models.find((m) => m.modelName === value.selectedModel);
         if (!modelData) return;
@@ -323,7 +325,7 @@ export function ConfigPanel({
 
               <div>
                 <span className="text-sm font-medium mb-1.5 block text-[var(--foreground)]">
-                  Models ({selectedModels.length}/{MAX_MODELS})
+                  Models ({selectedModels.length}/{maxModels})
                 </span>
 
                 {selectedModels.length > 0 && (
@@ -347,7 +349,7 @@ export function ConfigPanel({
                   </div>
                 )}
 
-                {selectedModels.length < MAX_MODELS && (
+                {selectedModels.length < maxModels && (
                   <div className="space-y-2">
                     <div className="relative flex items-center gap-2">
                       <button

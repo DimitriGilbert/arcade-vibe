@@ -41,7 +41,9 @@ export interface ModelMetadata {
   tiers: string[];
 }
 
-export const MAX_MODELS = 4;
+export const DEFAULT_MAX_MODELS = 4;
+export const PREMIUM_MAX_MODELS = 8;
+export const MAX_MODELS = DEFAULT_MAX_MODELS;
 
 export { GENERATION_CONCURRENCY_LIMIT };
 
