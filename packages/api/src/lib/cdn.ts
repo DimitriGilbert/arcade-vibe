@@ -112,7 +112,7 @@ const uploadImageToLocalFilesystem = async (
   const dir = join(process.cwd(), "public", "thumbnails");
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, filename), buffer);
-  return `/thumbnails/${filename}`;
+  return `/api/thumbnails/${filename}`;
 };
 
 const uploadImageToCDNInternal = async (
