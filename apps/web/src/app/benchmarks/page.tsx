@@ -111,7 +111,7 @@ export default async function BenchmarksPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 py-8">
         <header className="space-y-4 border-b border-[var(--border)] pb-6 mb-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
             Benchmarks
