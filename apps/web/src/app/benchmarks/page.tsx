@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import type { Route } from "next";
 
-import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { Cpu, Gamepad2, Swords } from "lucide-react";
 
 import { db } from "@arcade-vibe/db";
@@ -12,7 +11,7 @@ import { eq, desc, and, isNull, sql, inArray } from "drizzle-orm";
 import { ArcadeCard } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Benchmarks | Arcade Vibe",
@@ -20,8 +19,8 @@ export const metadata: Metadata = {
     "Browse benchmark prompts comparing AI model performance across game generations.",
 };
 
-async function getBenchmarksList() {
-  try {
+const getCachedBenchmarksList = unstable_cache(
+  async () => {
     const rows = await db.query.prompts.findMany({
       where: and(eq(prompts.isBenchmark, true), isNull(prompts.hiddenAt)),
       columns: {
@@ -101,13 +100,13 @@ async function getBenchmarksList() {
         ? (items[items.length - 1]?.id ?? null)
         : null,
     };
-  } catch {
-    return { items: [], nextCursor: null };
-  }
-}
+  },
+  ["benchmarks-list"],
+  { revalidate: 300, tags: ["benchmarks"] },
+);
 
 export default async function BenchmarksPage() {
-  const data = await getBenchmarksList();
+  const data = await getCachedBenchmarksList();
 
   return (
     <main className="min-h-screen bg-background">
@@ -158,15 +157,13 @@ export default async function BenchmarksPage() {
                 {data.items.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors"
+                    className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/benchmarks/${item.id}`}
                   >
                     <td className="py-3 px-4">
-                      <Link
-                        href={`/benchmarks/${item.id}` as Route}
-                        className="font-semibold hover:text-[var(--primary)] transition-colors"
-                      >
+                      <span className="font-semibold">
                         {item.title ?? "Untitled Benchmark"}
-                      </Link>
+                      </span>
                       <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                         {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
                         {item.theme && item.author && <span>/</span>}

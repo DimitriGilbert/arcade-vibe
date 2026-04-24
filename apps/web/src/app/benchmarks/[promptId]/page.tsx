@@ -97,7 +97,7 @@ async function getBenchmarkData(promptId: string) {
         sql`${games.status} != 'generating'`,
       ),
     )
-    .orderBy(games.modelName, desc(scores.finalScore));
+    .orderBy(desc(games.createdAt));
 
   const gameIds = result.map((g) => g.id);
 
