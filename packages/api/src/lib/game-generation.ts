@@ -94,6 +94,9 @@ export interface GenerateGameUsageMetrics {
   reasoningTokens?: number;
   cachedInputTokens?: number;
   requestCostUsd?: number;
+  generationTimeMs?: number;
+  timeToFirstTokenMs?: number;
+  tokensPerSecond?: number;
 }
 
 export interface PromptWithTheme {
@@ -693,6 +696,9 @@ export async function generateGame(
     let bufferedReasoningDelta = "";
     const STREAM_FLUSH_INTERVAL_MS = 16;
     let lastFlushAt = Date.now();
+    let streamStartTime = 0;
+    let firstTokenTime = 0;
+    let generationEndTime = 0;
 
     const flushBufferedDeltas = async function* (): AsyncGenerator<GenerateGameEvent> {
       if (bufferedReasoningDelta.length > 0) {
@@ -748,6 +754,7 @@ export async function generateGame(
         },
       ];
 
+      streamStartTime = Date.now();
       const providerStreamResult = await providerModel.doStream({
         prompt: providerPrompt,
       });
@@ -762,10 +769,12 @@ export async function generateGame(
 
           const part = readResult.value as ProviderStreamPart;
           if (part.type === "reasoning-delta") {
+            if (firstTokenTime === 0) firstTokenTime = Date.now();
             if (options.reasoningEnabled ?? true) {
               bufferedReasoningDelta += part.delta;
             }
           } else if (part.type === "text-delta") {
+            if (firstTokenTime === 0) firstTokenTime = Date.now();
             if (!hasEmittedGenerating) {
               hasEmittedGenerating = true;
               yield* flushBufferedDeltas();
@@ -790,6 +799,7 @@ export async function generateGame(
             lastFlushAt = now;
           }
         }
+        generationEndTime = Date.now();
       } finally {
         reader.releaseLock();
       }
@@ -835,6 +845,12 @@ export async function generateGame(
           : undefined;
       const requestCostUsd = providerReportedCost ?? estimatedCost;
 
+      const generationTime = generationEndTime > 0 ? generationEndTime - streamStartTime : undefined;
+      const ttft = firstTokenTime > 0 ? firstTokenTime - streamStartTime : undefined;
+      const tokPerSec = (outputTokens > 0 && generationEndTime > 0 && firstTokenTime > 0)
+        ? outputTokens / ((generationEndTime - firstTokenTime) / 1000)
+        : undefined;
+
       const usageMetrics: GenerateGameUsageMetrics = {
         inputTokens,
         outputTokens,
@@ -842,6 +858,9 @@ export async function generateGame(
         reasoningTokens,
         cachedInputTokens,
         requestCostUsd,
+        generationTimeMs: generationTime,
+        timeToFirstTokenMs: ttft,
+        tokensPerSecond: tokPerSec,
       };
 
       // 9. Upload SANITIZED code to CDN
@@ -870,6 +889,9 @@ export async function generateGame(
           cachedInputTokens,
           requestCostUsd:
             requestCostUsd !== undefined ? requestCostUsd.toFixed(6) : null,
+          generationTimeMs: generationTime ?? null,
+          timeToFirstTokenMs: ttft ?? null,
+          tokensPerSecond: tokPerSec ?? null,
           generatedAt: new Date(),
           status: "completed",
           blockedScriptUrls: sanitizationResult.blockedUrls,

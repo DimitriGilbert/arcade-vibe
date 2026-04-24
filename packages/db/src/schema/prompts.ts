@@ -5,6 +5,7 @@ import {
   integer,
   varchar,
   timestamp,
+  boolean,
   index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -32,6 +33,7 @@ export const prompts = pgTable(
     visibility: visibilityEnum("visibility").default("private").notNull(),
     status: promptStatusEnum("status").default("draft").notNull(),
     relationType: promptRelationEnum("relation_type").default("version").notNull(),
+    isBenchmark: boolean("is_benchmark").default(false).notNull(),
     hiddenAt: timestamp("hidden_at"),
     hiddenBy: text("hidden_by").references(() => user.id),
     hiddenReason: text("hidden_reason"),

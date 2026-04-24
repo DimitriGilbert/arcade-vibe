@@ -2,12 +2,13 @@ import { router, protectedProcedure, publicProcedure } from "@arcade-vibe/api";
 import { db } from "@arcade-vibe/db";
 import { prompts } from "@arcade-vibe/db/schema/prompts";
 import { themes } from "@arcade-vibe/db/schema/themes";
-import { games, gameScores as gameScoresTable } from "@arcade-vibe/db/schema/games";
+import { games, gameScores as gameScoresTable, gameSessionMetrics } from "@arcade-vibe/db/schema/games";
 import { ratings } from "@arcade-vibe/db/schema/ratings";
+import { scores } from "@arcade-vibe/db/schema/scores";
 import { user } from "@arcade-vibe/db/schema/auth";
 import { tierCosts } from "@arcade-vibe/db/schema/credits";
 import { z } from "zod";
-import { eq, desc, asc, or, and, isNull, sql, inArray, count } from "drizzle-orm";
+import { eq, desc, asc, or, and, isNull, isNotNull, sql, inArray, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   getTokenCount,
@@ -392,6 +393,7 @@ export const promptsRouter = router({
           version: true,
           visibility: true,
           status: true,
+          isBenchmark: true,
           createdAt: true,
           updatedAt: true,
           parentId: true,
@@ -420,6 +422,7 @@ export const promptsRouter = router({
         version: prompt.version,
         visibility: prompt.visibility,
         status: prompt.status,
+        isBenchmark: prompt.isBenchmark,
         createdAt: prompt.createdAt,
         updatedAt: prompt.updatedAt,
       }));
@@ -1079,6 +1082,351 @@ export const promptsRouter = router({
         totalPages,
         hasNextPage: totalPages > 0 && input.page < totalPages,
         hasPreviousPage: input.page > 1,
+      };
+    }),
+
+  setBenchmark: protectedProcedure
+    .use(createRateLimitMiddleware(rateLimits.default))
+    .input(
+      z.object({
+        promptId: z.string().uuid(),
+        isBenchmark: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const prompt = await db.query.prompts.findFirst({
+        where: eq(prompts.id, input.promptId),
+      });
+
+      if (!prompt) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Prompt not found",
+        });
+      }
+
+      if (ctx.user.id !== prompt.authorId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the author can toggle benchmark status",
+        });
+      }
+
+      await db
+        .update(prompts)
+        .set({ isBenchmark: input.isBenchmark, updatedAt: new Date() })
+        .where(eq(prompts.id, input.promptId));
+
+      return { success: true, isBenchmark: input.isBenchmark };
+    }),
+
+  listBenchmarks: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+        cursor: z.string().uuid().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const conditions = [
+        eq(prompts.isBenchmark, true),
+        isNull(prompts.hiddenAt),
+      ];
+
+      if (input.cursor) {
+        conditions.push(sql`${prompts.id} < ${input.cursor}`);
+      }
+
+      const rows = await db.query.prompts.findMany({
+        where: and(...conditions),
+        columns: {
+          id: true,
+          title: true,
+          content: true,
+          themeId: true,
+          authorId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: [desc(prompts.updatedAt)],
+        limit: input.limit + 1,
+        with: {
+          theme: { columns: { id: true, title: true } },
+          user: { columns: { id: true, name: true, image: true } },
+        },
+      });
+
+      const hasMore = rows.length > input.limit;
+      const items = hasMore ? rows.slice(0, -1) : rows;
+
+      const promptIds = items.map((p) => p.id);
+
+      const [gameCounts, modelCounts] = await Promise.all([
+        promptIds.length > 0
+          ? db
+              .select({
+                promptId: games.promptId,
+                count: sql<number>`count(*)`,
+              })
+              .from(games)
+              .where(
+                and(
+                  inArray(games.promptId, promptIds),
+                  isNull(games.deletedAt),
+                ),
+              )
+              .groupBy(games.promptId)
+          : [],
+        promptIds.length > 0
+          ? db
+              .select({
+                promptId: games.promptId,
+                modelCount: sql<number>`count(distinct ${games.modelName})`,
+              })
+              .from(games)
+              .where(
+                and(
+                  inArray(games.promptId, promptIds),
+                  isNull(games.deletedAt),
+                ),
+              )
+              .groupBy(games.promptId)
+          : [],
+      ]);
+
+      const gameCountMap = new Map(
+        gameCounts.map((r) => [r.promptId, Number(r.count)]),
+      );
+      const modelCountMap = new Map(
+        modelCounts.map((r) => [r.promptId, Number(r.modelCount)]),
+      );
+
+      return {
+        items: items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          theme: item.theme,
+          author: item.user,
+          gameCount: gameCountMap.get(item.id) ?? 0,
+          modelCount: modelCountMap.get(item.id) ?? 0,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        })),
+        nextCursor: hasMore
+          ? (items[items.length - 1]?.id ?? null)
+          : null,
+      };
+    }),
+
+  getBenchmark: publicProcedure
+    .input(
+      z.object({
+        promptId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const prompt = await db.query.prompts.findFirst({
+        where: eq(prompts.id, input.promptId),
+        with: {
+          user: {
+            columns: { name: true, image: true },
+          },
+          theme: {
+            columns: { title: true },
+          },
+        },
+      });
+
+      if (!prompt || !prompt.isBenchmark) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Benchmark not found",
+        });
+      }
+
+      const rootPromptId = prompt.parentId ?? prompt.id;
+
+      const allVersions = await db.query.prompts.findMany({
+        where: or(
+          eq(prompts.id, rootPromptId),
+          eq(prompts.parentId, rootPromptId),
+        ),
+        columns: { id: true },
+      });
+
+      const promptIds = allVersions.map((p) => p.id);
+
+      if (promptIds.length === 0) {
+        return {
+          prompt: {
+            id: prompt.id,
+            title: prompt.title,
+            content: prompt.content,
+            authorName: prompt.user?.name ?? null,
+            authorImage: prompt.user?.image ?? null,
+            themeTitle: prompt.theme?.title ?? null,
+          },
+          games: [],
+        };
+      }
+
+      const result = await db
+        .select({
+          id: games.id,
+          name: games.name,
+          modelName: games.modelName,
+          modelProvider: games.modelProvider,
+          status: games.status,
+          imageUrl: games.imageUrl,
+          tierCostId: games.tierCostId,
+          inputTokens: games.inputTokens,
+          outputTokens: games.outputTokens,
+          reasoningTokens: games.reasoningTokens,
+          tokenUsage: games.tokenUsage,
+          generationTimeMs: games.generationTimeMs,
+          timeToFirstTokenMs: games.timeToFirstTokenMs,
+          tokensPerSecond: games.tokensPerSecond,
+          requestCostUsd: games.requestCostUsd,
+          isSubmitted: games.isSubmitted,
+          createdAt: games.createdAt,
+          finalScore: scores.finalScore,
+          tierSlug: tierCosts.slug,
+          tierName: tierCosts.name,
+          tierColorClass: tierCosts.colorClass,
+        })
+        .from(games)
+        .leftJoin(scores, eq(games.id, scores.gameId))
+        .innerJoin(tierCosts, eq(games.tierCostId, tierCosts.id))
+        .where(
+          and(
+            inArray(games.promptId, promptIds),
+            isNull(games.deletedAt),
+            sql`${games.status} != 'generating'`,
+          ),
+        )
+        .orderBy(games.modelName, desc(scores.finalScore));
+
+      const gameIds = result.map((g) => g.id);
+
+      const playStats =
+        gameIds.length > 0
+          ? await db
+              .select({
+                gameId: gameSessionMetrics.gameId,
+                totalPlays: count(),
+                uniquePlayers: count(
+                  sql`DISTINCT ${gameSessionMetrics.userId}`,
+                ),
+              })
+              .from(gameSessionMetrics)
+              .where(
+                and(
+                  inArray(gameSessionMetrics.gameId, gameIds),
+                  isNotNull(gameSessionMetrics.endedAt),
+                ),
+              )
+              .groupBy(gameSessionMetrics.gameId)
+          : [];
+
+      const ratingsData =
+        gameIds.length > 0
+          ? await db
+              .select({
+                gameId: ratings.gameId,
+                avgOverall: sql<string>`AVG(${ratings.overall})::numeric`,
+                ratingCount: count(),
+              })
+              .from(ratings)
+              .where(inArray(ratings.gameId, gameIds))
+              .groupBy(ratings.gameId)
+          : [];
+
+      const highScores =
+        gameIds.length > 0
+          ? await db
+              .select({
+                gameId: gameScoresTable.gameId,
+                highScore: sql<number>`MAX(${gameScoresTable.score})`,
+              })
+              .from(gameScoresTable)
+              .where(
+                and(
+                  inArray(gameScoresTable.gameId, gameIds),
+                  eq(gameScoresTable.isHighScore, true),
+                ),
+              )
+              .groupBy(gameScoresTable.gameId)
+          : [];
+
+      const playStatsMap = new Map(
+        playStats.map((s) => [
+          s.gameId,
+          { totalPlays: Number(s.totalPlays), uniquePlayers: Number(s.uniquePlayers) },
+        ]),
+      );
+      const ratingsMap = new Map(
+        ratingsData.map((r) => [
+          r.gameId,
+          {
+            avgRating: r.avgOverall ? Number(r.avgOverall) : null,
+            ratingCount: Number(r.ratingCount),
+          },
+        ]),
+      );
+      const highScoresMap = new Map(
+        highScores.map((h) => [h.gameId, Number(h.highScore)]),
+      );
+
+      const benchmarkGames = result.map((game) => {
+        const stats = playStatsMap.get(game.id) ?? {
+          totalPlays: 0,
+          uniquePlayers: 0,
+        };
+        const rating = ratingsMap.get(game.id) ?? {
+          avgRating: null,
+          ratingCount: 0,
+        };
+
+        return {
+          id: game.id,
+          name: game.name,
+          modelName: game.modelName,
+          modelProvider: game.modelProvider,
+          status: game.status,
+          imageUrl: game.imageUrl,
+          tierSlug: game.tierSlug,
+          tierName: game.tierName,
+          tierColorClass: game.tierColorClass,
+          inputTokens: game.inputTokens,
+          outputTokens: game.outputTokens,
+          reasoningTokens: game.reasoningTokens,
+          tokenUsage: game.tokenUsage,
+          generationTimeMs: game.generationTimeMs,
+          timeToFirstTokenMs: game.timeToFirstTokenMs,
+          tokensPerSecond: game.tokensPerSecond,
+          requestCostUsd: game.requestCostUsd,
+          isSubmitted: game.isSubmitted,
+          createdAt: game.createdAt,
+          finalScore: game.finalScore,
+          totalPlays: stats.totalPlays,
+          uniquePlayers: stats.uniquePlayers,
+          avgRating: rating.avgRating,
+          ratingCount: rating.ratingCount,
+          highScore: highScoresMap.get(game.id) ?? null,
+        };
+      });
+
+      return {
+        prompt: {
+          id: prompt.id,
+          title: prompt.title,
+          content: prompt.content,
+          authorName: prompt.user?.name ?? null,
+          authorImage: prompt.user?.image ?? null,
+          themeTitle: prompt.theme?.title ?? null,
+        },
+        games: benchmarkGames,
       };
     }),
 });

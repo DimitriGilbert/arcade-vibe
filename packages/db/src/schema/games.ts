@@ -7,6 +7,7 @@ import {
   index,
   boolean,
   jsonb,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { gameStatusEnum } from "./enums";
 import { prompts } from "./prompts";
@@ -40,6 +41,9 @@ export const games = pgTable(
     reasoningTokens: integer("reasoning_tokens"),
     cachedInputTokens: integer("cached_input_tokens"),
     requestCostUsd: text("request_cost_usd"),
+    generationTimeMs: integer("generation_time_ms"),
+    timeToFirstTokenMs: integer("time_to_first_token_ms"),
+    tokensPerSecond: doublePrecision("tokens_per_second"),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
     generatedAt: timestamp("generated_at"),

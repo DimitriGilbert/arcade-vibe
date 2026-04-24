@@ -20,6 +20,7 @@ import {
   Clock,
   FileText,
   X,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -88,6 +89,10 @@ interface ExplorerSidebarProps {
   };
   toggleGamePublishedMutation: {
     mutate: (input: { id: string; isSubmitted: boolean }) => void;
+    isPending: boolean;
+  };
+  setBenchmarkMutation: {
+    mutate: (input: { promptId: string; isBenchmark: boolean }) => void;
     isPending: boolean;
   };
   guidance: CreatorGuidanceState | null;
@@ -263,6 +268,7 @@ function PromptFolderComponent({
   updateGameMutation,
   deleteGameMutation,
   toggleGamePublishedMutation,
+  setBenchmarkMutation,
 }: {
   prompt: PromptNode;
   isExpanded: boolean;
@@ -281,6 +287,7 @@ function PromptFolderComponent({
   updateGameMutation: ExplorerSidebarProps["updateGameMutation"];
   deleteGameMutation: ExplorerSidebarProps["deleteGameMutation"];
   toggleGamePublishedMutation: ExplorerSidebarProps["toggleGamePublishedMutation"];
+  setBenchmarkMutation: ExplorerSidebarProps["setBenchmarkMutation"];
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -315,6 +322,14 @@ function PromptFolderComponent({
         icon: Pencil,
         onClick: () => setIsEditing(true),
       },
+      {
+        label: prompt.isBenchmark ? "Remove Benchmark" : "Make Benchmark",
+        icon: BarChart3,
+        onClick: () => {
+          setBenchmarkMutation.mutate({ promptId: prompt.id, isBenchmark: !prompt.isBenchmark });
+        },
+      },
+      { type: "divider" },
       {
         label: "Delete",
         icon: Trash2,
@@ -589,6 +604,7 @@ function ThemeNodeComponent({
   updateGameMutation,
   deleteGameMutation,
   toggleGamePublishedMutation,
+  setBenchmarkMutation,
   guidance,
   onDismissGuidance,
 }: {
@@ -620,6 +636,7 @@ function ThemeNodeComponent({
   updateGameMutation: ExplorerSidebarProps["updateGameMutation"];
   deleteGameMutation: ExplorerSidebarProps["deleteGameMutation"];
   toggleGamePublishedMutation: ExplorerSidebarProps["toggleGamePublishedMutation"];
+  setBenchmarkMutation: ExplorerSidebarProps["setBenchmarkMutation"];
   guidance: CreatorGuidanceState | null;
   onDismissGuidance: () => void;
 }) {
@@ -699,6 +716,7 @@ function ThemeNodeComponent({
                 updateGameMutation={updateGameMutation}
                 deleteGameMutation={deleteGameMutation}
                 toggleGamePublishedMutation={toggleGamePublishedMutation}
+                setBenchmarkMutation={setBenchmarkMutation}
               />
             ))
           ) : !isNewPrompt ? (
@@ -746,6 +764,7 @@ export function ExplorerSidebar({
   updateGameMutation,
   deleteGameMutation,
   toggleGamePublishedMutation,
+  setBenchmarkMutation,
   guidance,
   onDismissGuidance,
 }: ExplorerSidebarProps) {
@@ -856,6 +875,7 @@ export function ExplorerSidebar({
                 updateGameMutation={updateGameMutation}
                 deleteGameMutation={deleteGameMutation}
                 toggleGamePublishedMutation={toggleGamePublishedMutation}
+                setBenchmarkMutation={setBenchmarkMutation}
                 guidance={guidance}
                 onDismissGuidance={onDismissGuidance}
               />

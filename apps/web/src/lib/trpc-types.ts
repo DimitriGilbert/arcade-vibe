@@ -719,3 +719,15 @@ export interface ModelSelection {
   reasoningEnabled: boolean;
   reasoningMaxTokens: number;
 }
+
+/**
+ * @source RouterOutput["prompts"]["getBenchmark"]
+ */
+export type BenchmarkListItem = PromptsOutput["listBenchmarks"]["items"][number];
+
+export type BenchmarkData = PromptsOutput["getBenchmark"];
+
+/**
+ * @source RouterOutput["prompts"]["getBenchmark"]["games"][number]
+ */
+export type BenchmarkGame = BenchmarkData["games"][number];

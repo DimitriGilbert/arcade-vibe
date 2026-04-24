@@ -284,6 +284,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
     visibility: p.visibility ?? "private",
     updatedAt: p.updatedAt,
     themeId: selection.themeId ?? "",
+    isBenchmark: p.isBenchmark ?? false,
   }));
 
   // Fetch runs for selected prompt (for backward compatibility in center panel)

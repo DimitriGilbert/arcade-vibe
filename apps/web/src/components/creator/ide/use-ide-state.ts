@@ -142,6 +142,10 @@ export interface UseIDEStateReturn {
   isForking: boolean;
   forkOriginalPromptId: string | null;
   clearFork: () => void;
+  setBenchmarkMutation: {
+    mutate: (input: { promptId: string; isBenchmark: boolean }) => void;
+    isPending: boolean;
+  };
 }
 
 export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
@@ -241,6 +245,7 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
       visibility: p.visibility ?? "private",
       updatedAt: p.updatedAt,
       themeId,
+      isBenchmark: p.isBenchmark ?? false,
     }));
   }, [promptsData, selection.themeId]);
 
@@ -431,6 +436,18 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update visibility");
+    },
+  });
+
+  const setBenchmarkMutation = useMutation({
+    mutationFn: (input: { promptId: string; isBenchmark: boolean }) =>
+      trpcClient.prompts.setBenchmark.mutate(input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["prompts-by-theme"] });
+      toast.success(variables.isBenchmark ? "Benchmark created" : "Benchmark removed");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update benchmark status");
     },
   });
 
@@ -956,5 +973,6 @@ export function useIDEState(options?: UseIDEStateOptions): UseIDEStateReturn {
     isForking,
     forkOriginalPromptId,
     clearFork,
+    setBenchmarkMutation,
   };
 }

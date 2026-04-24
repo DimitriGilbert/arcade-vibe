@@ -166,6 +166,27 @@ export function getGeneralSitemapEntries(): SitemapUrlEntry[] {
   ];
 }
 
+export async function getBenchmarkEntries(): Promise<SitemapUrlEntry[]> {
+  const rows = await db.query.prompts.findMany({
+    where: and(
+      eq(prompts.isBenchmark, true),
+      isNull(prompts.hiddenAt),
+    ),
+    columns: {
+      id: true,
+      updatedAt: true,
+    },
+    orderBy: [desc(prompts.updatedAt)],
+  });
+
+  return rows.map((row) => ({
+    loc: toAbsoluteUrl(`/benchmarks/${row.id}` as Route),
+    lastmod: toIsoString(row.updatedAt),
+    changefreq: "daily",
+    priority: 0.8,
+  }));
+}
+
 export async function getMagazineThemeEntries(): Promise<SitemapUrlEntry[]> {
   const rows = await db
     .selectDistinct({

@@ -19,6 +19,7 @@ export interface PromptNode {
   visibility: Visibility;
   updatedAt: string;
   themeId: string;
+  isBenchmark: boolean;
 }
 
 export interface RunNode {

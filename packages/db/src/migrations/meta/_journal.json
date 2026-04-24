@@ -29,6 +29,20 @@
       "when": 1774491315189,
       "tag": "0003_romantic_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777018311694,
+      "tag": "0004_chunky_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777023535336,
+      "tag": "0005_short_sentinel",
+      "breakpoints": true
     }
   ]
 }

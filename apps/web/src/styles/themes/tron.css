@@ -45,6 +45,12 @@
   --sidebar-border: oklch(0.72 0.24 248 / 0.3);
   --sidebar-ring: oklch(0.72 0.24 248);
 
+  --chart-1: oklch(0.72 0.24 248);
+  --chart-2: oklch(0.78 0.2 195);
+  --chart-3: oklch(0.85 0.18 80);
+  --chart-4: oklch(0.65 0.24 145);
+  --chart-5: oklch(0.6 0.2 280);
+
   /* Theme-specific colors */
   --neon-cyan: oklch(0.72 0.24 248);
   --neon-teal: oklch(0.78 0.2 195);

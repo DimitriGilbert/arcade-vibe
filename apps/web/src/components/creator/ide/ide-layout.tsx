@@ -191,6 +191,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     isForking,
     forkOriginalPromptId,
     clearFork,
+    setBenchmarkMutation,
   } = state;
 
   const addGenerationTabs = useCallback((context: {
@@ -585,6 +586,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
       updateGameMutation={updateGameMutation}
       deleteGameMutation={deleteGameMutation}
       toggleGamePublishedMutation={toggleGamePublishedMutation}
+      setBenchmarkMutation={setBenchmarkMutation}
       guidance={guidance}
       onDismissGuidance={dismissGuidance}
     />
