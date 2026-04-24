@@ -31,6 +31,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Models", href: "/models" },
+  { label: "Benchmarks", href: "/benchmarks" },
   { label: "Creator", href: "/creator/ide" },
 ];
 

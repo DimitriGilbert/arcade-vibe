@@ -145,58 +145,47 @@ export default async function BenchmarksPage() {
             />
           </ArcadeCard>
         ) : (
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider">Benchmark</th>
-                  <th className="text-right py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden sm:table-cell">Games</th>
-                  <th className="text-right py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden sm:table-cell">Models</th>
-                  <th className="text-right py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden md:table-cell">Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((item) => {
-                  const href = `/benchmarks/${item.id}` as Route;
-                  return (
-                    <tr
-                      key={item.id}
-                      className="relative border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors"
-                    >
-                      <td className="py-3 px-4">
-                        <Link href={href} className="absolute inset-0 z-0">
-                          <span className="sr-only">{item.title ?? "Untitled Benchmark"}</span>
-                        </Link>
-                        <p className="relative font-semibold">{item.title ?? "Untitled Benchmark"}</p>
-                        <div className="relative mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-                          {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
-                          {item.theme && item.author && <span>/</span>}
-                          {item.theme && <span>{item.theme.title}</span>}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right hidden sm:table-cell">
-                        <span className="inline-flex items-center justify-end gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
-                          <Gamepad2 className="h-3 w-3" />
-                          {item.gameCount}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right hidden sm:table-cell">
-                        <span className="inline-flex items-center justify-end gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
-                          <Cpu className="h-3 w-3" />
-                          {item.modelCount}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-xs text-[var(--muted-foreground)] font-mono tabular-nums hidden md:table-cell">
-                        {new Date(item.updatedAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] overflow-hidden text-sm">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] border-b border-[var(--border)]">
+              <div className="py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider">Benchmark</div>
+              <div className="py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden sm:block">Games</div>
+              <div className="py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden sm:block">Models</div>
+              <div className="py-3 px-4 font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wider hidden md:block">Updated</div>
+            </div>
+            {data.items.map((item) => (
+              <Link
+                key={item.id}
+                href={`/benchmarks/${item.id}` as Route}
+                className="grid grid-cols-[1fr_auto_auto_auto] border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors no-underline text-inherit"
+              >
+                <div className="py-3 px-4">
+                  <p className="font-semibold">{item.title ?? "Untitled Benchmark"}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                    {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
+                    {item.theme && item.author && <span>/</span>}
+                    {item.theme && <span>{item.theme.title}</span>}
+                  </div>
+                </div>
+                <div className="py-3 px-4 hidden sm:flex items-center">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
+                    <Gamepad2 className="h-3 w-3" />
+                    {item.gameCount}
+                  </span>
+                </div>
+                <div className="py-3 px-4 hidden sm:flex items-center">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
+                    <Cpu className="h-3 w-3" />
+                    {item.modelCount}
+                  </span>
+                </div>
+                <div className="py-3 px-4 text-xs text-[var(--muted-foreground)] font-mono tabular-nums hidden md:flex items-center">
+                  {new Date(item.updatedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>

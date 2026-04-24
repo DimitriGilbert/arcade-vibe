@@ -3,13 +3,14 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, Cpu, Wand2 } from "lucide-react";
+import { Home, Trophy, Cpu, Swords, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BOTTOM_NAV_ITEMS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Board", href: "/leaderboard", icon: Trophy },
   { label: "Models", href: "/models", icon: Cpu },
+  { label: "Benchmarks", href: "/benchmarks", icon: Swords },
   { label: "Creator", href: "/creator/ide", icon: Wand2 },
 ] as const;
 
