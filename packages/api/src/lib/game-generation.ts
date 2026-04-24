@@ -447,7 +447,10 @@ interface ProviderStreamResult {
 }
 
 interface ProviderModelWithDoStream {
-  doStream(options: { prompt: ProviderPrompt }): PromiseLike<ProviderStreamResult>;
+  doStream(options: {
+    prompt: ProviderPrompt;
+    providerOptions?: Record<string, unknown>;
+  }): PromiseLike<ProviderStreamResult>;
 }
 
 const selectPlatformProvider = (availableProviders: string[]): Provider => {
@@ -684,7 +687,7 @@ export async function generateGame(
     apiKey,
     selectedProvider,
     undefined,
-    { enabled: options.reasoningEnabled ?? true, effort: options.reasoningEffort ?? "medium" },
+    { enabled: options.reasoningEnabled ?? true, effort: options.reasoningEffort ?? "low" },
   );
 
   let finishedText = "";
@@ -757,6 +760,17 @@ export async function generateGame(
       streamStartTime = Date.now();
       const providerStreamResult = await providerModel.doStream({
         prompt: providerPrompt,
+        providerOptions: {
+          openrouter: {
+            ...(options.reasoningEnabled ?? true
+              ? {
+                  reasoning: {
+                    effort: options.reasoningEffort ?? "low",
+                  },
+                }
+              : {}),
+          },
+        } as Record<string, unknown>,
       });
 
       const reader = providerStreamResult.stream.getReader();
