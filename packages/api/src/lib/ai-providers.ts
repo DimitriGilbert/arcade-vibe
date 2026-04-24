@@ -62,15 +62,16 @@ export async function getProviderModel(
             process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
           "X-Title": process.env.OPENROUTER_APP_NAME ?? "Arcade-Vibe",
         },
-        ...(reasoningConfig?.enabled && {
-          extraBody: {
-            reasoning: {
-              max_tokens: reasoningConfig.maxTokens,
-            },
-          },
-        }),
       });
-      return openrouter(modelName);
+      return openrouter(modelName, {
+        ...(reasoningConfig?.enabled
+          ? {
+              reasoning: {
+                max_tokens: reasoningConfig.maxTokens,
+              },
+            }
+          : {}),
+      });
     }
 
     case "deepseek":

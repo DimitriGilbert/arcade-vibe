@@ -1,6 +1,8 @@
-const DEFAULT_GENERATION_CONCURRENCY_LIMIT = 4;
+export const DEFAULT_GENERATION_CONCURRENCY_LIMIT = 4;
+export const PREMIUM_GENERATION_CONCURRENCY_LIMIT = 8;
+
 const MIN_GENERATION_CONCURRENCY_LIMIT = 1;
-const MAX_GENERATION_CONCURRENCY_LIMIT = 4;
+const MAX_GENERATION_CONCURRENCY_LIMIT = 8;
 
 function parseGenerationConcurrencyLimit(rawValue: string | undefined): number {
   if (!rawValue) {

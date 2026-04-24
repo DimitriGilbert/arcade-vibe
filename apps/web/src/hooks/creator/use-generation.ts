@@ -7,7 +7,7 @@ import type { GenerationEntry } from "@/stores/generations-store";
 import {
   useGenerationsStore,
 } from "@/stores/generations-store";
-import { GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
+import { DEFAULT_GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 import { useDiscoveryDialog } from "@/components/creator/shared";
 
 export interface UseGenerationOptions {
@@ -26,6 +26,7 @@ export interface UseGenerationOptions {
   }) => void;
   onGenerationComplete?: (gameId: string, modelId: string) => void;
   setActiveOutputTab?: (id: string | null) => void;
+  generationConcurrencyLimit?: number;
 }
 
 export interface UseGenerationReturn {
@@ -49,6 +50,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
     onGenerationStart,
     onGenerationComplete,
     setActiveOutputTab,
+    generationConcurrencyLimit = DEFAULT_GENERATION_CONCURRENCY_LIMIT,
   } = options;
 
   const queryClient = useQueryClient();
@@ -232,8 +234,8 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
         }
       };
 
-      for (let index = 0; index < selectedModels.length; index += GENERATION_CONCURRENCY_LIMIT) {
-        const batch = selectedModels.slice(index, index + GENERATION_CONCURRENCY_LIMIT);
+      for (let index = 0; index < selectedModels.length; index += generationConcurrencyLimit) {
+        const batch = selectedModels.slice(index, index + generationConcurrencyLimit);
         await Promise.all(batch.map((model) => runGenerationForModel(model)));
       }
 

@@ -19,6 +19,7 @@ import { useGeneration } from "@/hooks/creator/use-generation";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
 import { PREMIUM_MAX_MODELS, DEFAULT_MAX_MODELS } from "@/lib/model-types";
+import { PREMIUM_GENERATION_CONCURRENCY_LIMIT, DEFAULT_GENERATION_CONCURRENCY_LIMIT } from "@/lib/generation-limits";
 import {
   Sheet,
   SheetTrigger,
@@ -132,6 +133,22 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
   } | null>(null);
   const state = useIDEState({ urlPromptId, urlForkId });
   const queryClient = useQueryClient();
+
+  const { data: subscriptionData } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: () => trpcClient.billing.getSubscription.query(),
+  });
+
+  const { data: userExtended } = useQuery({
+    queryKey: ["user", "extended"],
+    queryFn: () => trpcClient.credits.getUserExtended.query(),
+  });
+
+  const isAdmin = userExtended?.role === "admin";
+  const hasSubscription = subscriptionData?.hasSubscription === true;
+  const isPremium = isAdmin || hasSubscription;
+  const maxModels = isPremium ? PREMIUM_MAX_MODELS : DEFAULT_MAX_MODELS;
+  const generationConcurrencyLimit = isPremium ? PREMIUM_GENERATION_CONCURRENCY_LIMIT : DEFAULT_GENERATION_CONCURRENCY_LIMIT;
 
   const {
     selection,
@@ -280,6 +297,7 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     selectedModels,
     existingPromptId: currentPromptId,
     visibility,
+    generationConcurrencyLimit,
     onPromptCreated: (promptId) => {
       void handleSelectPrompt(promptId, {
         preserveSelectedModels: true,
@@ -297,20 +315,6 @@ export function IDELayout({ urlPromptId, urlForkId }: IDELayoutProps) {
     queryKey: ["credits"],
     queryFn: () => trpcClient.credits.getBalance.query(),
   });
-
-  const { data: subscriptionData } = useQuery({
-    queryKey: ["billing", "subscription"],
-    queryFn: () => trpcClient.billing.getSubscription.query(),
-  });
-
-  const { data: userExtended } = useQuery({
-    queryKey: ["user", "extended"],
-    queryFn: () => trpcClient.credits.getUserExtended.query(),
-  });
-
-  const isAdmin = userExtended?.role === "admin";
-  const hasSubscription = subscriptionData?.hasSubscription === true;
-  const maxModels = isAdmin || hasSubscription ? PREMIUM_MAX_MODELS : DEFAULT_MAX_MODELS;
 
   const { data: preferences } = useQuery({
     queryKey: ["user", "preferences"],
