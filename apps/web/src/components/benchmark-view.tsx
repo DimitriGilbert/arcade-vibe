@@ -24,10 +24,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { ArcadeBadge } from "@/components/arcade";
+import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RouterOutput } from "@/lib/trpc-types";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Clock, Coins, Cpu, Search, Star, Swords, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Clock, Coins, Cpu, ExternalLink, Play, Search, Star, Swords, X } from "lucide-react";
 
 type BenchmarkOutput = RouterOutput["prompts"]["getBenchmark"];
 type BenchmarkGame = BenchmarkOutput["games"][number];
@@ -272,111 +272,51 @@ function FilterDropdown({
   );
 }
 
-const columns: ColumnDef<BenchmarkGame>[] = [
-  {
-    accessorKey: "modelName",
-    header: "Model",
-    filterFn: (row, _columnId, filterValue) => {
-      if (!filterValue || (filterValue as string[]).length === 0) return true;
-      return (filterValue as string[]).includes(row.getValue("modelName") as string ?? "");
-    },
-    cell: ({ row }) => (
-      <a
-        href={`/game/${row.original.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-medium text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
-      >
-        {row.original.modelName ?? "unknown"}
-      </a>
-    ),
-  },
-  {
-    accessorKey: "name",
-    header: "Name",
-    cell: ({ row }) => (
-      <a
-        href={`/game/${row.original.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors truncate max-w-[200px] block"
-      >
-        {row.original.name ?? "Untitled"}
-      </a>
-    ),
-  },
-  {
-    accessorKey: "tierSlug",
-    header: "Tier",
-    filterFn: (row, _columnId, filterValue) => {
-      if (!filterValue || (filterValue as string[]).length === 0) return true;
-      return (filterValue as string[]).includes(row.getValue("tierSlug") as string ?? "");
-    },
-    cell: ({ row }) => {
-      const slug = row.original.tierSlug;
-      if (!slug) return null;
-      return <ArcadeBadge text={slug} variant="default" />;
-    },
-    sortingFn: (a, b) => (a.original.tierSlug ?? "").localeCompare(b.original.tierSlug ?? ""),
-  },
-  {
-    accessorKey: "outputTokens",
-    header: "Out",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-        {formatTokens(row.original.outputTokens)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "timeToFirstTokenMs",
-    header: "TTFT",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-        {formatTtft(row.original.timeToFirstTokenMs)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "requestCostUsd",
-    header: "Cost",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-        {formatCost(row.original.requestCostUsd)}
-      </span>
-    ),
-    sortingFn: (a, b) => (toNum(a.original.requestCostUsd) ?? 0) - (toNum(b.original.requestCostUsd) ?? 0),
-  },
-  {
-    accessorKey: "totalPlays",
-    header: "Plays",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-        {row.original.totalPlays}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "avgRating",
-    header: "Rating",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-        {formatRating(row.original.avgRating)}
-      </span>
-    ),
-    sortingFn: (a, b) => (a.original.avgRating ?? 0) - (b.original.avgRating ?? 0),
-  },
-  {
-    accessorKey: "finalScore",
-    header: "Score",
-    cell: ({ row }) => (
-      <span className="font-mono tabular-nums font-semibold text-[var(--foreground)]">
-        {formatScore(row.original.finalScore)}
-      </span>
-    ),
-    sortingFn: (a, b) => (toNum(a.original.finalScore) ?? 0) - (toNum(b.original.finalScore) ?? 0),
-  },
-];
+function GamePreviewDialog({
+  gameId,
+  gameName,
+  open,
+  onClose,
+}: {
+  gameId: string | null;
+  gameName: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open || !gameId) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-50 w-[90vw] h-[90vh] bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+          <span className="text-sm font-semibold truncate">{gameName}</span>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/game/${gameId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius)] border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open
+            </a>
+            <button onClick={onClose} className="p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 bg-black">
+          <iframe
+            src={`/api/games/${gameId}/play`}
+            className="w-full h-full border-0"
+            title={gameName}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
   const { prompt, games } = data;
@@ -384,6 +324,129 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [previewGameId, setPreviewGameId] = useState<string | null>(null);
+  const [previewGameName, setPreviewGameName] = useState("");
+
+  const tableColumns = useMemo<ColumnDef<BenchmarkGame>[]>(
+    () => [
+      {
+        accessorKey: "modelName",
+        header: "Model",
+        filterFn: (row, _columnId, filterValue) => {
+          if (!filterValue || (filterValue as string[]).length === 0) return true;
+          return (filterValue as string[]).includes(row.getValue("modelName") as string ?? "");
+        },
+        cell: ({ row }) => (
+          <a
+            href={`/game/${row.original.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
+          >
+            {row.original.modelName ?? "unknown"}
+          </a>
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 truncate max-w-[220px]">
+            <a
+              href={`/game/${row.original.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors truncate"
+            >
+              {row.original.name ?? "Untitled"}
+            </a>
+            <ArcadeButton
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setPreviewGameId(row.original.id);
+                setPreviewGameName(row.original.name ?? "Untitled");
+              }}
+            >
+              <Play className="h-3 w-3" />
+            </ArcadeButton>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "tierSlug",
+        header: "Tier",
+        filterFn: (row, _columnId, filterValue) => {
+          if (!filterValue || (filterValue as string[]).length === 0) return true;
+          return (filterValue as string[]).includes(row.getValue("tierSlug") as string ?? "");
+        },
+        cell: ({ row }) => {
+          const slug = row.original.tierSlug;
+          if (!slug) return null;
+          return <ArcadeBadge text={slug} variant="default" />;
+        },
+        sortingFn: (a, b) => (a.original.tierSlug ?? "").localeCompare(b.original.tierSlug ?? ""),
+      },
+      {
+        accessorKey: "outputTokens",
+        header: "Out",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
+            {formatTokens(row.original.outputTokens)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "timeToFirstTokenMs",
+        header: "TTFT",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
+            {formatTtft(row.original.timeToFirstTokenMs)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "requestCostUsd",
+        header: "Cost",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
+            {formatCost(row.original.requestCostUsd)}
+          </span>
+        ),
+        sortingFn: (a, b) => (toNum(a.original.requestCostUsd) ?? 0) - (toNum(b.original.requestCostUsd) ?? 0),
+      },
+      {
+        accessorKey: "totalPlays",
+        header: "Plays",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
+            {row.original.totalPlays}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "avgRating",
+        header: "Rating",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
+            {formatRating(row.original.avgRating)}
+          </span>
+        ),
+        sortingFn: (a, b) => (a.original.avgRating ?? 0) - (b.original.avgRating ?? 0),
+      },
+      {
+        accessorKey: "finalScore",
+        header: "Score",
+        cell: ({ row }) => (
+          <span className="font-mono tabular-nums font-semibold text-[var(--foreground)]">
+            {formatScore(row.original.finalScore)}
+          </span>
+        ),
+        sortingFn: (a, b) => (toNum(a.original.finalScore) ?? 0) - (toNum(b.original.finalScore) ?? 0),
+      },
+    ],
+    [],
+  );
 
   const uniqueModels = useMemo(
     () => [...new Set(games.map((g) => g.modelName ?? "unknown"))].sort(),
@@ -424,7 +487,7 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
 
   const table = useReactTable({
     data: games,
-    columns,
+    columns: tableColumns,
     state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -589,6 +652,13 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
           </div>
         )}
       </div>
+
+      <GamePreviewDialog
+        gameId={previewGameId}
+        gameName={previewGameName}
+        open={previewGameId !== null}
+        onClose={() => setPreviewGameId(null)}
+      />
     </div>
   );
 }
