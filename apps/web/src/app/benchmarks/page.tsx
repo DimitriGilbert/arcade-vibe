@@ -12,6 +12,8 @@ import { eq, desc, and, isNull, sql, inArray } from "drizzle-orm";
 import { ArcadeCard } from "@/components/arcade";
 import { EmptyState } from "@/components/reusable";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Benchmarks | Arcade Vibe",
   description:
@@ -19,85 +21,89 @@ export const metadata: Metadata = {
 };
 
 async function getBenchmarksList() {
-  const rows = await db.query.prompts.findMany({
-    where: and(eq(prompts.isBenchmark, true), isNull(prompts.hiddenAt)),
-    columns: {
-      id: true,
-      title: true,
-      content: true,
-      themeId: true,
-      authorId: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: [desc(prompts.updatedAt)],
-    limit: 51,
-    with: {
-      theme: { columns: { id: true, title: true } },
-      user: { columns: { id: true, name: true, image: true } },
-    },
-  });
+  try {
+    const rows = await db.query.prompts.findMany({
+      where: and(eq(prompts.isBenchmark, true), isNull(prompts.hiddenAt)),
+      columns: {
+        id: true,
+        title: true,
+        content: true,
+        themeId: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [desc(prompts.updatedAt)],
+      limit: 51,
+      with: {
+        theme: { columns: { id: true, title: true } },
+        user: { columns: { id: true, name: true, image: true } },
+      },
+    });
 
-  const hasMore = rows.length > 50;
-  const items = hasMore ? rows.slice(0, -1) : rows;
-  const promptIds = items.map((p) => p.id);
+    const hasMore = rows.length > 50;
+    const items = hasMore ? rows.slice(0, -1) : rows;
+    const promptIds = items.map((p) => p.id);
 
-  const [gameCounts, modelCounts] = await Promise.all([
-    promptIds.length > 0
-      ? db
-          .select({
-            promptId: games.promptId,
-            count: sql<number>`count(*)`,
-          })
-          .from(games)
-          .where(
-            and(
-              inArray(games.promptId, promptIds),
-              isNull(games.deletedAt),
-            ),
-          )
-          .groupBy(games.promptId)
-      : [],
-    promptIds.length > 0
-      ? db
-          .select({
-            promptId: games.promptId,
-            modelCount: sql<number>`count(distinct ${games.modelName})`,
-          })
-          .from(games)
-          .where(
-            and(
-              inArray(games.promptId, promptIds),
-              isNull(games.deletedAt),
-            ),
-          )
-          .groupBy(games.promptId)
-      : [],
-  ]);
+    const [gameCounts, modelCounts] = await Promise.all([
+      promptIds.length > 0
+        ? db
+            .select({
+              promptId: games.promptId,
+              count: sql<number>`count(*)`,
+            })
+            .from(games)
+            .where(
+              and(
+                inArray(games.promptId, promptIds),
+                isNull(games.deletedAt),
+              ),
+            )
+            .groupBy(games.promptId)
+        : [],
+      promptIds.length > 0
+        ? db
+            .select({
+              promptId: games.promptId,
+              modelCount: sql<number>`count(distinct ${games.modelName})`,
+            })
+            .from(games)
+            .where(
+              and(
+                inArray(games.promptId, promptIds),
+                isNull(games.deletedAt),
+              ),
+            )
+            .groupBy(games.promptId)
+        : [],
+    ]);
 
-  const gameCountMap = new Map(
-    gameCounts.map((r) => [r.promptId, Number(r.count)]),
-  );
-  const modelCountMap = new Map(
-    modelCounts.map((r) => [r.promptId, Number(r.modelCount)]),
-  );
+    const gameCountMap = new Map(
+      gameCounts.map((r) => [r.promptId, Number(r.count)]),
+    );
+    const modelCountMap = new Map(
+      modelCounts.map((r) => [r.promptId, Number(r.modelCount)]),
+    );
 
-  return {
-    items: items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      content: item.content,
-      theme: item.theme,
-      author: item.user,
-      gameCount: gameCountMap.get(item.id) ?? 0,
-      modelCount: modelCountMap.get(item.id) ?? 0,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    })),
-    nextCursor: hasMore
-      ? (items[items.length - 1]?.id ?? null)
-      : null,
-  };
+    return {
+      items: items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        theme: item.theme,
+        author: item.user,
+        gameCount: gameCountMap.get(item.id) ?? 0,
+        modelCount: modelCountMap.get(item.id) ?? 0,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      nextCursor: hasMore
+        ? (items[items.length - 1]?.id ?? null)
+        : null,
+    };
+  } catch {
+    return { items: [], nextCursor: null };
+  }
 }
 
 export default async function BenchmarksPage() {
