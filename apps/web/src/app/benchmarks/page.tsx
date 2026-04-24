@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import type { Route } from "next";
 
+import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { Cpu, Gamepad2, Swords } from "lucide-react";
 
@@ -154,42 +156,46 @@ export default async function BenchmarksPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors cursor-pointer"
-                    onClick={() => window.location.href = `/benchmarks/${item.id}`}
-                  >
-                    <td className="py-3 px-4">
-                      <span className="font-semibold">
-                        {item.title ?? "Untitled Benchmark"}
-                      </span>
-                      <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-                        {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
-                        {item.theme && item.author && <span>/</span>}
-                        {item.theme && <span>{item.theme.title}</span>}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right hidden sm:table-cell">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
-                        <Gamepad2 className="h-3 w-3" />
-                        {item.gameCount}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right hidden sm:table-cell">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
-                        <Cpu className="h-3 w-3" />
-                        {item.modelCount}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right text-xs text-[var(--muted-foreground)] font-mono tabular-nums hidden md:table-cell">
-                      {new Date(item.updatedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                  </tr>
-                ))}
+                {data.items.map((item) => {
+                  const href = `/benchmarks/${item.id}` as Route;
+                  return (
+                    <tr
+                      key={item.id}
+                      className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <Link href={href} className="font-semibold hover:text-[var(--primary)] transition-colors">
+                          {item.title ?? "Untitled Benchmark"}
+                        </Link>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                          {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
+                          {item.theme && item.author && <span>/</span>}
+                          {item.theme && <span>{item.theme.title}</span>}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right hidden sm:table-cell">
+                        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums hover:text-[var(--primary)] transition-colors">
+                          <Gamepad2 className="h-3 w-3" />
+                          {item.gameCount}
+                        </Link>
+                      </td>
+                      <td className="py-3 px-4 text-right hidden sm:table-cell">
+                        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums hover:text-[var(--primary)] transition-colors">
+                          <Cpu className="h-3 w-3" />
+                          {item.modelCount}
+                        </Link>
+                      </td>
+                      <td className="py-3 px-4 text-right text-xs text-[var(--muted-foreground)] font-mono tabular-nums hidden md:table-cell">
+                        <Link href={href} className="hover:text-[var(--primary)] transition-colors">
+                          {new Date(item.updatedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
