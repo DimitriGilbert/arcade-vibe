@@ -161,37 +161,36 @@ export default async function BenchmarksPage() {
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors"
+                      className="relative border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--muted)]/30 transition-colors"
                     >
                       <td className="py-3 px-4">
-                        <Link href={href} className="font-semibold hover:text-[var(--primary)] transition-colors">
-                          {item.title ?? "Untitled Benchmark"}
+                        <Link href={href} className="absolute inset-0 z-0">
+                          <span className="sr-only">{item.title ?? "Untitled Benchmark"}</span>
                         </Link>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                        <p className="relative font-semibold">{item.title ?? "Untitled Benchmark"}</p>
+                        <div className="relative mt-0.5 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                           {item.author && <span>{item.author.name ?? "Anonymous"}</span>}
                           {item.theme && item.author && <span>/</span>}
                           {item.theme && <span>{item.theme.title}</span>}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right hidden sm:table-cell">
-                        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums hover:text-[var(--primary)] transition-colors">
+                        <span className="inline-flex items-center justify-end gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
                           <Gamepad2 className="h-3 w-3" />
                           {item.gameCount}
-                        </Link>
+                        </span>
                       </td>
                       <td className="py-3 px-4 text-right hidden sm:table-cell">
-                        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums hover:text-[var(--primary)] transition-colors">
+                        <span className="inline-flex items-center justify-end gap-1.5 text-xs text-[var(--muted-foreground)] font-mono tabular-nums">
                           <Cpu className="h-3 w-3" />
                           {item.modelCount}
-                        </Link>
+                        </span>
                       </td>
                       <td className="py-3 px-4 text-right text-xs text-[var(--muted-foreground)] font-mono tabular-nums hidden md:table-cell">
-                        <Link href={href} className="hover:text-[var(--primary)] transition-colors">
-                          {new Date(item.updatedAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </Link>
+                        {new Date(item.updatedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </td>
                     </tr>
                   );
