@@ -190,7 +190,7 @@ export function useGeneration(options: UseGenerationOptions): UseGenerationRetur
             apiKeyId: model.apiKeyId ?? undefined,
             name: gameName.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
-            reasoningMaxTokens: model.reasoningMaxTokens,
+            reasoningEffort: model.reasoningEffort,
           });
 
           try {

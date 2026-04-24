@@ -40,7 +40,7 @@ export interface GenerateGameOptions {
   name?: string;
   mediaUrls?: Record<string, string>;
   reasoningEnabled?: boolean;
-  reasoningMaxTokens?: number;
+  reasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
 }
 
 export interface GenerateGameStatusEvent {
@@ -684,7 +684,7 @@ export async function generateGame(
     apiKey,
     selectedProvider,
     undefined,
-    { enabled: options.reasoningEnabled ?? true, maxTokens: options.reasoningMaxTokens ?? 2000 },
+    { enabled: options.reasoningEnabled ?? true, effort: options.reasoningEffort ?? "medium" },
   );
 
   let finishedText = "";

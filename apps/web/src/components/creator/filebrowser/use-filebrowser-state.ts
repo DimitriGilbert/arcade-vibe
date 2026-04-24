@@ -654,7 +654,7 @@ export function useFilebrowserState(options?: { promptId?: string; forkId?: stri
             apiKeyId: model.apiKeyId ?? undefined,
             name: gameName.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
-            reasoningMaxTokens: model.reasoningMaxTokens,
+            reasoningEffort: model.reasoningEffort,
           });
 
           try {

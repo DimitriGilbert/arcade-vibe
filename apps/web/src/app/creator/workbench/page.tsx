@@ -468,7 +468,7 @@ export default function WorkbenchPage({ searchParams }: WorkbenchPageProps) {
             apiKeyId: model.apiKeyId ?? undefined,
             name: promptTitle.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
-            reasoningMaxTokens: model.reasoningMaxTokens,
+            reasoningEffort: model.reasoningEffort,
           });
 
           try {

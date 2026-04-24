@@ -531,7 +531,7 @@ export default function EditorPage({ searchParams }: EditorPageProps) {
             name: undefined,
             mediaUrls: gameMedia.mediaUrls ?? undefined,
             reasoningEnabled: model.reasoningEnabled,
-            reasoningMaxTokens: model.reasoningMaxTokens,
+            reasoningEffort: model.reasoningEffort,
           });
 
           try {

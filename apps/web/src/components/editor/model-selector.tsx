@@ -72,7 +72,7 @@ const modelSelectionSchema = z.object({
   selectedModel: z.string().min(1, "Please select a model"),
   selectedApiKeyId: z.string().optional(),
   reasoningEnabled: z.boolean().default(true),
-  reasoningMaxTokens: z.number().min(500).max(10000).default(2000),
+  reasoningEffort: z.enum(["minimal", "low", "medium", "high", "xhigh"]).default("medium"),
 });
 
 type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
@@ -200,13 +200,18 @@ export function ModelSelector({
         description: "Enable reasoning/thinking for supported models",
       },
       {
-        name: "reasoningMaxTokens",
-        type: "number",
-        label: "Max Reasoning Tokens",
+        name: "reasoningEffort",
+        type: "select",
+        label: "Reasoning Effort",
         conditional: (values) => values.reasoningEnabled === true,
-        min: 500,
-        max: 10000,
-        description: "Maximum tokens for reasoning (500-10000)",
+        options: [
+          { value: "minimal", label: "Minimal" },
+          { value: "low", label: "Low" },
+          { value: "medium", label: "Medium" },
+          { value: "high", label: "High" },
+          { value: "xhigh", label: "Extra High" },
+        ],
+        description: "Control reasoning depth for supported models",
       },
     ],
     formOptions: {
@@ -216,7 +221,7 @@ export function ModelSelector({
         selectedModel: "",
         selectedApiKeyId: "",
         reasoningEnabled: true,
-        reasoningMaxTokens: 2000,
+        reasoningEffort: "medium" as const,
       },
       onSubmit: async ({ value }) => {
         if (existingModelKeys.includes(value.selectedModel)) {
@@ -245,7 +250,7 @@ export function ModelSelector({
           apiKeyId: isByok ? (value.selectedApiKeyId ?? null) : null,
           isByok: !!isByok,
           reasoningEnabled: value.reasoningEnabled,
-          reasoningMaxTokens: value.reasoningMaxTokens,
+          reasoningEffort: value.reasoningEffort,
         };
 
         onAddModel(selection);

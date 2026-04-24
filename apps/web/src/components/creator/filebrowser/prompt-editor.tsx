@@ -104,7 +104,7 @@ export function PromptEditor({
       apiKeyId: isByok ? selectedApiKeyId : null,
       isByok,
       reasoningEnabled,
-      reasoningMaxTokens: 2000,
+      reasoningEffort: "medium" as const,
     };
 
     onAddModel(selection);

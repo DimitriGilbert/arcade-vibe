@@ -20,12 +20,14 @@ type Provider =
   | "moonshot"
   | "custom";
 
+type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+
 export async function getProviderModel(
   modelName: string,
   apiKey: string,
   provider: Provider,
   customEndpoint?: string,
-  reasoningConfig?: { enabled: boolean; maxTokens: number },
+  reasoningConfig?: { enabled: boolean; effort: ReasoningEffort },
 ): Promise<LanguageModel> {
   const config = await db.query.modelConfig.findFirst({
     where: eq(modelConfig.modelName, modelName),
@@ -67,7 +69,7 @@ export async function getProviderModel(
         ...(reasoningConfig?.enabled
           ? {
               reasoning: {
-                max_tokens: reasoningConfig.maxTokens,
+                effort: reasoningConfig.effort,
               },
             }
           : {}),

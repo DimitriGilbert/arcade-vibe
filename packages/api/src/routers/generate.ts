@@ -18,7 +18,7 @@ export const generateRouter = router({
         name: z.string().max(100).optional(),
         mediaUrls: z.record(z.string(), z.string()).optional(),
         reasoningEnabled: z.boolean().default(true),
-        reasoningMaxTokens: z.number().min(500).max(10000).default(2000),
+        reasoningEffort: z.enum(["minimal", "low", "medium", "high", "xhigh"]).default("medium"),
       }),
     )
     .mutation(async function* ({ input, ctx }) {
@@ -39,7 +39,7 @@ export const generateRouter = router({
         name: input.name,
         mediaUrls: input.mediaUrls,
         reasoningEnabled: input.reasoningEnabled,
-        reasoningMaxTokens: input.reasoningMaxTokens,
+        reasoningEffort: input.reasoningEffort,
       });
 
       // Stream events from the generator

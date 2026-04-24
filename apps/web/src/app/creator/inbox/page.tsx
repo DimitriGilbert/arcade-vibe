@@ -505,7 +505,7 @@ export default function InboxPage({ searchParams }: InboxPageProps) {
             apiKeyId: model.apiKeyId ?? undefined,
             name: gameName.trim() || promptTitle.trim() || undefined,
             reasoningEnabled: model.reasoningEnabled,
-            reasoningMaxTokens: model.reasoningMaxTokens,
+            reasoningEffort: model.reasoningEffort,
           });
 
           try {

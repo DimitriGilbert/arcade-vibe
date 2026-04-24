@@ -703,6 +703,8 @@ export type SubscriptionPlan = AdminOutput["plans"]["getPlans"][number];
  */
 export type GenerationStatus = "idle" | "reasoning" | "generating" | "complete" | "error";
 
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+
 /**
  * Model selection for game generation
  * Represents a selected AI model with its configuration for generation
@@ -717,7 +719,7 @@ export interface ModelSelection {
   apiKeyId: string | null;
   isByok: boolean;
   reasoningEnabled: boolean;
-  reasoningMaxTokens: number;
+  reasoningEffort: ReasoningEffort;
 }
 
 /**
