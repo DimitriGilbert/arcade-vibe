@@ -94,6 +94,7 @@ export async function generateMetadata({
       title: `${gameTitle} | Arcade Vibe`,
       description,
       type: "article",
+      ...(data.game.thumbnailUrl && { images: [data.game.thumbnailUrl] }),
     },
   };
 }

@@ -43,6 +43,13 @@
       "when": 1777023535336,
       "tag": "0005_short_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777071089778,
+      "tag": "0006_aspiring_salo",
+      "breakpoints": true
     }
   ]
 }

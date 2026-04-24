@@ -22,6 +22,7 @@ import {
 } from "../lib/game-export";
 import { cacheDeletePattern } from "../lib/redis";
 import { redis } from "../lib/redis";
+import { processImageForThumbnail, uploadImage } from "../lib/cdn";
 import z from "zod";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -49,6 +50,7 @@ const GAME_LIST_COLUMNS = {
   hiddenAt: true,
   isSubmitted: true,
   submittedAt: true,
+  thumbnailUrl: true,
   sanitizationApplied: true,
   deletedAt: true,
   createdAt: true,
@@ -1734,6 +1736,85 @@ export const gamesRouter = router({
         success: true,
         gameId: input.gameId,
       };
+    }),
+
+  saveThumbnail: protectedProcedure
+    .input(
+      z.object({
+        gameId: z.string().uuid(),
+        imageDataUrl: z.string().refine((val) => val.startsWith("data:image/"), {
+          message: "Invalid image data URL",
+        }),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      const gamesQuery = db.query.games;
+      if (!gamesQuery) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database query not available",
+        });
+      }
+
+      const game = await gamesQuery.findFirst({
+        where: eq(games.id, input.gameId),
+        with: {
+          prompt: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!game || game.prompt.user?.id !== ctx.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Game not found or you are not the owner",
+        });
+      }
+
+      const base64Data = input.imageDataUrl.split(",")[1];
+      if (!base64Data) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid image data URL format",
+        });
+      }
+
+      const buffer = Buffer.from(base64Data, "base64");
+      const processedBuffer = await processImageForThumbnail(buffer);
+      const key = `thumbnails/${input.gameId}.webp`;
+      const thumbnailUrl = await uploadImage({
+        buffer: processedBuffer,
+        key,
+        contentType: "image/webp",
+      });
+
+      await db
+        .update(games)
+        .set({
+          thumbnailUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(games.id, input.gameId));
+
+      await cacheDeletePattern(`games:theme:*`);
+      await cacheDeletePattern(`games:prompt:*`);
+      await cacheDelete(`game:${input.gameId}`);
+
+      return { thumbnailUrl };
     }),
 
   getDiscoveryGames: publicProcedure

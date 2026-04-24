@@ -314,6 +314,7 @@ export async function getUserGames(userId: string, page = 1, pageSize = 10): Pro
         generatedAt: true,
         isSubmitted: true,
         submittedAt: true,
+        thumbnailUrl: true,
         isHidden: true,
         hiddenReason: true,
         hiddenAt: true,

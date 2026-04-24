@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Code2, Download, Eye, EyeOff, Moon, Play, Sun } from "lucide-react";
+import { Camera, Code2, Download, Eye, EyeOff, Loader2, Moon, Play, Sun } from "lucide-react";
 import { StreamingCodeViewerV2 } from "@/components/streaming-code-viewer-v2";
 import { useGenerationById } from "@/stores/generations-store";
 import { OutputStatusCard, StatusIcon, WaitingState } from "@/components/creator/shared";
 import { trpcClient } from "@/utils/trpc";
 import { cn } from "@/lib/utils";
 import type { EditorTheme, GameStatus, GenerationStatus } from "./types";
+import { useGameScreenshot } from "./use-game-screenshot";
 import { GuidanceBubble } from "./creator-guidance";
 import type { CreatorGuidanceState } from "./creator-guidance";
 
@@ -67,6 +68,7 @@ export function GameContent({
   const isComplete = generation?.status === "complete";
   const hasCodeInMemory = !!generation?.code;
   const [iframeKey, setIframeKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasPersistedGameId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     gameId
   );
@@ -99,6 +101,7 @@ export function GameContent({
   const displayModelName = modelName ?? generation?.modelKey ?? modelKey ?? "Model";
   const showModelName = displayModelName !== displayTitle;
   const resolvedGameId = generation?.gameId ?? (hasPersistedGameId ? gameId : null);
+  const { captureScreenshot, isCapturing } = useGameScreenshot({ iframeRef, gameId: resolvedGameId });
   const status = generation?.status ?? mapGameStatusToGenerationStatus(gameStatus);
   const statusLabel =
     status === "reasoning"
@@ -116,7 +119,18 @@ export function GameContent({
   const canRenderGame = !!code && status !== "error";
   const published = persistedGame?.isSubmitted ?? isSubmitted ?? false;
 
-  const iframeDocument = useMemo(() => code, [code]);
+  const SCREENSHOT_PATCH = `<script>(function(){var o=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(t,a){if(t==='webgl'||t==='webgl2'||t==='experimental-webgl'){a=Object.assign({},a,{preserveDrawingBuffer:true})}return o.call(this,t,a)}})()</script>`;
+
+  const iframeDocument = useMemo(() => {
+    if (!code) return "";
+    if (code.includes("<head>")) {
+      return code.replace("<head>", "<head>" + SCREENSHOT_PATCH);
+    }
+    if (code.includes("<html>")) {
+      return code.replace("<html>", "<html>" + SCREENSHOT_PATCH);
+    }
+    return SCREENSHOT_PATCH + code;
+  }, [code]);
 
   const handleDownload = useCallback(() => {
     const blob = new Blob([code], { type: "text/html" });
@@ -236,6 +250,22 @@ export function GameContent({
               <Moon className="w-4 h-4 text-[var(--muted-foreground)]" />
             )}
           </button>
+          {viewMode === "game" && canRenderGame ? (
+            <button
+              type="button"
+              onClick={captureScreenshot}
+              disabled={isCapturing || !resolvedGameId}
+              className="p-1.5 rounded-md hover:bg-[var(--muted)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Capture screenshot"
+              title="Capture screenshot"
+            >
+              {isCapturing ? (
+                <Loader2 className="w-4 h-4 text-[var(--muted-foreground)] animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-[var(--muted-foreground)]" />
+              )}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleDownload}
@@ -278,6 +308,7 @@ export function GameContent({
               </div>
               <iframe
                 key={`${gameId}-${iframeKey}`}
+                ref={iframeRef}
                 title={`Game preview: ${displayTitle}`}
                 srcDoc={iframeDocument}
                 className="h-[calc(100%-41px)] w-full border-0 bg-white"

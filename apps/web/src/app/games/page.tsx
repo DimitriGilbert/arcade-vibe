@@ -108,6 +108,20 @@ export default async function GamesLibraryPage({
 
               return (
                 <ArcadeCard key={game.id} className="flex h-full flex-col overflow-hidden p-0">
+                  {game.thumbnailUrl ? (
+                    <div className="relative aspect-video w-full overflow-hidden">
+                      <img
+                        src={game.thumbnailUrl}
+                        alt={gameTitle}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative aspect-video w-full bg-gradient-to-br from-[var(--muted)] to-[var(--card)] flex items-center justify-center">
+                      <Gamepad2 className="w-12 h-12 text-[var(--primary)]/20" />
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-3 text-xs text-[var(--muted-foreground)]">
                     <span className="inline-flex items-center gap-2">
                       {game.tierCost?.slug && (

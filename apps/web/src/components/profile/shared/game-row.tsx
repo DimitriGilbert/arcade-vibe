@@ -30,8 +30,16 @@ export function GameRow({ game, rank }: GameRowProps) {
         </span>
       </div>
 
-      <div className="w-12 h-12 rounded-lg bg-[var(--muted)] flex items-center justify-center">
-        <Gamepad2 className="w-6 h-6 text-[var(--primary)]/40 group-hover:text-[var(--primary)] transition-colors" />
+      <div className="w-12 h-12 rounded-lg bg-[var(--muted)] flex items-center justify-center overflow-hidden">
+        {game.thumbnailUrl ? (
+          <img
+            src={game.thumbnailUrl}
+            alt={game.name || "Game"}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <Gamepad2 className="w-6 h-6 text-[var(--primary)]/40 group-hover:text-[var(--primary)] transition-colors" />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">

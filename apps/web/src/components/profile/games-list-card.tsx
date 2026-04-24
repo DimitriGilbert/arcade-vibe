@@ -1,3 +1,5 @@
+"use client";
+
 import { useRouter } from "next/navigation";
 import { ArcadeBadge } from "@/components/arcade";
 import { Gamepad2 } from "lucide-react";
@@ -50,8 +52,16 @@ export function GamesListCard({ games, isLoading }: GamesListCardProps) {
               }
             }}
           >
-            <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center">
-              <Gamepad2 className="h-6 w-6 text-[var(--primary-foreground)]" />
+            <div className="w-16 h-12 bg-[var(--primary)] rounded flex items-center justify-center overflow-hidden">
+              {game.thumbnailUrl ? (
+                <img
+                  src={game.thumbnailUrl}
+                  alt={game.name || "Game"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Gamepad2 className="h-6 w-6 text-[var(--primary-foreground)]" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate text-[var(--foreground)]">

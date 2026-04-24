@@ -20,7 +20,15 @@ export function GameCabinet({ game, rank }: GameCabinetProps) {
     >
       <div className="relative aspect-[4/3] bg-gradient-to-br from-[var(--muted)] to-[var(--card)] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-[var(--primary)]/5" />
-        <Gamepad2 className="w-16 h-16 text-[var(--primary)]/30 group-hover:text-[var(--primary)]/50 transition-colors" />
+        {game.thumbnailUrl ? (
+          <img
+            src={game.thumbnailUrl}
+            alt={game.name || "Game"}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <Gamepad2 className="w-16 h-16 text-[var(--primary)]/30 group-hover:text-[var(--primary)]/50 transition-colors" />
+        )}
 
         {rank && rank <= 3 && (
           <div className="absolute top-3 left-3">

@@ -39,6 +39,7 @@ export async function generateMetadata({
         description: game.name
           ? `Play "${game.name}" on Arcade Vibe`
           : promptDescription,
+        ...(game.thumbnailUrl && { images: [game.thumbnailUrl] }),
       },
     };
   } catch {

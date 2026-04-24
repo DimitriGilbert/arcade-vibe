@@ -52,7 +52,7 @@ const modelSelectionSchema = z.object({
   selectedModel: z.string().min(1, "Please select a model"),
   selectedApiKeyId: z.string().optional(),
   reasoningEnabled: z.boolean().default(true),
-  reasoningEffort: z.enum(["minimal", "low", "medium", "high", "xhigh"]).default("medium"),
+  reasoningEffort: z.enum(["minimal", "low", "medium", "high", "xhigh"]).default("low"),
 });
 
 type ModelSelectionValues = z.infer<typeof modelSelectionSchema>;
@@ -228,7 +228,7 @@ export function ConfigPanel({
         selectedModel: "",
         selectedApiKeyId: "",
         reasoningEnabled: true,
-        reasoningEffort: "medium",
+        reasoningEffort: "low",
       },
       onSubmit: async ({ value }) => {
         if (!modelMetadata) return;

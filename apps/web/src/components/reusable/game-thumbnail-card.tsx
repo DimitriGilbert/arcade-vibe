@@ -1,5 +1,8 @@
+"use client";
+
 import * as React from "react";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +63,9 @@ function GameThumbnailCard({
   footerAction,
   onClick,
 }: GameThumbnailCardProps) {
+  const [imageError, setImageError] = useState(false);
+  const showImage = game.thumbnailUrl && !imageError;
+
   const displayTitle = title;
   const displayDescription = description ?? game.prompt?.content;
   const displayMeta = {
@@ -85,9 +91,18 @@ function GameThumbnailCard({
       onClick={onClick}
     >
       <div className="relative aspect-video overflow-hidden bg-primary">
-        <div className="size-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center">
-          <Gamepad2 className="h-12 w-12 text-primary/40" />
-        </div>
+        {showImage ? (
+          <img
+            src={game.thumbnailUrl!}
+            alt={game.name ?? "Game"}
+            className="size-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="size-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center">
+            <Gamepad2 className="h-12 w-12 text-primary/40" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
         <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5">
           {displayMeta.tier && tierBadgeStyle && (

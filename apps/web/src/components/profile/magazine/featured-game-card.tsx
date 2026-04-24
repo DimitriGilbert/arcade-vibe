@@ -28,8 +28,16 @@ export function FeaturedGameCard({ game, rank, variant = "default" }: FeaturedGa
     >
       <ArcadeCard className={`h-full ${isFeatured ? 'flex flex-col' : ''} p-4`}>
         {isFeatured && (
-          <div className="relative bg-gradient-to-br from-[var(--muted)] to-[var(--card)] flex items-center justify-center aspect-video mb-4 rounded">
-            <Gamepad2 className="w-16 h-16 text-[var(--primary)]/20 group-hover:text-[var(--primary)]/40 transition-colors" />
+          <div className="relative bg-gradient-to-br from-[var(--muted)] to-[var(--card)] flex items-center justify-center aspect-video mb-4 rounded overflow-hidden">
+            {game.thumbnailUrl ? (
+              <img
+                src={game.thumbnailUrl}
+                alt={game.name || "Game"}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <Gamepad2 className="w-16 h-16 text-[var(--primary)]/20 group-hover:text-[var(--primary)]/40 transition-colors" />
+            )}
           </div>
         )}
 

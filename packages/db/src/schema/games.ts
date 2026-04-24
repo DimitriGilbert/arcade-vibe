@@ -46,6 +46,7 @@ export const games = pgTable(
     tokensPerSecond: doublePrecision("tokens_per_second"),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
+    thumbnailUrl: text("thumbnail_url"),
     generatedAt: timestamp("generated_at"),
     isHidden: boolean("is_hidden").default(false).notNull(),
     hiddenReason: text("hidden_reason"),
