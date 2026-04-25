@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { db } from "@arcade-vibe/db";
+import { games } from "@arcade-vibe/db/schema/games";
+import { prompts } from "@arcade-vibe/db/schema/prompts";
+import { eq } from "drizzle-orm";
 import GamePlayPage from "@/components/game-client";
-import { trpcClient } from "@/utils/trpc";
 
 const baseUrl =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -17,34 +20,40 @@ export async function generateMetadata({
   const { id: gameId } = await params;
 
   try {
-    const game = await trpcClient.games.getById.query({ id: gameId });
+    const [row] = await db
+      .select({
+        name: games.name,
+        thumbnailUrl: games.thumbnailUrl,
+        promptContent: prompts.content,
+        promptVisibility: prompts.visibility,
+      })
+      .from(games)
+      .innerJoin(prompts, eq(games.promptId, prompts.id))
+      .where(eq(games.id, gameId))
+      .limit(1);
 
-    if (!game) {
+    if (!row) {
       return { title: "Game Not Found" };
     }
 
     const canExposePrompt =
-      game.prompt?.visibility === "public" && game.prompt.content.length > 0;
-    const promptTitle = canExposePrompt
-      ? `${game.prompt.content.slice(0, 50)}...`
-      : "Game";
-    const promptDescription = canExposePrompt
-      ? game.prompt.content
-      : "Play this AI-generated game on Arcade Vibe";
-
+      row.promptVisibility === "public" && row.promptContent.length > 0;
     const ogTitle =
-      game.name ||
-      (canExposePrompt ? game.prompt.content.slice(0, 100) : "AI-Generated Game");
-    const ogDescription = game.name
-      ? `Play "${game.name}" on Arcade Vibe`
-      : promptDescription;
-
-    const ogImage = game.thumbnailUrl
-      ? `${baseUrl}${game.thumbnailUrl}`
+      row.name ||
+      (canExposePrompt ? row.promptContent.slice(0, 100) : "AI-Generated Game");
+    const ogDescription = row.name
+      ? `Play "${row.name}" on Arcade Vibe`
+      : canExposePrompt
+        ? row.promptContent
+        : "Play this AI-generated game on Arcade Vibe";
+    const ogImage = row.thumbnailUrl
+      ? row.thumbnailUrl.startsWith("http")
+        ? row.thumbnailUrl
+        : `${baseUrl}${row.thumbnailUrl}`
       : undefined;
 
     return {
-      title: game.name || promptTitle,
+      title: row.name || (canExposePrompt ? `${row.promptContent.slice(0, 50)}...` : "Game"),
       description: ogDescription,
       openGraph: {
         title: ogTitle,
