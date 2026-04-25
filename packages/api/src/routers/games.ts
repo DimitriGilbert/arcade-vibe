@@ -1795,11 +1795,11 @@ export const gamesRouter = router({
 
       const buffer = Buffer.from(base64Data, "base64");
       const processedBuffer = await processImageForThumbnail(buffer);
-      const key = `thumbnails/${input.gameId}.webp`;
+      const key = `thumbnails/${input.gameId}.jpg`;
       const thumbnailUrl = await uploadImage({
         buffer: processedBuffer,
         key,
-        contentType: "image/webp",
+        contentType: "image/jpeg",
       });
 
       await db

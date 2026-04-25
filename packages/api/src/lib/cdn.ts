@@ -99,7 +99,7 @@ export const processImageForThumbnail = async (
 ): Promise<Buffer> => {
   const processed = await sharp(imageBuffer)
     .resize(800, null, { withoutEnlargement: true })
-    .webp({ quality: 75 })
+    .jpeg({ quality: 80 })
     .toBuffer();
   return Buffer.from(processed);
 };
