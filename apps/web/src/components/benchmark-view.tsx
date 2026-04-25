@@ -27,7 +27,11 @@ import {
 import { ArcadeBadge, ArcadeButton } from "@/components/arcade";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RouterOutput } from "@/lib/trpc-types";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Clock, Coins, Cpu, ExternalLink, Play, Search, Star, Swords, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { trpcClient } from "@/utils/trpc";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ChevronDown, Clock, Coins, Cpu, ExternalLink, Play, Search, Star, Swords, X } from "lucide-react";
 
 type BenchmarkOutput = RouterOutput["prompts"]["getBenchmark"];
 type BenchmarkGame = BenchmarkOutput["games"][number];
@@ -272,28 +276,115 @@ function FilterDropdown({
   );
 }
 
-function GamePreviewDialog({
+function InteractiveStars({
   gameId,
-  gameName,
-  open,
-  onClose,
+  promptId,
 }: {
-  gameId: string | null;
-  gameName: string;
-  open: boolean;
-  onClose: () => void;
+  gameId: string;
+  promptId: string;
 }) {
-  if (!open || !gameId) return null;
+  const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+  const [hovered, setHovered] = useState(0);
+
+  const { data: myRating } = useQuery({
+    queryKey: ["my-rating", gameId, promptId],
+    queryFn: () => trpcClient.ratings.getMyRating.query({ gameId, promptId }),
+    enabled: !!session,
+  });
+
+  const rateMutation = useMutation({
+    mutationFn: (rating: number) =>
+      trpcClient.ratings.create.mutate({ gameId, promptId, rating }),
+    onSuccess: () => {
+      toast.success("Rating submitted!");
+      void queryClient.invalidateQueries({ queryKey: ["my-rating", gameId, promptId] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to submit rating");
+    },
+  });
+
+  const currentRating = myRating?.overall ?? 0;
+  const displayRating = hovered || currentRating;
+
+  if (!session) return null;
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }, (_, i) => i + 1).map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={!!myRating || rateMutation.isPending}
+          onClick={() => rateMutation.mutate(star)}
+          onMouseEnter={() => !myRating && setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
+          className={`p-0.5 transition-colors ${myRating ? "cursor-default" : "cursor-pointer"}`}
+        >
+          <Star
+            className={`h-3.5 w-3.5 transition-colors ${
+              star <= displayRating
+                ? "fill-amber-400 text-amber-400"
+                : "text-[var(--muted-foreground)]/30"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function GamePreviewDialog({
+  games,
+  currentIndex,
+  promptId,
+  onClose,
+  onNavigate,
+}: {
+  games: BenchmarkGame[];
+  currentIndex: number;
+  promptId: string;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}) {
+  const game = games[currentIndex];
+  if (!game) return null;
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < games.length - 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-50 w-[90vw] h-[90vh] bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-          <span className="text-sm font-semibold truncate">{gameName}</span>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center px-4 py-3 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              onClick={() => hasPrev && onNavigate(currentIndex - 1)}
+              disabled={!hasPrev}
+              className={`shrink-0 p-1.5 rounded-[var(--radius)] border border-[var(--border)] transition-colors ${hasPrev ? "text-[var(--foreground)] hover:bg-[var(--accent)]" : "text-[var(--muted-foreground)]/30 cursor-not-allowed"}`}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-sm font-semibold truncate">{game.name || "Untitled"}</span>
+            <button
+              onClick={() => hasNext && onNavigate(currentIndex + 1)}
+              disabled={!hasNext}
+              className={`shrink-0 p-1.5 rounded-[var(--radius)] border border-[var(--border)] transition-colors ${hasNext ? "text-[var(--foreground)] hover:bg-[var(--accent)]" : "text-[var(--muted-foreground)]/30 cursor-not-allowed"}`}
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="shrink-0 mx-4">
+            <InteractiveStars gameId={game.id} promptId={promptId} />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-[var(--muted-foreground)]">
+              {currentIndex + 1} / {games.length}
+            </span>
             <a
-              href={`/game/${gameId}`}
+              href={`/game/${game.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius)] border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
@@ -308,9 +399,10 @@ function GamePreviewDialog({
         </div>
         <div className="flex-1 bg-black">
           <iframe
-            src={`/api/games/${gameId}/play`}
+            key={game.id}
+            src={`/api/games/${game.id}/play`}
             className="w-full h-full border-0"
-            title={gameName}
+            title={game.name || "Untitled"}
           />
         </div>
       </div>
@@ -324,8 +416,7 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [previewGameId, setPreviewGameId] = useState<string | null>(null);
-  const [previewGameName, setPreviewGameName] = useState("");
+  const [previewGameIndex, setPreviewGameIndex] = useState<number>(-1);
 
   const tableColumns = useMemo<ColumnDef<BenchmarkGame>[]>(
     () => [
@@ -364,8 +455,8 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
               variant="primary"
               size="sm"
               onClick={() => {
-                setPreviewGameId(row.original.id);
-                setPreviewGameName(row.original.name ?? "Untitled");
+                const idx = games.findIndex((g) => g.id === row.original.id);
+                setPreviewGameIndex(idx);
               }}
             >
               <Play className="h-3 w-3" />
@@ -653,12 +744,15 @@ export default function BenchmarkView({ data }: { data: BenchmarkOutput }) {
         )}
       </div>
 
-      <GamePreviewDialog
-        gameId={previewGameId}
-        gameName={previewGameName}
-        open={previewGameId !== null}
-        onClose={() => setPreviewGameId(null)}
-      />
+      {previewGameIndex >= 0 && previewGameIndex < games.length && (
+        <GamePreviewDialog
+          games={games}
+          currentIndex={previewGameIndex}
+          promptId={prompt.id}
+          onClose={() => setPreviewGameIndex(-1)}
+          onNavigate={setPreviewGameIndex}
+        />
+      )}
     </div>
   );
 }

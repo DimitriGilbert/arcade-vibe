@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import GamePlayPage from "@/components/game-client";
 import { trpcClient } from "@/utils/trpc";
 
+const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 interface GamePageProps {
   params: Promise<{
     id: string;
@@ -29,17 +32,30 @@ export async function generateMetadata({
       ? game.prompt.content
       : "Play this AI-generated game on Arcade Vibe";
 
+    const ogTitle =
+      game.name ||
+      (canExposePrompt ? game.prompt.content.slice(0, 100) : "AI-Generated Game");
+    const ogDescription = game.name
+      ? `Play "${game.name}" on Arcade Vibe`
+      : promptDescription;
+
+    const ogImage = game.thumbnailUrl
+      ? `${baseUrl}${game.thumbnailUrl}`
+      : undefined;
+
     return {
       title: game.name || promptTitle,
-      description: game.name
-        ? `Play "${game.name}" on Arcade Vibe`
-        : promptDescription,
+      description: ogDescription,
       openGraph: {
-        title: game.name || (canExposePrompt ? game.prompt.content.slice(0, 100) : "AI-Generated Game"),
-        description: game.name
-          ? `Play "${game.name}" on Arcade Vibe`
-          : promptDescription,
-        ...(game.thumbnailUrl && { images: [game.thumbnailUrl] }),
+        title: ogTitle,
+        description: ogDescription,
+        ...(ogImage && { images: [ogImage] }),
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: ogTitle,
+        description: ogDescription,
+        ...(ogImage && { images: [ogImage] }),
       },
     };
   } catch {
