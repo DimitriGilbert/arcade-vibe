@@ -94,6 +94,13 @@ export default function RootLayout({
           </AppShell>
         </Providers>
         <Script
+          src="https://chemin.dbuild.dev/script.js"
+          strategy="lazyOnload"
+          data-id="7040d34e-b41f-4f20-88d1-b86ac93266c4"
+          data-utcoffset="2"
+          data-server="https://chemin.dbuild.dev"
+        />
+        <Script
           src="https://cdn.counter.dev/script.js"
           strategy="lazyOnload"
           data-id="154c6878-7558-4eff-90f9-bd4904015df1"
