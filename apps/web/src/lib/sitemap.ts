@@ -16,6 +16,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { getModelDetailRoute } from "@/lib/model-routes";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const SITEMAP_PAGE_SIZE = 40000;
 const XML_HEADERS = {
@@ -63,16 +64,6 @@ function xmlEscape(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
-}
-
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-}
-
-export function getSiteUrl(): string {
-  return normalizeBaseUrl(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001",
-  );
 }
 
 export function toAbsoluteUrl(path: Route): string {
@@ -144,6 +135,7 @@ export function getGeneralSitemapEntries(): SitemapUrlEntry[] {
     { loc: toAbsoluteUrl("/games" as Route), changefreq: "hourly", priority: 0.9 },
     { loc: toAbsoluteUrl("/models" as Route), changefreq: "weekly", priority: 0.8 },
     { loc: toAbsoluteUrl("/prompts" as Route), changefreq: "daily", priority: 0.8 },
+    { loc: toAbsoluteUrl("/benchmarks" as Route), changefreq: "daily", priority: 0.8 },
     { loc: toAbsoluteUrl("/leaderboard" as Route), changefreq: "daily", priority: 0.8 },
     {
       loc: toAbsoluteUrl("/leaderboard/arena" as Route),

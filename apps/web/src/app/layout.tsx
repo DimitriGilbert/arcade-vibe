@@ -6,6 +6,7 @@ import { Orbitron, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "../index.css";
 import Providers from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
+import { getSiteUrl, getSiteUrlObject } from "@/lib/site-url";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -25,12 +26,18 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
-const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/og.jpeg`;
+const siteUrl = getSiteUrl();
+const ogImageUrl = `${siteUrl}/og.jpeg`;
 
 export const metadata: Metadata = {
+  metadataBase: getSiteUrlObject(),
+  applicationName: "Arcade Vibe",
   title: {
     default: "Arcade Vibe - AI-Powered Game Arcade",
     template: "%s | Arcade Vibe",
+  },
+  alternates: {
+    canonical: "/",
   },
   icons: {
     icon: [
@@ -41,6 +48,10 @@ export const metadata: Metadata = {
   },
   description:
     "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry. Get better at prompting. Figure out which AI actually delivers. Have fun doing it.",
+  authors: [{ name: "Arcade Vibe" }],
+  creator: "Arcade Vibe",
+  publisher: "Arcade Vibe",
+  category: "Games",
   keywords: [
     "arcade",
     "AI games",
@@ -54,7 +65,17 @@ export const metadata: Metadata = {
     title: "Arcade Vibe - One Prompt. One Shot. One Game.",
     description:
       "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
-    images: [ogImageUrl],
+    url: siteUrl,
+    siteName: "Arcade Vibe",
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: "Arcade Vibe - AI-powered game arcade",
+      },
+    ],
+    locale: "en_US",
     type: "website",
   },
   twitter: {
@@ -64,6 +85,18 @@ export const metadata: Metadata = {
       "Write one prompt. Get a game. Play it, rate it, see how different models handle your words. Monthly themes, leaderboards, and a crowd that learns from every winning entry.",
     images: [ogImageUrl],
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
