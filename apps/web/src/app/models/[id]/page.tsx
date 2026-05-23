@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 
 import { ArcadeBadge, ArcadeCard } from "@/components/arcade";
+import { JsonLd } from "@/components/JsonLd";
 import { EmptyState } from "@/components/reusable";
 import { getModelDetailRoute, getModelIdFromSegment } from "@/lib/model-routes";
+import { getSiteUrl, toAbsoluteUrl } from "@/lib/site-url";
 import { StatRow } from "@/components/models";
 import { getServerCaller } from "@/utils/trpc-server";
 import { GameActionsClient } from "./game-actions-client";
@@ -91,6 +93,7 @@ export default async function ModelDetailPage({ params }: ModelDetailPageProps) 
 
   const canonicalRoute = getModelDetailRoute(model.modelName, model.id);
   const canonicalSegment = canonicalRoute.replace("/models/", "");
+  const modelUrl = toAbsoluteUrl(canonicalRoute);
 
   if (rawId !== canonicalSegment) {
     permanentRedirect(canonicalRoute);
@@ -103,6 +106,54 @@ export default async function ModelDetailPage({ params }: ModelDetailPageProps) 
 
   return (
     <div className="min-h-screen bg-background pb-10">
+      <JsonLd
+        id="model-json-ld"
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "@id": `${modelUrl}#model`,
+            name: model.modelName,
+            url: modelUrl,
+            applicationCategory: "AIModel",
+            operatingSystem: "Web",
+            description: `${model.modelName} is tracked on Arcade Vibe with ${model.gameCount} published games and ${model.ratingCount} ratings.`,
+            inLanguage: "en",
+            publisher: {
+              "@id": `${getSiteUrl()}/#organization`,
+            },
+            ...(model.ratingCount > 0
+              ? {
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: model.avgRating,
+                    ratingCount: model.ratingCount,
+                    bestRating: 5,
+                    worstRating: 1,
+                  },
+                }
+              : {}),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Models",
+                item: toAbsoluteUrl("/models" as Route),
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: model.modelName,
+                item: modelUrl,
+              },
+            ],
+          },
+        ]}
+      />
       <div className="container mx-auto px-4 pt-8 grid gap-6 xl:grid-cols-[320px_1fr]">
         <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
           <ArcadeCard className="p-5">

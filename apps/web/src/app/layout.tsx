@@ -6,6 +6,8 @@ import { Orbitron, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "../index.css";
 import Providers from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
+import { JsonLd } from "@/components/JsonLd";
+import type { JsonLdObject } from "@/components/JsonLd";
 import { getSiteUrl, getSiteUrlObject } from "@/lib/site-url";
 
 const orbitron = Orbitron({
@@ -28,6 +30,44 @@ const jetbrainsMono = JetBrains_Mono({
 
 const siteUrl = getSiteUrl();
 const ogImageUrl = `${siteUrl}/og.jpeg`;
+
+const siteJsonLd: JsonLdObject[] = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
+    name: "Arcade Vibe",
+    url: siteUrl,
+    logo: `${siteUrl}/arcade-vibe_logo.png`,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    name: "Arcade Vibe",
+    url: siteUrl,
+    description:
+      "AI-powered game arcade for prompt-driven game creation and AI model comparison.",
+    inLanguage: "en",
+    publisher: {
+      "@id": `${siteUrl}/#organization`,
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": `${siteUrl}/#application`,
+    name: "Arcade Vibe",
+    url: siteUrl,
+    applicationCategory: "GameApplication",
+    operatingSystem: "Web",
+    description:
+      "Create playable games from prompts, compare AI models, and compete on Arcade Vibe leaderboards.",
+    publisher: {
+      "@id": `${siteUrl}/#organization`,
+    },
+  },
+];
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrlObject(),
@@ -122,6 +162,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
+          <JsonLd id="site-json-ld" data={siteJsonLd} />
           <AppShell>
               {children}
           </AppShell>

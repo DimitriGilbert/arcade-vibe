@@ -11,3 +11,8 @@ export function getSiteUrl(): string {
 export function getSiteUrlObject(): URL {
   return new URL(getSiteUrl());
 }
+
+export function toAbsoluteUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getSiteUrl()}${normalizedPath}`;
+}

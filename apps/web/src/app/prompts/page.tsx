@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DocumentPromptsList } from "@/components/prompts/document-prompts-list";
+import { JsonLd } from "@/components/JsonLd";
+import { getSiteUrl, toAbsoluteUrl } from "@/lib/site-url";
 import { getServerCaller } from "@/utils/trpc-server";
 
 const PAGE_SIZE = 25;
@@ -44,14 +46,32 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
   }
 
   return (
-    <DocumentPromptsList
-      prompts={result.items}
-      themes={themes.map((t) => ({ id: t.id, title: t.title }))}
-      currentPage={page}
-      totalPages={result.totalPages}
-      totalItems={result.total}
-      hasNextPage={result.hasNextPage}
-      hasPreviousPage={result.hasPreviousPage}
-    />
+    <>
+      <JsonLd
+        id="prompts-json-ld"
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "@id": `${toAbsoluteUrl("/prompts")}#collection`,
+          name: "Prompt Library",
+          url: toAbsoluteUrl("/prompts"),
+          description:
+            "Discover public prompts crafted by the Arcade Vibe community for AI-generated games.",
+          inLanguage: "en",
+          isPartOf: {
+            "@id": `${getSiteUrl()}/#website`,
+          },
+        }}
+      />
+      <DocumentPromptsList
+        prompts={result.items}
+        themes={themes.map((t) => ({ id: t.id, title: t.title }))}
+        currentPage={page}
+        totalPages={result.totalPages}
+        totalItems={result.total}
+        hasNextPage={result.hasNextPage}
+        hasPreviousPage={result.hasPreviousPage}
+      />
+    </>
   );
 }

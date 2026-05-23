@@ -6,7 +6,9 @@ import { notFound } from "next/navigation";
 import { Calendar, Globe, Play, User } from "lucide-react";
 
 import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
+import { JsonLd } from "@/components/JsonLd";
 import { EmptyState } from "@/components/reusable";
+import { getSiteUrl, toAbsoluteUrl } from "@/lib/site-url";
 import { trpcClient } from "@/utils/trpc";
 
 interface PublicCollectionPageProps {
@@ -65,8 +67,53 @@ export default async function PublicCollectionPage({
     notFound();
   }
 
+  const collectionUrl = toAbsoluteUrl(`/collections/${id}` as Route);
+
   return (
     <main className="min-h-screen bg-background py-8">
+      <JsonLd
+        id="collection-json-ld"
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "@id": `${collectionUrl}#collection`,
+            name: data.collection.name,
+            url: collectionUrl,
+            description:
+              data.collection.description ??
+              `Public Arcade Vibe collection with ${data.games.length} games.`,
+            inLanguage: "en",
+            creator: {
+              "@type": "Person",
+              name: data.collection.user?.name ?? "Arcade Vibe user",
+            },
+            isPartOf: {
+              "@id": `${getSiteUrl()}/#website`,
+            },
+            dateCreated: new Date(data.collection.createdAt).toISOString(),
+            dateModified: new Date(data.collection.updatedAt).toISOString(),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Collections",
+                item: toAbsoluteUrl("/collections" as Route),
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: data.collection.name,
+                item: collectionUrl,
+              },
+            ],
+          },
+        ]}
+      />
       <div className="container mx-auto px-4 max-w-6xl space-y-6">
         <ArcadeCard>
           <div className="p-6 border-b border-[var(--border)] bg-[var(--muted)]/20">

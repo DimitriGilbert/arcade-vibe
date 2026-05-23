@@ -26,7 +26,9 @@ import {
   ArcadeTabsList,
   ArcadeTabsTrigger,
 } from "@/components/arcade";
+import { JsonLd } from "@/components/JsonLd";
 import { getModelDetailRoute } from "@/lib/model-routes";
+import { getSiteUrl, toAbsoluteUrl } from "@/lib/site-url";
 import { InfoCard } from "@/components/reusable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getServerCaller } from "@/utils/trpc-server";
@@ -110,6 +112,12 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
   const { game, stats, leaderboard, modelPageId } = data;
   const gameTitle = game.name ?? game.theme?.title ?? "Untitled Game";
   const creatorName = game.prompt.user?.name ?? "Anonymous";
+  const gameUrl = toAbsoluteUrl(`/games/${id}` as Route);
+  const imageUrl = game.thumbnailUrl
+    ? game.thumbnailUrl.startsWith("http")
+      ? game.thumbnailUrl
+      : `${getSiteUrl()}${game.thumbnailUrl}`
+    : undefined;
   const hasPromptContent = game.prompt.content.trim().length > 0;
   const avgScore =
     stats?.avgScore !== null && stats?.avgScore !== undefined
@@ -118,6 +126,52 @@ export default async function GameInfoPage({ params }: GameInfoPageProps) {
 
   return (
     <main className="min-h-screen bg-background py-8">
+      <JsonLd
+        id="game-json-ld"
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "VideoGame",
+            "@id": `${gameUrl}#game`,
+            name: gameTitle,
+            url: gameUrl,
+            description: hasPromptContent
+              ? game.prompt.content.slice(0, 500)
+              : `Arcade Vibe game generated with ${game.modelName}.`,
+            inLanguage: "en",
+            applicationCategory: "Game",
+            creator: {
+              "@type": "Person",
+              name: creatorName,
+            },
+            publisher: {
+              "@id": `${getSiteUrl()}/#organization`,
+            },
+            ...(imageUrl ? { image: imageUrl } : {}),
+            dateCreated: game.createdAt.toISOString(),
+            dateModified: game.updatedAt.toISOString(),
+            keywords: [game.modelName, game.modelProvider, game.theme?.title ?? "AI game"],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Games",
+                item: toAbsoluteUrl("/games" as Route),
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: gameTitle,
+                item: gameUrl,
+              },
+            ],
+          },
+        ]}
+      />
       <div className="container mx-auto px-4 max-w-6xl space-y-6">
         <ArcadeCard>
           <div className="p-6 border-b border-[var(--border)] bg-[var(--muted)]/20">

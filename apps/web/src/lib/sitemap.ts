@@ -16,7 +16,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { getModelDetailRoute } from "@/lib/model-routes";
-import { getSiteUrl } from "@/lib/site-url";
+import { toAbsoluteUrl as getAbsoluteUrl } from "@/lib/site-url";
 
 export const SITEMAP_PAGE_SIZE = 40000;
 const XML_HEADERS = {
@@ -67,8 +67,7 @@ function xmlEscape(value: string): string {
 }
 
 export function toAbsoluteUrl(path: Route): string {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${getSiteUrl()}${normalizedPath}`;
+  return getAbsoluteUrl(path);
 }
 
 function toIsoString(value: Date): string {

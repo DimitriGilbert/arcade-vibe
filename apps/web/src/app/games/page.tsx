@@ -6,8 +6,10 @@ import { notFound } from "next/navigation";
 import { Calendar, Gamepad2, Layers, Play, Star, User } from "lucide-react";
 
 import { ArcadeBadge, ArcadeButton, ArcadeCard } from "@/components/arcade";
+import { JsonLd } from "@/components/JsonLd";
 import { EmptyState } from "@/components/reusable";
 import { getModelDetailRoute } from "@/lib/model-routes";
+import { getSiteUrl, toAbsoluteUrl } from "@/lib/site-url";
 import { getServerCaller } from "@/utils/trpc-server";
 
 const PAGE_SIZE = 12;
@@ -60,6 +62,22 @@ export default async function GamesLibraryPage({
 
   return (
     <main className="min-h-screen bg-background">
+      <JsonLd
+        id="games-json-ld"
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "@id": `${toAbsoluteUrl("/games")}#collection`,
+          name: "Game Library",
+          url: toAbsoluteUrl("/games"),
+          description:
+            "Browse published AI-generated games on Arcade Vibe with creators, themes, and model details.",
+          inLanguage: "en",
+          isPartOf: {
+            "@id": `${getSiteUrl()}/#website`,
+          },
+        }}
+      />
       <div className="container mx-auto max-w-6xl space-y-8 px-4 py-8">
         <header className="space-y-4 border-b border-[var(--border)] pb-6">
           <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
