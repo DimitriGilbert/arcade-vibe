@@ -30,7 +30,7 @@ export function Footer() {
         </a>
         <span className="opacity-30">·</span>
         <a
-          href="https://github.com/DimitriGilbert"
+          href="https://github.com/DimitriGilbert/arcade-vibe"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-[var(--muted-foreground)] transition-colors"
