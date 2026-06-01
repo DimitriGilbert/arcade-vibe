@@ -440,10 +440,11 @@ type ProviderStreamPart =
   | { type: "text-delta"; delta: string }
   | { type: "reasoning-delta"; delta: string }
   | { type: "finish"; usage: ProviderStreamUsage }
-  | { type: "error"; error: unknown };
+  | { type: "error"; error: unknown }
+  | { type: "unknown"; summary: string };
 
 interface ProviderStreamResult {
-  stream: ReadableStream<ProviderStreamPart>;
+  stream: ReadableStream<unknown>;
 }
 
 interface ProviderModelWithDoStream {
@@ -451,6 +452,150 @@ interface ProviderModelWithDoStream {
     prompt: ProviderPrompt;
     providerOptions?: Record<string, unknown>;
   }): PromiseLike<ProviderStreamResult>;
+}
+
+interface SerializedProviderError {
+  name?: string;
+  message: string;
+  code?: string;
+  status?: number;
+  statusCode?: number;
+  type?: string;
+  cause?: string;
+  raw?: string;
+}
+
+interface GenerationFailureDetails extends Record<string, unknown> {
+  stage: "provider-stream" | "stream-validation" | "post-processing";
+  message: string;
+  gameId: string;
+  promptId: string;
+  modelKey: string;
+  provider: Provider;
+  providerError?: SerializedProviderError;
+  streamState?: {
+    textLength: number;
+    reasoningLength: number;
+    finishSeen: boolean;
+    usageSeen: boolean;
+    unknownPartCount: number;
+    firstUnknownParts: string[];
+  };
+}
+
+class GenerationFailure extends Error {
+  readonly details: GenerationFailureDetails;
+
+  constructor(details: GenerationFailureDetails) {
+    super(details.message);
+    this.name = "GenerationFailure";
+    this.details = details;
+  }
+}
+
+function getRecordString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function getRecordNumber(record: Record<string, unknown>, key: string): number | undefined {
+  const value = record[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function summarizeUnknown(value: unknown): string {
+  if (typeof value === "string") return value.slice(0, 2000);
+  if (typeof value === "number" || typeof value === "boolean" || value === null) {
+    return String(value);
+  }
+  if (value instanceof Error) {
+    return `${value.name}: ${value.message}`.slice(0, 2000);
+  }
+  try {
+    return JSON.stringify(value).slice(0, 2000);
+  } catch {
+    return Object.prototype.toString.call(value);
+  }
+}
+
+function serializeProviderError(error: unknown): SerializedProviderError {
+  if (error instanceof Error) {
+    const serialized: SerializedProviderError = {
+      name: error.name,
+      message: error.message || "Provider stream failed",
+    };
+
+    if (error.cause !== undefined) {
+      serialized.cause = summarizeUnknown(error.cause);
+    }
+
+    if (isRecord(error)) {
+      serialized.code = getRecordString(error, "code");
+      serialized.status = getRecordNumber(error, "status");
+      serialized.statusCode = getRecordNumber(error, "statusCode");
+      serialized.type = getRecordString(error, "type");
+    }
+
+    return serialized;
+  }
+
+  if (isRecord(error)) {
+    const message =
+      getRecordString(error, "message") ??
+      getRecordString(error, "error") ??
+      "Provider stream failed";
+    return {
+      message,
+      code: getRecordString(error, "code"),
+      status: getRecordNumber(error, "status"),
+      statusCode: getRecordNumber(error, "statusCode"),
+      type: getRecordString(error, "type"),
+      raw: summarizeUnknown(error),
+    };
+  }
+
+  return {
+    message: summarizeUnknown(error) || "Provider stream failed",
+  };
+}
+
+function parseProviderStreamPart(value: unknown): ProviderStreamPart {
+  if (!isRecord(value)) {
+    return { type: "unknown", summary: summarizeUnknown(value) };
+  }
+
+  const type = value["type"];
+  if (type === "text-delta") {
+    const delta = value["delta"];
+    return typeof delta === "string"
+      ? { type, delta }
+      : { type: "unknown", summary: summarizeUnknown(value) };
+  }
+
+  if (type === "reasoning-delta") {
+    const delta = value["delta"];
+    return typeof delta === "string"
+      ? { type, delta }
+      : { type: "unknown", summary: summarizeUnknown(value) };
+  }
+
+  if (type === "finish") {
+    const usage = value["usage"];
+    return isProviderStreamUsage(usage)
+      ? { type, usage }
+      : { type: "unknown", summary: summarizeUnknown(value) };
+  }
+
+  if (type === "error") {
+    return { type, error: value["error"] ?? value };
+  }
+
+  return { type: "unknown", summary: summarizeUnknown(value) };
+}
+
+function isProviderStreamUsage(value: unknown): value is ProviderStreamUsage {
+  if (!isRecord(value)) return false;
+  return isRecord(value["inputTokens"]) && isRecord(value["outputTokens"]);
 }
 
 const selectPlatformProvider = (availableProviders: string[]): Provider => {
@@ -697,11 +842,40 @@ export async function generateGame(
     let hasEmittedGenerating = false;
     let bufferedCodeDelta = "";
     let bufferedReasoningDelta = "";
+    let totalReasoningLength = 0;
+    let finishSeen = false;
+    let unknownPartCount = 0;
+    const firstUnknownParts: string[] = [];
     const STREAM_FLUSH_INTERVAL_MS = 16;
     let lastFlushAt = Date.now();
     let streamStartTime = 0;
     let firstTokenTime = 0;
     let generationEndTime = 0;
+
+    const buildStreamState = () => ({
+      textLength: finishedText.length,
+      reasoningLength: totalReasoningLength,
+      finishSeen,
+      usageSeen: finishedTotalUsage !== undefined,
+      unknownPartCount,
+      firstUnknownParts,
+    });
+
+    const buildFailure = (
+      stage: GenerationFailureDetails["stage"],
+      message: string,
+      providerError?: SerializedProviderError,
+    ) =>
+      new GenerationFailure({
+        stage,
+        message,
+        gameId: confirmedGameId,
+        promptId,
+        modelKey,
+        provider: selectedProvider,
+        providerError,
+        streamState: buildStreamState(),
+      });
 
     const flushBufferedDeltas = async function* (): AsyncGenerator<GenerateGameEvent> {
       if (bufferedReasoningDelta.length > 0) {
@@ -776,14 +950,26 @@ export async function generateGame(
       const reader = providerStreamResult.stream.getReader();
       try {
         while (true) {
-          const readResult = await reader.read();
+          let readResult: Awaited<ReturnType<typeof reader.read>>;
+          try {
+            readResult = await reader.read();
+          } catch (error) {
+            const providerError = serializeProviderError(error);
+            throw buildFailure(
+              "provider-stream",
+              providerError.message,
+              providerError,
+            );
+          }
+
           if (readResult.done) {
             break;
           }
 
-          const part = readResult.value as ProviderStreamPart;
+          const part = parseProviderStreamPart(readResult.value);
           if (part.type === "reasoning-delta") {
             if (firstTokenTime === 0) firstTokenTime = Date.now();
+            totalReasoningLength += part.delta.length;
             if (options.reasoningEnabled ?? true) {
               bufferedReasoningDelta += part.delta;
             }
@@ -802,9 +988,20 @@ export async function generateGame(
             bufferedCodeDelta += part.delta;
             finishedText += part.delta;
           } else if (part.type === "finish") {
+            finishSeen = true;
             finishedTotalUsage = mapProviderUsageToAiSdkUsage(part.usage);
           } else if (part.type === "error") {
-            throw part.error;
+            const providerError = serializeProviderError(part.error);
+            throw buildFailure(
+              "provider-stream",
+              providerError.message,
+              providerError,
+            );
+          } else if (part.type === "unknown") {
+            unknownPartCount++;
+            if (firstUnknownParts.length < 5) {
+              firstUnknownParts.push(part.summary);
+            }
           }
 
           const now = Date.now();
@@ -820,10 +1017,15 @@ export async function generateGame(
       yield* flushBufferedDeltas();
       const fullCode = finishedText;
       if (fullCode.length === 0) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Generation completed without output text",
-        });
+        const validationMessage = firstUnknownParts.length > 0
+          ? "Provider returned stream parts that Arcade Vibe does not understand"
+          : !finishSeen
+            ? "Provider stream ended before returning game code or a finish event"
+            : totalReasoningLength > 0
+              ? "Provider returned reasoning but no playable game code"
+              : "Provider finished without returning game code";
+
+        throw buildFailure("stream-validation", validationMessage);
       }
 
       const normalizedFullCode = fullCode.trim();
@@ -841,10 +1043,10 @@ export async function generateGame(
 
       const usage = finishedTotalUsage;
       if (!usage) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Generation completed without usage metrics",
-        });
+        throw buildFailure(
+          "stream-validation",
+          "Provider returned game code without usage metrics",
+        );
       }
       const inputTokens = usage.inputTokens ?? 0;
       const outputTokens = usage.outputTokens ?? 0;
@@ -922,22 +1124,36 @@ export async function generateGame(
         usage: usageMetrics,
       };
     } catch (error) {
+      const failureDetails: GenerationFailureDetails = error instanceof GenerationFailure
+        ? error.details
+        : {
+            stage: "post-processing",
+            message: error instanceof Error ? error.message : "Generation failed",
+            gameId: confirmedGameId,
+            promptId,
+            modelKey,
+            provider: selectedProvider,
+            providerError: serializeProviderError(error),
+            streamState: buildStreamState(),
+          };
+
+      console.error("[game-generation] Generation failed", failureDetails);
+
       // Update game status to failed
       await db
         .update(games)
         .set({
           status: "failed",
+          failureReason: failureDetails.message,
+          failureDetails,
           updatedAt: new Date(),
         })
         .where(eq(games.id, confirmedGameId));
 
-      const errorMessage =
-        error instanceof Error ? error.message : "Generation failed";
-
       yield {
         type: "error",
         gameId: confirmedGameId,
-        error: errorMessage,
+        error: failureDetails.message,
       };
     }
   }

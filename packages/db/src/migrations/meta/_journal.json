@@ -50,6 +50,13 @@
       "when": 1777071089778,
       "tag": "0006_aspiring_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780294495692,
+      "tag": "0007_lush_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

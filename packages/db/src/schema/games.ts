@@ -44,6 +44,8 @@ export const games = pgTable(
     generationTimeMs: integer("generation_time_ms"),
     timeToFirstTokenMs: integer("time_to_first_token_ms"),
     tokensPerSecond: doublePrecision("tokens_per_second"),
+    failureReason: text("failure_reason"),
+    failureDetails: jsonb("failure_details").$type<Record<string, unknown>>(),
     gameData: text("game_data"),
     imageUrl: text("image_url"),
     thumbnailUrl: text("thumbnail_url"),
