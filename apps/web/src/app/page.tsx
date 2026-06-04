@@ -707,6 +707,17 @@ function Outro() {
           Come hang out at{" "}
           <span className="font-bold text-[var(--primary)]">Arcade Vibe</span>.
         </p>
+        <nav aria-label="Legal" className="mt-6 flex items-center justify-center gap-4 text-xs text-[var(--muted-foreground)]">
+          <Link href={"/privacy" as Route} className="transition-colors hover:text-[var(--primary)]">
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true" className="opacity-40">
+            ·
+          </span>
+          <Link href={"/terms" as Route} className="transition-colors hover:text-[var(--primary)]">
+            Terms
+          </Link>
+        </nav>
       </div>
     </footer>
   );

@@ -31,43 +31,53 @@ const jetbrainsMono = JetBrains_Mono({
 const siteUrl = getSiteUrl();
 const ogImageUrl = `${siteUrl}/og.jpeg`;
 
-const siteJsonLd: JsonLdObject[] = [
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${siteUrl}/#organization`,
-    name: "Arcade Vibe",
-    url: siteUrl,
-    logo: `${siteUrl}/arcade-vibe_logo.png`,
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${siteUrl}/#website`,
-    name: "Arcade Vibe",
-    url: siteUrl,
-    description:
-      "AI-powered game arcade for prompt-driven game creation and AI model comparison.",
-    inLanguage: "en",
-    publisher: {
+const siteJsonLd: JsonLdObject = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
       "@id": `${siteUrl}/#organization`,
+      name: "Arcade Vibe",
+      url: siteUrl,
+      logo: `${siteUrl}/arcade-vibe_logo.png`,
     },
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "@id": `${siteUrl}/#application`,
-    name: "Arcade Vibe",
-    url: siteUrl,
-    applicationCategory: "GameApplication",
-    operatingSystem: "Web",
-    description:
-      "Create playable games from prompts, compare AI models, and compete on Arcade Vibe leaderboards.",
-    publisher: {
-      "@id": `${siteUrl}/#organization`,
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
+      name: "Arcade Vibe",
+      url: siteUrl,
+      description:
+        "AI-powered game arcade for prompt-driven game creation and AI model comparison.",
+      inLanguage: "en",
+      publisher: {
+        "@id": `${siteUrl}/#organization`,
+      },
     },
-  },
-];
+    {
+      "@type": ["SoftwareApplication", "WebApplication"],
+      "@id": `${siteUrl}/#softwareapplication`,
+      name: "Arcade Vibe",
+      url: siteUrl,
+      mainEntityOfPage: siteUrl,
+      applicationCategory: "GameApplication",
+      operatingSystem: "Web",
+      description:
+        "Create playable games from prompts, compare AI models, and compete on Arcade Vibe leaderboards.",
+      image: ogImageUrl,
+      publisher: {
+        "@id": `${siteUrl}/#organization`,
+      },
+      offers: {
+        "@type": "AggregateOffer",
+        url: `${siteUrl}/pricing`,
+        priceCurrency: "USD",
+        lowPrice: "0",
+        offerCount: 2,
+        availability: "https://schema.org/InStock",
+      },
+    },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrlObject(),
